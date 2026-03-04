@@ -8,6 +8,7 @@
     "start:server": "node dist/server.js"
   },
   "devDependencies": {
+    "@types/node": "^25.3.3",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
   },
