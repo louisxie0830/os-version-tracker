@@ -21,7 +21,7 @@ function renderVersionRow(v: OSVersionInfo): string {
   </tr>`;
 }
 
-function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[]): string {
+function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +55,7 @@ function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[]): string {
     <tbody>${android.length ? android.map(renderVersionRow).join('') : '<tr><td colspan="6">No data available</td></tr>'}</tbody>
   </table>
 
-  <p class="timestamp">Last fetched: ${new Date().toISOString()}</p>
+  <p class="timestamp">Cached at: \${cachedAt} (refreshes every 10 min)</p>
 </body>
 </html>`;
 }
@@ -81,9 +81,9 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && (req.url === '/' || req.url === '')) {
     try {
-      const { ios, android } = await fetchAllVersions();
+      const { ios, android, cachedAt } = await fetchAllVersions();
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(renderHTML(ios, android));
+      res.end(renderHTML(ios, android, cachedAt));
     } catch {
       res.writeHead(500, { 'Content-Type': 'text/html' });
       res.end('<h1>Error fetching versions</h1>');
