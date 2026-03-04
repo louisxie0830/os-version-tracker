@@ -4,21 +4,36 @@ import type { OSVersionInfo } from './types.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 
-function renderVersionRow(v: OSVersionInfo): string {
-  const badge = v.isBeta
-    ? '<span style="background:#f59e0b;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px">Beta</span>'
-    : '<span style="background:#22c55e;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px">Stable</span>';
-  const build = v.build ? `<code>${v.build}</code>` : '';
-  const api = v.apiLevel ? `API ${v.apiLevel}` : '';
-  const codename = v.codename ?? '';
-  return `<tr>
-    <td>${badge}</td>
-    <td><strong>${v.version}</strong></td>
-    <td>${build}</td>
-    <td>${api}</td>
-    <td>${codename}</td>
-    <td>${v.releaseDate}</td>
-  </tr>`;
+function renderVersionCard(v: OSVersionInfo): string {
+  const isStable = !v.isBeta;
+  const badgeClass = isStable ? 'badge-stable' : 'badge-beta';
+  const badgeText = isStable ? 'Stable' : 'Beta';
+  const build = v.build ? `<span class="meta">Build <code>${v.build}</code></span>` : '';
+  const api = v.apiLevel ? `<span class="meta">API ${v.apiLevel}</span>` : '';
+  const codename = v.codename ? `<span class="meta">${v.codename}</span>` : '';
+  return `<div class="version-card">
+    <div class="version-header">
+      <span class="badge ${badgeClass}">${badgeText}</span>
+      <span class="version-number">${v.version}</span>
+    </div>
+    <div class="version-details">
+      ${build}${api}${codename}
+      <span class="meta">Released ${v.releaseDate}</span>
+    </div>
+  </div>`;
+}
+
+function renderPlatformSection(icon: string, name: string, versions: OSVersionInfo[]): string {
+  if (!versions.length) {
+    return `<div class="platform-section">
+      <div class="platform-header">${icon}<h2>${name}</h2></div>
+      <div class="empty">No data available</div>
+    </div>`;
+  }
+  return `<div class="platform-section">
+    <div class="platform-header">${icon}<h2>${name}</h2></div>
+    <div class="version-grid">${versions.map(renderVersionCard).join('')}</div>
+  </div>`;
 }
 
 function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: string): string {
@@ -27,35 +42,127 @@ function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: st
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OS Version Tracker</title>
+  <title>OS Version Tracker — Latest iOS &amp; Android Versions</title>
+  <meta name="description" content="Track the latest stable and beta versions of iOS and Android in real time. Updated every 10 minutes with version numbers, build info, API levels, and release dates.">
+  <meta name="keywords" content="iOS version, Android version, iOS beta, Android beta, OS tracker, mobile OS, Apple iOS, Android API level">
+  <meta property="og:title" content="OS Version Tracker">
+  <meta property="og:description" content="Latest stable and beta versions of iOS and Android, updated every 10 minutes.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="OS Version Tracker">
+  <meta name="twitter:description" content="Latest stable and beta versions of iOS and Android, updated every 10 minutes.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://os-version-tracker.onrender.com">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📱</text></svg>">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "OS Version Tracker",
+    "description": "Track the latest stable and beta versions of iOS and Android",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Any"
+  }
+  </script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 2rem; }
-    h1 { font-size: 1.8rem; margin-bottom: 1.5rem; }
-    h2 { font-size: 1.3rem; margin: 1.5rem 0 0.75rem; color: #475569; }
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
-    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background: #f1f5f9; font-weight: 600; font-size: 13px; text-transform: uppercase; color: #64748b; }
-    code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
-    .timestamp { margin-top: 1.5rem; font-size: 13px; color: #94a3b8; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .container { max-width: 720px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { color: #94a3b8; font-size: 0.9rem; margin-top: 0.4rem; }
+
+    /* Platform */
+    .platform-section { margin-bottom: 2rem; }
+    .platform-header { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+    .platform-header svg { width: 28px; height: 28px; flex-shrink: 0; }
+    .platform-header h2 { font-size: 1.25rem; font-weight: 600; }
+
+    /* Cards */
+    .version-grid { display: grid; gap: 0.75rem; }
+    .version-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .version-card:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .version-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+    .version-number { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.3px; }
+    .version-details { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+    /* Badge */
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .badge-stable { background: #059669; color: #fff; }
+    .badge-beta { background: #d97706; color: #fff; }
+
+    /* Meta */
+    .meta {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      background: rgba(255,255,255,0.06);
+      padding: 2px 10px;
+      border-radius: 6px;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      margin-top: 2.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+    .footer a { color: #64748b; text-decoration: none; }
+    .footer a:hover { color: #94a3b8; }
+    .dot { margin: 0 0.5rem; }
+    .empty { color: #64748b; font-size: 0.9rem; padding: 1rem; }
+
+    @media (max-width: 480px) {
+      .container { padding: 1.5rem 1rem; }
+      .version-number { font-size: 1.1rem; }
+    }
   </style>
 </head>
 <body>
-  <h1>OS Version Tracker</h1>
+  <div class="container">
+    <div class="header">
+      <h1>OS Version Tracker</h1>
+      <p>Latest iOS &amp; Android release info</p>
+    </div>
 
-  <h2>iOS</h2>
-  <table>
-    <thead><tr><th>Channel</th><th>Version</th><th>Build</th><th>API</th><th>Codename</th><th>Release Date</th></tr></thead>
-    <tbody>${ios.length ? ios.map(renderVersionRow).join('') : '<tr><td colspan="6">No data available</td></tr>'}</tbody>
-  </table>
+    ${renderPlatformSection(`<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/><path d="M16.5 7.5S15 6 12 6 7.5 7.5 7.5 7.5"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="15.5" cy="10.5" r="1"/><path d="M8.5 15s1.5 2 3.5 2 3.5-2 3.5-2"/></svg>`, 'Apple iOS', ios)}
 
-  <h2>Android</h2>
-  <table>
-    <thead><tr><th>Channel</th><th>Version</th><th>Build</th><th>API</th><th>Codename</th><th>Release Date</th></tr></thead>
-    <tbody>${android.length ? android.map(renderVersionRow).join('') : '<tr><td colspan="6">No data available</td></tr>'}</tbody>
-  </table>
+    ${renderPlatformSection(`<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`, 'Android', android)}
 
-  <p class="timestamp">Cached at: \${cachedAt} (refreshes every 10 min)</p>
+    <div class="footer">
+      Cached at ${cachedAt}<span class="dot">&middot;</span>Refreshes every 10 min<br>
+      <a href="/api">JSON API</a><span class="dot">&middot;</span><a href="/health">Health</a>
+    </div>
+  </div>
 </body>
 </html>`;
 }
