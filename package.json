@@ -1,0 +1,17 @@
+{
+  "name": "os-version-tracker",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "start:server": "node dist/server.js"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "rss-parser": "^3.13.0"
+  }
+}
