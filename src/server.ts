@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { fetchAllVersions } from './fetch-all.js';
-import type { OSVersionInfo } from './types.js';
+import type { OSVersionInfo, SubmissionDeadline } from './types.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -36,7 +36,43 @@ function renderPlatformSection(icon: string, name: string, versions: OSVersionIn
   </div>`;
 }
 
-function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: string): string {
+function renderDeadlineCard(deadline: SubmissionDeadline, title: string): string {
+  const reqs = deadline.requirements
+    .map(r => `<li>${r.platform}: <strong>${r.sdk}</strong></li>`)
+    .join('');
+  const announced = deadline.announcedAt
+    ? `<div class="deadline-announced">Announced ${deadline.announcedAt}</div>`
+    : '';
+  const extension = deadline.extensionDate
+    ? `<div class="deadline-announced">Extension available to ${deadline.extensionDate}</div>`
+    : '';
+  const note = deadline.source === 'apple'
+    ? 'Apps uploaded to App Store Connect must meet:'
+    : 'Apps on Google Play must target:';
+  return `<div class="deadline-card">
+    <div class="deadline-label">${title}</div>
+    <div class="deadline-date">${deadline.deadline}</div>
+    <div class="deadline-note">${note}</div>
+    <ul class="deadline-reqs">${reqs}</ul>
+    ${announced}${extension}
+  </div>`;
+}
+
+function renderDeadlinesSection(apple: SubmissionDeadline | null, google: SubmissionDeadline | null): string {
+  if (!apple && !google) return '';
+  const cards: string[] = [];
+  if (apple) cards.push(renderDeadlineCard(apple, 'App Store'));
+  if (google) cards.push(renderDeadlineCard(google, 'Google Play'));
+  return `<div class="platform-section">
+    <div class="platform-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <h2>Submission Deadlines</h2>
+    </div>
+    <div class="version-grid">${cards.join('')}</div>
+  </div>`;
+}
+
+function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: string, appleDeadline?: SubmissionDeadline | null, googleDeadline?: SubmissionDeadline | null): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -141,6 +177,45 @@ function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: st
     .dot { margin: 0 0.5rem; }
     .empty { color: #64748b; font-size: 0.9rem; padding: 1rem; }
 
+    /* Deadline */
+    .deadline-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+    }
+    .deadline-date {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f59e0b;
+      margin-bottom: 0.5rem;
+    }
+    .deadline-note { font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.5rem; }
+    .deadline-reqs {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .deadline-reqs li {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      background: rgba(255,255,255,0.06);
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .deadline-reqs strong { color: #e2e8f0; }
+    .deadline-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      margin-bottom: 0.3rem;
+    }
+    .deadline-announced { font-size: 0.75rem; color: #64748b; margin-top: 0.5rem; }
+
     @media (max-width: 480px) {
       .container { padding: 1.5rem 1rem; }
       .version-number { font-size: 1.1rem; }
@@ -157,6 +232,8 @@ function renderHTML(ios: OSVersionInfo[], android: OSVersionInfo[], cachedAt: st
     ${renderPlatformSection(`<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/><path d="M16.5 7.5S15 6 12 6 7.5 7.5 7.5 7.5"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="15.5" cy="10.5" r="1"/><path d="M8.5 15s1.5 2 3.5 2 3.5-2 3.5-2"/></svg>`, 'Apple iOS', ios)}
 
     ${renderPlatformSection(`<svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`, 'Android', android)}
+
+    ${renderDeadlinesSection(appleDeadline ?? null, googleDeadline ?? null)}
 
     <div class="footer">
       Cached at ${cachedAt}<span class="dot">&middot;</span>Refreshes every 10 min<br>
@@ -188,9 +265,9 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && (req.url === '/' || req.url === '')) {
     try {
-      const { ios, android, cachedAt } = await fetchAllVersions();
+      const { ios, android, appleDeadline, googleDeadline, cachedAt } = await fetchAllVersions();
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-      res.end(renderHTML(ios, android, cachedAt));
+      res.end(renderHTML(ios, android, cachedAt, appleDeadline, googleDeadline));
     } catch {
       res.writeHead(500, { 'Content-Type': 'text/html' });
       res.end('<h1>Error fetching versions</h1>');

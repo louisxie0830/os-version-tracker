@@ -8,3 +8,16 @@ export interface OSVersionInfo {
   supportedDevices?: string[];
   isBeta?: boolean;
 }
+
+export interface SDKRequirement {
+  platform: string;
+  sdk: string;
+}
+
+export interface SubmissionDeadline {
+  source: 'apple' | 'google';
+  deadline: string;
+  announcedAt?: string;
+  requirements: SDKRequirement[];
+  extensionDate?: string;
+}
