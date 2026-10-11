@@ -21,7 +21,7 @@ const STATIC_TYPES: Record<string, string> = {
 };
 
 async function serveStatic(pathname: string, res: http.ServerResponse): Promise<boolean> {
-  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || /^\/icons\/[\w.-]+$/.test(pathname);
+  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/og-image.png' || /^\/icons\/[\w.-]+$/.test(pathname);
   if (!allowed) return false;
   try {
     const body = await readFile(path.join(PUBLIC_DIR, pathname));

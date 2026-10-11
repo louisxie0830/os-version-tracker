@@ -123,6 +123,11 @@ async function main(): Promise<void> {
   await writeFile(path.join(OUT, 'calendar.ics'), buildCalendar(data.timeline, SITE_URL));
   await writeFile(path.join(OUT, 'feed.xml'), buildAtomFeed(data.tracked, SITE_URL, data.cachedAt));
   await writeFile(path.join(OUT, 'health.json'), JSON.stringify({ status: 'ok', builtAt: data.cachedAt, sources: `${healthy}/${sources.length}` }));
+  await writeFile(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${SITE_URL}/</loc><lastmod>${data.cachedAt}</lastmod><changefreq>hourly</changefreq></url>
+</urlset>
+`);
   // GitHub Pages runs Jekyll by default, which would skip files and folders starting with "_"
   await writeFile(path.join(OUT, '.nojekyll'), '');
 

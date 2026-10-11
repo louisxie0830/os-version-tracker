@@ -261,12 +261,12 @@ function renderAndroidCompat(compat: AllVersions['androidCompat'], stableAgp?: s
     const current = stableAgp && majorMinor(stableAgp) === agp;
     const jdk = agpJdk.find(j => j.agp === agp)?.jdk;
     return `<tr${current ? ' class="current"' : ''}>
-      <td><strong>${esc(agp)}</strong>${current ? ' <span class="badge badge-stable badge-sm">最新</span>' : ''}</td>
-      <td>${esc(minGradle)} 以上</td>
-      <td>${jdk ? `JDK ${esc(jdk)}` : '—'}</td>
-      <td>${studio ? esc(studio.studio) + ' 以上' : '—'}</td>
-      <td>${kotlinText}</td>
-      <td>${api ? `API ${esc(api.api)}` : '—'}</td>
+      <td class="row-title" data-label="AGP"><strong>${esc(agp)}</strong>${current ? ' <span class="badge badge-stable badge-sm">最新</span>' : ''}</td>
+      <td data-label="最低 Gradle">${esc(minGradle)} 以上</td>
+      <td data-label="JDK">${jdk ? `JDK ${esc(jdk)}` : '—'}</td>
+      <td data-label="最低 Android Studio">${studio ? esc(studio.studio) + ' 以上' : '—'}</td>
+      <td data-label="Kotlin（KGP）">${kotlinText}</td>
+      <td data-label="最高 API">${api ? `API ${esc(api.api)}` : '—'}</td>
     </tr>`;
   }).join('');
   const cur = compat.current;
@@ -275,7 +275,7 @@ function renderAndroidCompat(compat: AllVersions['androidCompat'], stableAgp?: s
     : '';
   return `<div class="subhead">Android：AGP × Gradle × Android Studio × Kotlin</div>
   ${note ? `<p class="table-note">${note}</p>` : ''}
-  <div class="table-wrap"><table class="compat-table">
+  <div class="table-wrap"><table class="compat-table stack-on-mobile">
     <thead><tr><th>AGP</th><th>最低 Gradle</th><th>JDK</th><th>最低 Android Studio</th><th>Kotlin（KGP）</th><th>最高 API</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
@@ -285,15 +285,15 @@ function renderXcodeCompat(rows: AllVersions['xcodeSupport']): string {
   if (!rows.length) return '';
   const later = (v?: string) => v ? esc(v.replace(/\s+or later$/i, ' 以上')) : '—';
   return `<div class="subhead">iOS：Xcode × macOS × 部署版本</div>
-  <div class="table-wrap"><table class="compat-table">
+  <div class="table-wrap"><table class="compat-table stack-on-mobile">
     <thead><tr><th>Xcode</th><th>macOS</th><th>iOS SDK</th><th>可設定的部署版本</th><th>實機除錯</th><th>Swift</th></tr></thead>
     <tbody>${rows.slice(0, 10).map(r => `<tr>
-      <td><strong>${esc(r.xcode)}</strong>${/beta|RC/i.test(r.xcode) ? ' <span class="badge badge-beta badge-sm">預覽版</span>' : ''}</td>
-      <td>${later(r.macOS)}</td>
-      <td>${r.iosSdk ? esc(r.iosSdk) : '—'}</td>
-      <td>${r.deploymentiOS ? `iOS ${esc(r.deploymentiOS)}` : '—'}</td>
-      <td>${r.deviceiOS ? `iOS ${later(r.deviceiOS)}` : '—'}</td>
-      <td>${r.swift ? esc(r.swift) : '—'}</td>
+      <td class="row-title" data-label="Xcode"><strong>${esc(r.xcode)}</strong>${/beta|RC/i.test(r.xcode) ? ' <span class="badge badge-beta badge-sm">預覽版</span>' : ''}</td>
+      <td data-label="macOS">${later(r.macOS)}</td>
+      <td data-label="iOS SDK">${r.iosSdk ? esc(r.iosSdk) : '—'}</td>
+      <td data-label="可設定的部署版本">${r.deploymentiOS ? `iOS ${esc(r.deploymentiOS)}` : '—'}</td>
+      <td data-label="實機除錯">${r.deviceiOS ? `iOS ${later(r.deviceiOS)}` : '—'}</td>
+      <td data-label="Swift">${r.swift ? esc(r.swift) : '—'}</td>
     </tr>`).join('')}</tbody>
   </table></div>`;
 }
@@ -498,18 +498,18 @@ function renderCiTable(ci: AllVersions['ciImages']): string {
   if (!ci?.githubActions.length) return '';
   const STATUS: Record<string, string> = { ga: '', preview: ' <span class="badge badge-beta badge-sm">預覽</span>', deprecated: ' <span class="badge badge-sm" style="color:var(--fail);background:var(--fail-soft)">即將淘汰</span>' };
   const rows = ci.githubActions.map(r => `<tr>
-      <td><strong>${esc(r.label)}</strong>${STATUS[r.status] ?? ''}${r.labels.includes('macos-latest') ? ' <span class="badge badge-stable badge-sm">macos-latest</span>' : ''}</td>
-      <td>${esc(r.arch)}</td>
-      <td>${esc(r.os)}</td>
-      <td><strong>${esc(r.defaultXcode ?? '—')}</strong></td>
-      <td class="wrap-cell">${esc(r.xcodes.join('、'))}</td>
-      <td>${esc(r.imageDate ?? r.imageVersion ?? '—')}</td>
+      <td class="row-title" data-label="Runner"><strong>${esc(r.label)}</strong>${STATUS[r.status] ?? ''}${r.labels.includes('macos-latest') ? ' <span class="badge badge-stable badge-sm">macos-latest</span>' : ''}</td>
+      <td data-label="架構">${esc(r.arch)}</td>
+      <td data-label="macOS">${esc(r.os)}</td>
+      <td data-label="預設 Xcode"><strong>${esc(r.defaultXcode ?? '—')}</strong></td>
+      <td class="wrap-cell" data-label="已安裝的 Xcode">${esc(r.xcodes.join('、'))}</td>
+      <td data-label="映像檔日期">${esc(r.imageDate ?? r.imageVersion ?? '—')}</td>
     </tr>`).join('');
   const cloud = ci.xcodeCloud?.latestAnnouncedXcode
     ? `<p class="table-note" style="margin-top:10px">Xcode Cloud：Apple 公開的 release notes 最近公告提供的版本為 Xcode ${esc(ci.xcodeCloud.latestAnnouncedXcode)}。這份公開紀錄可能落後，實際可選版本以 App Store Connect 的 Workflow 設定為準。<a href="${esc(ci.xcodeCloud.url)}" target="_blank" rel="noopener">查看 Xcode Cloud release notes</a></p>`
     : '';
   return `<div class="subhead">CI：GitHub Actions macOS runner 內建的 Xcode</div>
-  <div class="table-wrap"><table class="compat-table">
+  <div class="table-wrap"><table class="compat-table stack-on-mobile">
     <thead><tr><th>Runner</th><th>架構</th><th>macOS</th><th>預設 Xcode</th><th>已安裝的 Xcode</th><th>映像檔日期</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>${cloud}`;
@@ -542,7 +542,51 @@ function renderPrivacySection(data: AllVersions): string {
   </section>`;
 }
 
+/** schema.org JSON-LD; "<" is escaped so the data can't close the script tag */
+function structuredData(data: AllVersions): string {
+  const graph = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${SITE_URL}/#website`,
+        url: `${SITE_URL}/`,
+        name: 'OS Version Tracker',
+        inLanguage: 'zh-Hant',
+      },
+      {
+        '@type': 'WebApplication',
+        '@id': `${SITE_URL}/#app`,
+        url: `${SITE_URL}/`,
+        name: 'OS Version Tracker',
+        description: 'iOS 與 Android 開發者上架雷達：上架期限、Xcode 與 SDK 需求、版本相容性、專案檢查與近期閃退。',
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Any',
+        inLanguage: 'zh-Hant',
+        isAccessibleForFree: true,
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+        image: `${SITE_URL}/og-image.png`,
+        dateModified: data.cachedAt,
+        isPartOf: { '@id': `${SITE_URL}/#website` },
+        featureList: [
+          'App Store 與 Google Play 上架期限倒數',
+          'Xcode、macOS、iOS SDK 與部署版本對照',
+          'AGP、Gradle、JDK、Android Studio、Kotlin 相容性',
+          '我的專案檢查',
+          'iOS 與 Android 近期閃退與已知問題',
+          '行事曆與 RSS 訂閱',
+        ],
+      },
+    ],
+  };
+  return JSON.stringify(graph).replace(/</g, '\\u003c');
+}
+
 export function renderHTML(data: AllVersions, config: ProjectConfig | null = null, options: RenderOptions = {}): string {
+  const refresh = options.refreshMinutes ?? 10;
+  // Kept short: search results cut Chinese descriptions off at roughly 80–100 characters
+  const description = `iOS 與 Android 開發者上架雷達：App Store 與 Google Play 期限倒數、Xcode 與 AGP 相容性、專案檢查與近期閃退，每 ${refresh} 分鐘自動更新。`;
+  const shortDescription = `上架期限倒數、Xcode 與 AGP 相容性、專案檢查與近期閃退，官方來源每 ${refresh} 分鐘自動更新。`;
   const { ios, android } = data;
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
@@ -551,17 +595,28 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0d96d4">
   <meta name="color-scheme" content="light">
-  <title>OS Version Tracker — iOS 與 Android 版本、Xcode 與 SDK 上架需求</title>
-  <meta name="description" content="即時追蹤 iOS 與 Android 最新版本，以及開發者需要知道的事：需要的 Xcode 與 macOS 版本、App Store SDK 上架期限、Google Play 目標 API 等級、Android Studio、AGP、Gradle、Kotlin 版本。每 ${options.refreshMinutes ?? 10} 分鐘更新。">
-  <meta name="keywords" content="iOS 版本, Android 版本, Xcode 版本, iOS SDK 上架需求, App Store 上架期限, Google Play 目標 API 等級, targetSdk, Android Studio 版本, AGP 版本, Gradle 版本">
-  <meta property="og:title" content="OS Version Tracker">
-  <meta property="og:description" content="iOS 與 Android 最新正式版與 Beta，加上 Xcode、SDK 與上架期限，每 ${options.refreshMinutes ?? 10} 分鐘更新。">
-  <meta property="og:type" content="website">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="OS Version Tracker">
-  <meta name="twitter:description" content="iOS 與 Android 最新正式版與 Beta，加上 Xcode、SDK 與上架期限，每 ${options.refreshMinutes ?? 10} 分鐘更新。">
-  <meta name="robots" content="index, follow">
+  <title>iOS / Android 上架期限與版本相容性追蹤｜OS Version Tracker</title>
+  <meta name="description" content="${esc(description)}">
+  <meta name="keywords" content="iOS 上架期限, App Store SDK 要求, Google Play targetSdk, Xcode 版本, Xcode macOS 需求, AGP Gradle 相容性, Kotlin AGP 相容, Play Billing Library 淘汰, 16 KB page size, iOS 採用率, Android 17, iOS 27, 隱私清單 PrivacyInfo, 閃退">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  ${process.env.GOOGLE_SITE_VERIFICATION ? `<meta name="google-site-verification" content="${esc(process.env.GOOGLE_SITE_VERIFICATION)}">` : ''}
   <link rel="canonical" href="${esc(SITE_URL)}/">
+  <link rel="alternate" type="application/atom+xml" title="OS Version Tracker：上架規定與重要公告" href="feed.xml">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OS Version Tracker">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:url" content="${esc(SITE_URL)}/">
+  <meta property="og:title" content="iOS / Android 上架期限與版本相容性追蹤">
+  <meta property="og:description" content="${esc(shortDescription)}">
+  <meta property="og:image" content="${esc(SITE_URL)}/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="OS Version Tracker：iOS 與 Android 上架期限與版本相容性">
+  <meta property="og:updated_time" content="${esc(data.cachedAt)}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="iOS / Android 上架期限與版本相容性追蹤">
+  <meta name="twitter:description" content="${esc(shortDescription)}">
+  <meta name="twitter:image" content="${esc(SITE_URL)}/og-image.png">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="icon" href="icons/icon-192.png" type="image/png" sizes="192x192">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -570,16 +625,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="OS Tracker">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "OS Version Tracker",
-    "description": "Track the latest stable and beta versions of iOS and Android",
-    "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Any"
-  }
-  </script>
+  <script type="application/ld+json">${structuredData(data)}</script>
   <style>
     :root {
       --bg: #f3fbff;
@@ -737,7 +783,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .subhead { font-size: 13px; color: var(--muted); margin: 26px 0 12px; }
 
     /* Version cards */
-    .version-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+    .version-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 14px; }
     .version-card {
       border: 1px solid var(--line);
       border-radius: var(--r-md);
@@ -827,7 +873,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .action-detail { font-size: 13px; color: var(--muted); margin-top: 2px; }
 
     /* Toolchain tiles */
-    .tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 12px; }
     .tile {
       display: block;
       color: inherit;
@@ -964,7 +1010,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       padding: 14px 18px 18px;
       margin: 0;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
       gap: 12px;
       align-content: start;
       background: #fff;
@@ -1003,7 +1049,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .wrap-cell { white-space: normal; min-width: 260px; }
 
     /* Privacy */
-    .privacy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .privacy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px; }
     .privacy-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 16px; display: grid; gap: 4px; align-content: start; min-width: 0; overflow-wrap: anywhere; }
     .privacy-card code { word-break: break-all; }
     .privacy-reasons { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1020,7 +1066,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .privacy-links li span { font-size: 12.5px; color: var(--muted); }
 
     /* Deadlines */
-    .deadline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .deadline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
     .deadline-date { font-size: 17px; font-weight: 700; color: var(--accent-deep); }
     .deadline-note { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
     .deadline-reqs { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -1055,6 +1101,27 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .news li { flex-wrap: wrap; padding: 10px 16px; }
       .tl-item { flex-direction: column; gap: 4px; padding: 14px 16px; }
       .check-form, .check-results, .crash-grid, .privacy-links { grid-template-columns: 1fr; }
+      /* Tables become one card per row, each value labelled, instead of clipping columns */
+      .table-wrap { border: 0; background: transparent; overflow: visible; }
+      .stack-on-mobile, .stack-on-mobile tbody, .stack-on-mobile tr, .stack-on-mobile td { display: block; width: 100%; }
+      .stack-on-mobile thead { display: none; }
+      .stack-on-mobile { white-space: normal; }
+      .stack-on-mobile tr { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 10px 14px; margin-bottom: 10px; }
+      .stack-on-mobile tr.current { border-color: rgba(18, 179, 164, 0.6); background: rgba(220, 247, 241, 0.35); }
+      .stack-on-mobile tr.current td, .stack-on-mobile tbody tr:hover td { background: transparent; }
+      .stack-on-mobile td { display: flex; gap: 12px; justify-content: space-between; padding: 5px 0; border-top: 1px dashed rgba(13, 150, 212, 0.14); text-align: right; overflow-wrap: anywhere; }
+      .stack-on-mobile td::before { content: attr(data-label); flex: none; color: var(--muted); font-size: 12.5px; text-align: left; }
+      .stack-on-mobile td.row-title { border-top: 0; justify-content: flex-start; text-align: left; font-size: 15px; padding-top: 0; }
+      .stack-on-mobile td.row-title::before { content: none; }
+      .wrap-cell { min-width: 0; }
+      /* iOS Safari zooms the page when focusing inputs smaller than 16px */
+      .check-form input[type=text] { font-size: 16px; }
+      .summary { white-space: normal; max-width: 100%; border-radius: var(--r-sm); }
+      /* Keep the brand and the JSON button on one line */
+      header .btn.primary { padding: 6px 12px; font-size: 13px; }
+      .brand h1 { font-size: 15px; }
+      .brand-sub { font-size: 10px; letter-spacing: .08em; }
+      .brand-mark { width: 34px; height: 34px; }
     }
     @media (prefers-reduced-motion: reduce) {
       .panel { animation: none; }
