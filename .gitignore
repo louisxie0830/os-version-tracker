@@ -2,3 +2,28 @@ node_modules
 dist
 site
 .state
+
+# Secrets and credentials: never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.mobileprovision
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+.npmrc
+.netrc
+credentials*.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# OS / editor
+.DS_Store
+*.log
