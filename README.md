@@ -10,8 +10,11 @@
 |---|---|
 | 最近 7 天新增 | 新的上架規定、重要官方公告、新機型、熱門 SDK 閃退；可訂閱行事曆（.ics）與 RSS / Atom |
 | 我的專案檢查 | 輸入 Xcode、macOS、部署版本、AGP、Gradle、Kotlin、targetSdk、Billing 版本，列出會擋上架的項目與剩餘天數；結果網址可分享 |
-| 近期閃退與當機 | Apple / Android 官方 release notes 的已知問題與修正，加上 18 個熱門 SDK repo 在 GitHub 近 30 天的閃退回報 |
-| Apple iOS / Android | 最新正式版與 Beta、開發者須知（上架期限換算成要升級的 Xcode / macOS、targetSdk 倒數等）、iOS 採用率、開發工具版本、官方公告 |
+| 近期閃退與當機 | Apple / Android 官方 release notes 的已知問題與修正、18 個熱門 SDK repo 在 GitHub 近 30 天的閃退回報、Stack Overflow 近 90 天的社群討論，以及 Apple Developer Forums 捷徑 |
+| Apple iOS / Android | 最新正式版與 Beta、開發者須知（上架期限換算成要升級的 Xcode / macOS、targetSdk 倒數、Deployment Target / minSdk 建議等）、開發工具版本、官方公告 |
+| 版本分布 | 台灣與全球 iOS / Android 各版本占比、「支援到某版本可涵蓋多少裝置」、台灣最常見版本（StatCounter），以及 Apple 官方 iOS 採用率 |
+| 台灣銀行 App 支援版本 | 23 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本，即時抓取；銀行與 App 名稱以部分遮罩顯示 |
+| 通知中心 | 右上角鈴鐺：新規定、重要公告、新機型、SDK 閃退的未讀清單；網頁開著時每 5 分鐘檢查，可開啟系統通知 |
 | 版本相容性對照表 | Xcode × macOS × 部署版本 × 實機除錯、GitHub Actions macOS runner 內建的 Xcode、AGP × Gradle × JDK × Android Studio × Kotlin |
 | 上架期限與規定 | App Store / Google Play 期限，以及 Apple Upcoming Requirements、Play 政策、Play Billing Library 淘汰、16 KB 分頁大小的時間軸 |
 | 隱私清單與第三方 SDK | Required Reason API 與原因代碼、須附隱私清單的第三方 SDK 名單、Apple 與 Google 官方文件 |
@@ -96,6 +99,8 @@ test/              單元測試與 fixtures（存下來的官方頁面）
 
 ## 資料來源
 
-Apple（軟體更新目錄、Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 採用率、release notes、隱私文件）、Google（Android Developers Blog、Play 目標 API 等級、Play 政策期限、Play Billing 淘汰時程、16 KB 分頁指南、AGP 相容性與 release notes、Android SDK repository、Google Maven）、xcodereleases.com、endoflife.date、Gradle、Kotlin、GitHub（actions/runner-images、熱門 SDK issues）。
+StatCounter Global Stats（版本占比，CC BY-SA 3.0）、App Store / Google Play（台灣區）、Stack Exchange API、Apple（軟體更新目錄、Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 採用率、release notes、隱私文件）、Google（Android Developers Blog、Play 目標 API 等級、Play 政策期限、Play Billing 淘汰時程、16 KB 分頁指南、AGP 相容性與 release notes、Android SDK repository、Google Maven）、xcodereleases.com、endoflife.date、Gradle、Kotlin、GitHub（actions/runner-images、熱門 SDK issues）。
+
+免責聲明與智慧財產權：[中文](DISCLAIMER.md) · [English](DISCLAIMER.en.md)（網頁最下方也有完整內容）。
 
 所有資料皆來自公開頁面，以官方公告為準；GitHub 上的閃退回報為社群回報，未必已確認。

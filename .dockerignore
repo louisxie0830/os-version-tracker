@@ -11,6 +11,8 @@ npm-debug.log*
 .env
 .env.*
 *.md
+!DISCLAIMER.md
+!DISCLAIMER.en.md
 Dockerfile
 .dockerignore
 render.yaml

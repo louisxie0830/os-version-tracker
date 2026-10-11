@@ -27,6 +27,9 @@ import { fetchCiImages, RUNNER_IMAGES_REPO_URL, type CiImages } from './fetchers
 import { AGP_PAST_RELEASES_URL, fetchAgpJdk, type AgpJdkRequirement } from './fetchers/agp-jdk.js';
 import { fetchPrivacyCompliance, THIRD_PARTY_SDK_URL, type PrivacyCompliance } from './fetchers/privacy.js';
 import { fetchCrashReport, type CrashReport } from './fetchers/crashes.js';
+import { fetchOsShare, STATCOUNTER_URL, type OsShare } from './fetchers/os-share.js';
+import { fetchTaiwanBankApps, type TaiwanBankApp } from './fetchers/tw-banks.js';
+import { anonymizeAppStoreUrl, maskName } from './mask.js';
 import { buildAndroidActions, buildDeadlineTimeline, buildiOSActions, zhPlatform, zhSdk } from './insights.js';
 import { notifyWebhook, recentItems, recordItems, toTrackedItems, type TrackedItem } from './changes.js';
 import type {
@@ -69,6 +72,8 @@ export interface AllVersions {
   agpJdk: AgpJdkRequirement[];
   privacy: PrivacyCompliance | null;
   crashes: CrashReport | null;
+  osShare: OsShare | null;
+  twBanks: TaiwanBankApp[];
   sources: Record<SourceKey, SourceInfo>;
   cachedAt: string;
 }
@@ -96,6 +101,8 @@ const SOURCES = {
   ciImages: { label: 'GitHub Actions runner images · Xcode Cloud', url: RUNNER_IMAGES_REPO_URL },
   agpJdk: { label: 'AGP 各版本 release notes', url: AGP_PAST_RELEASES_URL },
   privacy: { label: 'Apple 隱私清單與第三方 SDK 規定', url: THIRD_PARTY_SDK_URL },
+  osShare: { label: 'StatCounter Global Stats（台灣、全球）', url: STATCOUNTER_URL },
+  twBanks: { label: 'App Store / Google Play（台灣區）', url: 'https://apps.apple.com/tw/' },
   crashes: { label: 'Apple / Android release notes · GitHub SDK issues', url: 'https://developer.apple.com/documentation/ios-ipados-release-notes' },
 } as const;
 
@@ -149,7 +156,7 @@ export async function fetchAllVersions(): Promise<AllVersions> {
   const [
     ios, android, appleDeadline, googleDeadline, iosToolchain, androidToolchain, iosAdoption,
     appleNews, androidNews, androidCompat, xcodeSupport, appleRequirements, playPolicy, playBilling, pageSize,
-    ciImages, agpJdk, privacy,
+    ciImages, agpJdk, privacy, osShare, twBanks,
   ] = await Promise.all([
     track('ios', fetchiOSVersions(), []),
     track('android', fetchAndroidVersions(), []),
@@ -169,6 +176,8 @@ export async function fetchAllVersions(): Promise<AllVersions> {
     track('ciImages', fetchCiImages(), null),
     track('agpJdk', fetchAgpJdk(), []),
     track('privacy', fetchPrivacyCompliance(), null),
+    track('osShare', fetchOsShare(), null),
+    track('twBanks', fetchTaiwanBankApps(), []),
   ]);
 
   // Crash notes depend on which OS / Xcode versions are current
@@ -218,12 +227,14 @@ export async function fetchAllVersions(): Promise<AllVersions> {
     androidToolchain,
     iosActions: buildiOSActions(ios, iosToolchain, appleDeadline, {
       adoption: iosAdoption,
+      osShare,
       xcodeSupport,
       requirements: appleRequirements,
       announcedDevices,
       ciRunners: ciImages?.githubActions ?? [],
     }),
     androidActions: buildAndroidActions(android, googleDeadline, {
+      osShare,
       toolchain: androidToolchain,
       compat: androidCompat,
       billing: playBilling,
@@ -243,6 +254,14 @@ export async function fetchAllVersions(): Promise<AllVersions> {
     agpJdk,
     privacy,
     crashes,
+    osShare,
+    // Bank and app names are partially masked everywhere they're published (page and api.json)
+    twBanks: twBanks.map(b => ({
+      ...b,
+      bank: maskName(b.bank),
+      app: maskName(b.app),
+      ios: b.ios && { ...b.ios, url: anonymizeAppStoreUrl(b.ios.url) },
+    })),
     sources,
     cachedAt: new Date().toISOString(),
   };

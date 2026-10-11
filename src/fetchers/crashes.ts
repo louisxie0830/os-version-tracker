@@ -3,7 +3,7 @@ import { compareVersions } from './ios-toolchain.js';
 
 export interface CrashItem {
   platform: 'iOS' | 'Android' | '跨平台';
-  source: 'iOS release notes' | 'Xcode release notes' | 'Android release notes' | 'GitHub';
+  source: 'iOS release notes' | 'Xcode release notes' | 'Android release notes' | 'GitHub' | 'Stack Overflow';
   /** known = still open in the latest release; fixed = fixed in a recent release; reported = community report */
   kind: 'known' | 'fixed' | 'reported';
   title: string;
@@ -267,27 +267,91 @@ export async function fetchSdkCrashes(newOsPattern?: RegExp, days = 30, limit = 
     .slice(0, limit);
 }
 
+// ---------- Stack Overflow (official Stack Exchange API) ----------
+
+const SO_TAGS: Array<{ platform: CrashItem['platform']; tags: string[] }> = [
+  { platform: 'iOS', tags: ['ios', 'swift', 'swiftui', 'xcode', 'objective-c', 'uikit', 'iphone', 'ipad', 'watchos', 'visionos'] },
+  { platform: 'Android', tags: ['android', 'kotlin', 'android-jetpack-compose', 'android-studio', 'android-gradle-plugin', 'jetpack'] },
+  { platform: '跨平台', tags: ['flutter', 'react-native', 'kotlin-multiplatform', 'compose-multiplatform', 'expo', 'maui', 'capacitor'] },
+];
+
+interface StackQuestion {
+  title: string;
+  link: string;
+  tags: string[];
+  score: number;
+  answer_count: number;
+  view_count: number;
+  is_answered: boolean;
+  creation_date: number;
+}
+
+const decodeEntities = (s: string) => s
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+  .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+
+export function parseStackQuestions(items: StackQuestion[], newOsPattern?: RegExp, limit = 10): CrashItem[] {
+  return items
+    .flatMap(q => {
+      const platform = SO_TAGS.find(g => q.tags.some(t => g.tags.includes(t)))?.platform;
+      const title = decodeEntities(q.title);
+      // The search matches the body too, so keep only questions whose title is about a crash / hang
+      if (!platform || !CRASH_PATTERN.test(title)) return [];
+      return [{
+        platform,
+        source: 'Stack Overflow' as const,
+        kind: 'reported' as const,
+        title,
+        context: `Stack Overflow · ${q.tags.slice(0, 3).join(', ')}${q.is_answered ? ' · 已有解答' : ''}`,
+        url: q.link,
+        date: new Date(q.creation_date * 1000).toISOString().slice(0, 10),
+        reactions: q.score,
+        comments: q.answer_count,
+        newOs: newOsPattern?.test(title) ?? false,
+        views: q.view_count,
+      }];
+    })
+    // Votes matter most, then answers, then how many people looked
+    .sort((a, b) => (b.reactions * 5 + b.comments * 2 + b.views / 200) - (a.reactions * 5 + a.comments * 2 + a.views / 200))
+    .slice(0, limit)
+    .map(({ views: _views, ...item }) => item);
+}
+
+/**
+ * Mobile crash questions from the last `days` days. One request per refresh (full-text "crash",
+ * then filtered by mobile tags and crash wording here) keeps well within the 300/day anonymous quota
+ * at 48 builds a day. Stack Overflow's volume has dropped a lot, hence the 90-day window.
+ */
+export async function fetchStackOverflowCrashes(newOsPattern?: RegExp, days = 90, now = new Date()): Promise<CrashItem[]> {
+  const from = Math.floor((now.getTime() - days * 24 * 60 * 60 * 1000) / 1000);
+  const url = `https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=creation&q=crash&fromdate=${from}&site=stackoverflow&pagesize=100`;
+  const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`Stack Exchange API failed: ${res.status}`);
+  const data = await res.json() as { items?: StackQuestion[]; error_message?: string };
+  if (!data.items) throw new Error(data.error_message ?? 'Stack Exchange API returned no items');
+  return parseStackQuestions(data.items, newOsPattern);
+}
+
 export interface CrashReport {
   ios: CrashItem[];
   android: CrashItem[];
   sdks: CrashItem[];
+  community: CrashItem[];
 }
 
 export async function fetchCrashReport(opts: { iosMajor?: string; androidMajor?: string; xcodeNotesUrl?: string }): Promise<CrashReport> {
   const newOs = [opts.iosMajor && `iOS ${opts.iosMajor}`, opts.androidMajor && `Android ${opts.androidMajor}`].filter(Boolean);
   const newOsPattern = newOs.length ? new RegExp(newOs.map(v => `\\b${v!.replace(' ', '\\s*')}\\b`).join('|'), 'i') : undefined;
-  const [ios, android, sdks] = await Promise.allSettled([
+  const [ios, android, sdks, community] = await Promise.allSettled([
     opts.iosMajor ? fetchAppleCrashes(opts.iosMajor, opts.xcodeNotesUrl) : Promise.resolve([]),
     opts.androidMajor ? fetchAndroidCrashes(opts.androidMajor) : Promise.resolve([]),
     fetchSdkCrashes(newOsPattern),
+    fetchStackOverflowCrashes(newOsPattern),
   ]);
-  for (const [label, r] of [['Apple', ios], ['Android', android], ['GitHub', sdks]] as const) {
+  for (const [label, r] of [['Apple', ios], ['Android', android], ['GitHub', sdks], ['Stack Overflow', community]] as const) {
     if (r.status === 'rejected') console.warn(`[crashes] ${label} failed (${(r.reason as Error).message})`);
   }
-  if ([ios, android, sdks].every(r => r.status === 'rejected')) throw new Error('All crash sources failed');
-  return {
-    ios: ios.status === 'fulfilled' ? ios.value : [],
-    android: android.status === 'fulfilled' ? android.value : [],
-    sdks: sdks.status === 'fulfilled' ? sdks.value : [],
-  };
+  if ([ios, android, sdks, community].every(r => r.status === 'rejected')) throw new Error('All crash sources failed');
+  const value = <T,>(r: PromiseSettledResult<T[]>) => r.status === 'fulfilled' ? r.value : [];
+  return { ios: value(ios), android: value(android), sdks: value(sdks), community: value(community) };
 }

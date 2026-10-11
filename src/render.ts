@@ -3,9 +3,14 @@ import { deadlineId } from './calendar.js';
 import { buildNotificationsJson, type TrackedItem } from './changes.js';
 import { checkProject, type ProjectConfig } from './checker.js';
 import type { CrashItem } from './fetchers/crashes.js';
+import type { VersionShare } from './fetchers/os-share.js';
 import { compareVersions } from './fetchers/ios-toolchain.js';
 import { zhDate, zhPlatform, zhSdk } from './insights.js';
 import { esc, renderActions, STATUS_LABEL } from './render-actions.js';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { markdownToHtml } from './markdown.js';
 import type { ActionStatus, Deadline, iOSAdoption, NewsItem, OSVersionInfo, SubmissionDeadline, ToolVersion } from './types.js';
 
 export interface RenderOptions {
@@ -141,10 +146,58 @@ function renderAdoptionBar(label: string, shares: iOSAdoption['allDevices']): st
   </div>`;
 }
 
+/** Stacked bar of the 4 newest majors (plus "更早") */
+function renderShareBar(label: string, platform: 'ios' | 'android', byMajor: VersionShare[]): string {
+  const known = byMajor.filter(m => m.version !== '其他');
+  const head = known.slice(0, 4);
+  const rest = Math.round(byMajor.filter(m => !head.includes(m)).reduce((n, m) => n + m.share, 0) * 10) / 10;
+  const name = (v: string) => (platform === 'ios' ? `iOS ${v}` : `Android ${v}`);
+  const segs = [...head.map(m => ({ name: name(m.version), short: m.version, share: m.share })), ...(rest > 0 ? [{ name: '更早', short: '更早', share: rest }] : [])];
+  return `<div class="adoption-row">
+    <div class="adoption-label">${label}</div>
+    <div class="adoption-bar">${segs.map((sg, i) => `<span class="seg seg-${Math.min(i, 2)}" style="width:${sg.share}%" title="${esc(sg.name)} ${sg.share}%">${sg.share >= 8 ? `${esc(sg.short)} · ${Math.round(sg.share)}%` : ''}</span>`).join('')}</div>
+  </div>`;
+}
+
+function renderVersionDistribution(platform: 'ios' | 'android', data: AllVersions): string {
+  const share = data.osShare;
+  const tw = share?.[platform].TW;
+  const ww = share?.[platform].ww;
+  if (!share || (!tw && !ww)) return '';
+  const name = platform === 'ios' ? 'iOS' : 'Android';
+  const base = tw ?? ww!;
+  // Rows until ~99.5% is covered: older versions don't change the decision
+  const rows: string[] = [];
+  for (const c of base.coverage) {
+    const w = ww?.coverage.find(x => x.min === c.min);
+    rows.push(`<tr><td class="row-title" data-label="最低支援版本"><strong>${name} ${esc(c.min)}</strong>${c.api ? ` <span class="tl-source">API ${c.api}</span>` : ''} 以上</td>
+      <td data-label="台灣">${tw ? `${tw.coverage.find(x => x.min === c.min)?.covered ?? '—'}%` : '—'}</td>
+      <td data-label="全球">${w ? `${w.covered}%` : '—'}</td></tr>`);
+    if (c.covered >= 99.5 || rows.length >= 8) break;
+  }
+  const top = (tw ?? ww)!.topVersions.map(v => `<span>${esc(platform === 'ios' ? v.version : `Android ${v.version}`)} <strong>${v.share}%</strong></span>`).join('');
+  return `<div class="subhead">${name} 版本分布 <span class="subhead-note">StatCounter · ${esc(share.month)} · 行動裝置</span></div>
+  <div class="adoption">
+    ${tw ? renderShareBar('台灣', platform, tw.byMajor) : ''}
+    ${ww ? renderShareBar('全球', platform, ww.byMajor) : ''}
+  </div>
+  <div class="share-grid">
+    <div class="table-wrap share-table"><table class="compat-table">
+      <thead><tr><th>最低支援版本（${platform === 'ios' ? 'Deployment Target' : 'minSdk'}）</th><th>台灣</th><th>全球</th></tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table></div>
+    <div class="share-top">
+      <div class="tile-label">台灣最多人使用的版本</div>
+      <div class="share-chips">${top}</div>
+      <p class="tl-source">占比以已知版本計算；「涵蓋」= 該版本以上的裝置比例。<a href="${esc(base.url)}" target="_blank" rel="noopener">查看 StatCounter 原始資料</a></p>
+    </div>
+  </div>`;
+}
+
 function renderAdoption(adoption: iOSAdoption | null): string {
   if (!adoption) return '';
   const measured = adoption.measuredAt ? `統計至 ${esc(zhDate(adoption.measuredAt))}` : '';
-  return `<div class="subhead">iOS 版本採用率 <span class="subhead-note">Apple 官方數據 ${measured}</span></div>
+  return `<div class="subhead">iOS 採用率（Apple 官方） <span class="subhead-note">App Store 交易裝置 ${measured}</span></div>
   <div class="adoption">
     ${renderAdoptionBar('近四年推出的裝置', adoption.recentDevices)}
     ${renderAdoptionBar('所有裝置', adoption.allDevices)}
@@ -464,7 +517,7 @@ function renderCrashList(title: string, items: CrashItem[], note: string, limit 
           <span class="crash-context">${esc(c.context)}</span>
         </div>
         <a class="crash-title" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>
-        ${c.source === 'GitHub' ? `<div class="tl-source">${c.date ? `${esc(c.date)} 回報 · ` : ''}👍 ${c.reactions ?? 0} · 💬 ${c.comments ?? 0}</div>` : ''}
+        ${c.source === 'GitHub' || c.source === 'Stack Overflow' ? `<div class="tl-source">${c.date ? `${esc(c.date)} ${c.source === 'GitHub' ? '回報' : '發問'} · ` : ''}${c.source === 'GitHub' ? '👍' : '▲'} ${c.reactions ?? 0} · ${c.source === 'GitHub' ? '💬' : '回答'} ${c.comments ?? 0}</div>` : ''}
       </li>`).join('')}</ul>`
     : '<div class="case-body empty">目前沒有相關的閃退紀錄。</div>';
   return `<div class="case">
@@ -484,11 +537,19 @@ function renderCrashesSection(data: AllVersions): string {
   const androidMajor = data.android.find(v => !v.isBeta)?.version.match(/\d+/)?.[0];
   return `<section class="panel" id="crashes">
     <h2>近期閃退與當機</h2>
-    <p class="table-note">從官方 release notes 整理出與閃退、當機、無回應相關的已知問題與修正，加上熱門 SDK 在 GitHub 上近 30 天的閃退回報（依 👍 數排序）。升級系統或 SDK 前可以先看這裡。</p>
+    <p class="table-note">從官方 release notes 整理出與閃退、當機、無回應相關的已知問題與修正，加上熱門 SDK 在 GitHub 上近 30 天的閃退回報，以及 Stack Overflow 上的社群討論。升級系統或 SDK 前可以先看這裡。</p>
     <div class="crash-grid">
       ${renderCrashList(`iOS ${iosMajor ?? ''} 與 Xcode`, c.ios, 'Apple 官方 release notes 的 Known Issues / Resolved Issues')}
       ${renderCrashList(`Android ${androidMajor ?? ''}`, c.android, 'Android 官方 release notes（最新 QPR beta）的已知問題與修正')}
       ${renderCrashList('熱門 SDK（GitHub 近 30 天）', c.sdks, 'Firebase、Facebook、React Native、Flutter、Lottie、Glide、OkHttp、Sentry 等 18 個 repo；社群回報，未必已確認', 10)}
+      ${renderCrashList('社群討論（Stack Overflow 近 90 天）', c.community, '依票數與回答數排序；標題含閃退、當機、無回應的 iOS / Android / 跨平台問題')}
+    </div>
+    <div class="forum-links">
+      <span>Apple Developer Forums（需在瀏覽器開啟）：</span>
+      <a href="https://developer.apple.com/forums/topics/community" target="_blank" rel="noopener">社群主題</a>
+      <a href="https://developer.apple.com/forums/search?q=crash" target="_blank" rel="noopener">搜尋 crash</a>
+      <a href="https://developer.apple.com/forums/search?q=hang" target="_blank" rel="noopener">搜尋 hang</a>
+      <a href="https://developer.apple.com/forums/topics/developer-tools-and-services/developer-tools-and-services-xcode" target="_blank" rel="noopener">Xcode 討論區</a>
     </div>
     ${renderSources(data, ['crashes'])}
   </section>`;
@@ -513,6 +574,86 @@ function renderCiTable(ci: AllVersions['ciImages']): string {
     <thead><tr><th>Runner</th><th>架構</th><th>macOS</th><th>預設 Xcode</th><th>已安裝的 Xcode</th><th>映像檔日期</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>${cloud}`;
+}
+
+const ANDROID_API_BY_VERSION: Record<string, number> = {
+  '5.0': 21, '5.1': 22, '6.0': 23, '7.0': 24, '7.1': 25, '8.0': 26, '8.1': 27, '9': 28, '10': 29, '11': 30, '12': 31, '13': 33, '14': 34, '15': 35, '16': 36,
+};
+
+function androidApi(version: string): number | undefined {
+  return ANDROID_API_BY_VERSION[version] ?? ANDROID_API_BY_VERSION[version.replace(/\.0$/, '')] ?? ANDROID_API_BY_VERSION[`${version}.0`];
+}
+
+/** "8 家：iOS 13 · 9 家：iOS 15 …" grouped by major version, most common first */
+function countByMajor(values: string[], prefix: string): string {
+  const counts = new Map<string, number>();
+  for (const v of values) {
+    const major = v.match(/^\d+/)?.[0];
+    if (major) counts.set(major, (counts.get(major) ?? 0) + 1);
+  }
+  return [...counts]
+    .sort((a, b) => Number(a[0]) - Number(b[0]))
+    .map(([major, n]) => `<span>${prefix} ${major}<strong>${n} 家</strong></span>`)
+    .join('');
+}
+
+function renderBanksSection(data: AllVersions): string {
+  const banks = data.twBanks;
+  if (!banks.length) return '';
+  const ios = banks.flatMap(b => b.ios ? [b.ios.minOs] : []);
+  const android = banks.flatMap(b => b.android ? [b.android.minOs] : []);
+  const sorted = (list: string[]) => [...list].sort(compareVersions);
+  const strictestIos = sorted(ios).at(-1);
+  const strictestAndroid = sorted(android.filter(v => /^\d/.test(v))).at(-1);
+  const rows = banks.map(b => {
+    const api = b.android ? androidApi(b.android.minOs) : undefined;
+    return `<tr>
+      <td class="row-title" data-label="銀行"><strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}</div></td>
+      <td data-label="最低 iOS">${b.ios ? `<a href="${esc(b.ios.url)}" target="_blank" rel="noopener">iOS ${esc(b.ios.minOs)}</a>` : '—'}</td>
+      <td data-label="最低 Android">${b.android ? `<span><a href="${esc(b.android.url)}" target="_blank" rel="noopener">Android ${esc(b.android.minOs)}</a>${api ? ` <span class="tl-source">API ${api}</span>` : ''}</span>` : '—'}</td>
+      <td class="bank-updated" data-label="最近更新">${esc([b.ios?.updated && `iOS ${b.ios.updated}`, b.android?.updated && `Android ${b.android.updated}`].filter(Boolean).join(' · ') || '—')}</td>
+    </tr>`;
+  }).join('');
+  return `<section class="panel" id="banks">
+    <h2>台灣銀行 App 支援版本</h2>
+    <p class="table-note">各銀行官方行動銀行 App 在 App Store 與 Google Play（台灣區）標示的最低支援版本，每次更新網站時重新抓取。可作為金融業 App 設定 Deployment Target / minSdk 的業界參考。銀行與 App 名稱以部分遮罩顯示；商店標示的版本不代表銀行的官方支援政策。</p>
+    <div class="bank-summary">
+      <div><div class="tile-label">最低 iOS 分布</div><div class="share-chips">${countByMajor(ios, 'iOS')}</div></div>
+      <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>
+      <div class="tl-source">共 ${banks.length} 個 App；要求最高：iOS ${esc(strictestIos ?? '—')}、Android ${esc(strictestAndroid ?? '—')}</div>
+    </div>
+    <div class="table-wrap"><table class="compat-table stack-on-mobile bank-table">
+      <thead><tr><th>銀行 / App</th><th>最低 iOS</th><th>最低 Android</th><th>最近更新</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    ${renderSources(data, ['twBanks'])}
+  </section>`;
+}
+
+const REPO_BLOB = 'https://github.com/louisxie0830/os-version-tracker/blob/master';
+
+/** The disclaimer files live at the repository root, next to src/ and dist/ */
+function readLegal(file: string): string | null {
+  try {
+    return readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', file), 'utf8');
+  } catch {
+    return null;
+  }
+}
+
+function renderLegalSection(): string {
+  const zh = readLegal('DISCLAIMER.md');
+  const en = readLegal('DISCLAIMER.en.md');
+  if (!zh && !en) return '';
+  // The documents' own title is the panel heading, so drop it from the body
+  const body = (md: string) => markdownToHtml(md.replace(/^# .*\n/, ''), { relativeBase: REPO_BLOB, headingOffset: 2 });
+  return `<section class="panel" id="legal">
+    <h2>免責聲明與智慧財產權 · Disclaimer</h2>
+    <p class="legal-lead">本網站為非官方專案，與 Apple、Google 及所提及的公司、銀行均無關係；商標與引用內容的權利屬於各權利人。資料自動抓取、僅供參考，不構成任何專業建議。本網站不使用 Cookie、不追蹤、不蒐集個人資料。</p>
+    <p class="legal-lead">This is an unofficial project, not affiliated with Apple, Google or any company or bank mentioned. Trademarks and quoted content belong to their owners. Data is collected automatically, for reference only, and is not professional advice. No cookies, tracking or personal data collection.</p>
+    ${zh ? `<details class="legal-doc"><summary>閱讀完整中文版</summary><div class="legal-body">${body(zh)}</div></details>` : ''}
+    ${en ? `<details class="legal-doc" lang="en"><summary>Read the full English version</summary><div class="legal-body">${body(en)}</div></details>` : ''}
+  </section>`;
 }
 
 function renderPrivacySection(data: AllVersions): string {
@@ -1036,7 +1177,10 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .check-results.single { grid-template-columns: 1fr; }
 
     /* Crashes */
-    .crash-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .crash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .forum-links { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 14px; font-size: 13px; color: var(--muted); }
+    .forum-links a { color: var(--accent-deep); font-weight: 600; text-decoration: none; }
+    .forum-links a:hover { text-decoration: underline; }
     .crash-list { list-style: none; margin: 0; padding: 0; }
     .crash-list li { padding: 12px 18px; display: grid; gap: 4px; overflow-wrap: anywhere; }
     .crash-list li + li { border-top: 1px solid rgba(13, 150, 212, 0.12); }
@@ -1146,6 +1290,35 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .toast-action { flex: none; cursor: pointer; font: inherit; font-size: 12.5px; padding: 4px 12px; }
     .toast-close { flex: none; border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; }
 
+    /* Version distribution */
+    .share-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; margin-top: 14px; align-items: start; }
+    .share-top { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 16px; display: grid; gap: 8px; }
+    .share-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .share-chips span { font-size: 13px; background: var(--bg); border: 1px solid rgba(13, 150, 212, 0.14); border-radius: 999px; padding: 2px 10px; }
+    .share-chips strong { color: var(--accent-deep); }
+    .share-top a { color: var(--accent-deep); }
+    .share-table .compat-table { white-space: normal; }
+    .share-table td:not(:first-child), .share-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+
+    /* Taiwan banks */
+    .bank-summary { display: grid; gap: 10px; margin-bottom: 14px; }
+    .bank-summary .share-chips strong { margin-left: 6px; }
+    .bank-table a { color: var(--accent-deep); text-decoration: none; font-weight: 600; }
+    .bank-table a:hover { text-decoration: underline; }
+
+    /* Legal */
+    .intro-legal { margin-left: 10px; font-size: 12.5px; color: var(--muted); }
+    .legal-lead { font-size: 13.5px; color: var(--muted); margin: 0 0 8px; }
+    .legal-doc { margin-top: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+    .legal-doc summary { cursor: pointer; padding: 12px 16px; font-weight: 700; color: var(--accent-deep); }
+    .legal-body { padding: 0 20px 16px; font-size: 13.5px; line-height: 1.75; overflow-wrap: anywhere; }
+    .legal-body h3 { font-size: 15px; margin: 18px 0 6px; }
+    .legal-body ul { padding-left: 1.3em; margin: 6px 0; }
+    .legal-body a { color: var(--accent-deep); }
+    .legal-body code { background: var(--bg); padding: 0 4px; border-radius: 4px; }
+    .legal-body .table-wrap { margin: 8px 0; }
+    .legal-table { white-space: normal; }
+
     /* Deadlines */
     .deadline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
     .deadline-date { font-size: 17px; font-weight: 700; color: var(--accent-deep); }
@@ -1183,7 +1356,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .adoption-row { grid-template-columns: 1fr; gap: 4px; }
       .news li { flex-wrap: wrap; padding: 10px 16px; }
       .tl-item { flex-direction: column; gap: 4px; padding: 14px 16px; }
-      .check-form, .check-results, .crash-grid, .privacy-links { grid-template-columns: 1fr; }
+      .check-form, .check-results, .crash-grid, .privacy-links, .share-grid { grid-template-columns: 1fr; }
       /* Tables become one card per row, each value labelled, instead of clipping columns */
       .table-wrap { border: 0; background: transparent; overflow: visible; }
       .stack-on-mobile, .stack-on-mobile tbody, .stack-on-mobile tr, .stack-on-mobile td { display: block; width: 100%; }
@@ -1197,6 +1370,10 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .stack-on-mobile td.row-title { border-top: 0; justify-content: flex-start; text-align: left; font-size: 15px; padding-top: 0; }
       .stack-on-mobile td.row-title::before { content: none; }
       .wrap-cell { min-width: 0; }
+      .table-wrap.share-table { border: 1px solid var(--line); background: #fff; }
+      .share-table td, .share-table th { padding: 8px 10px; }
+      .bank-table .bank-updated { display: none; }
+      .bank-table tr { padding: 8px 14px; margin-bottom: 8px; }
       /* iOS Safari zooms the page when focusing inputs smaller than 16px */
       .check-form input[type=text] { font-size: 16px; }
       .summary { white-space: normal; max-width: 100%; border-radius: var(--r-sm); }
@@ -1229,6 +1406,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       <a class="btn" href="#crashes">閃退</a>
       <a class="btn" href="#compat">相容性</a>
       <a class="btn" href="#deadlines">上架期限</a>
+      <a class="btn" href="#banks">銀行</a>
       <a class="btn" href="#privacy">隱私</a>
       <a class="btn primary" href="api.json">JSON API</a>
       <div class="notif">
@@ -1255,7 +1433,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
   <script src="notifications.js" defer></script>
 
   <main class="wrap">
-    <p class="intro">iOS 與 Android 最新版本，以及隨之而來的 Xcode、SDK 與商店上架需求。</p>
+    <p class="intro">iOS 與 Android 最新版本，以及隨之而來的 Xcode、SDK 與商店上架需求。<a class="intro-legal" href="#legal">免責聲明 · Disclaimer</a></p>
 
     ${renderRecent(data)}
 
@@ -1264,20 +1442,24 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     ${renderCrashesSection(data)}
 
     ${renderPlatformSection('ios', 'Apple iOS', ios,
-      renderActions(data.iosActions) + renderAdoption(data.iosAdoption) + renderTiles(iOSTiles(data.iosToolchain, data.announcedDevices))
+      renderActions(data.iosActions) + renderVersionDistribution('ios', data) + renderAdoption(data.iosAdoption) + renderTiles(iOSTiles(data.iosToolchain, data.announcedDevices))
       + renderNews('Apple 開發者公告', data.appleNews, 'https://developer.apple.com/news/')
-      + renderSources(data, ['ios', 'appleDeadline', 'appleRequirements', 'iosToolchain', 'xcodeSupport', 'adoption', 'appleNews']))}
+      + renderSources(data, ['ios', 'appleDeadline', 'appleRequirements', 'iosToolchain', 'xcodeSupport', 'adoption', 'osShare', 'appleNews']))}
 
     ${renderPlatformSection('android', 'Android', android,
-      renderActions(data.androidActions) + renderTiles(androidTiles(data.androidToolchain))
+      renderActions(data.androidActions) + renderVersionDistribution('android', data) + renderTiles(androidTiles(data.androidToolchain))
       + renderNews('Android 開發者部落格', data.androidNews, 'https://android-developers.googleblog.com/')
-      + renderSources(data, ['android', 'googleDeadline', 'androidToolchain', 'androidCompat', 'playBilling', 'playPolicy', 'pageSize', 'androidNews']))}
+      + renderSources(data, ['android', 'googleDeadline', 'androidToolchain', 'androidCompat', 'playBilling', 'playPolicy', 'pageSize', 'osShare', 'androidNews']))}
 
     ${renderCompatSection(data)}
 
     ${renderDeadlinesSection(data)}
 
+    ${renderBanksSection(data)}
+
     ${renderPrivacySection(data)}
+
+    ${renderLegalSection()}
 
   </main>
   <div class="offline-banner" id="offline" hidden>目前離線，顯示的是上次抓取的資料</div>

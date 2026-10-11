@@ -5,6 +5,7 @@ import {
   parseAndroidReleaseNotes,
   parseAppleReleaseNotes,
   parseGithubIssues,
+  parseStackQuestions,
   pickiOSReleaseNotes,
 } from '../src/fetchers/crashes.ts';
 
@@ -84,4 +85,19 @@ test('parseGithubIssues maps repos to platforms, flags new-OS reports and drops 
     ['iOS', true, 'firebase/firebase-ios-sdk'],
     ['Android', false, 'bumptech/glide'],
   ]);
+});
+
+test('parseStackQuestions keeps mobile crash questions, classifies by tag and ranks by votes', () => {
+  const q = (title: string, tags: string[], score = 0, answers = 0) => ({
+    title, link: `https://stackoverflow.com/q/${title.length}`, tags, score, answer_count: answers, view_count: 100, is_answered: answers > 0, creation_date: 1790000000,
+  });
+  const items = parseStackQuestions([
+    q('App crashes on iOS 27 launch', ['ios', 'swift'], 1, 1),
+    q('Which YouTube player should I use?', ['flutter', 'ios']),
+    q('ClassNotFoundException crash in release build', ['android', 'kotlin'], 5, 2),
+    q('Server crashes under load', ['node.js']),
+    q('Expo Go app freezes &amp; hangs on start', ['react-native', 'expo']),
+  ], /\biOS\s*27\b/i);
+  assert.deepEqual(items.map(i => [i.platform, i.newOs]), [['Android', false], ['iOS', true], ['跨平台', false]]);
+  assert.equal(items[2].title, 'Expo Go app freezes & hangs on start', 'decodes HTML entities');
 });

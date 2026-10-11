@@ -2,6 +2,7 @@ import { minXcodeForiOSSdk } from './fetchers/ios-toolchain.js';
 import { compareVersions } from './fetchers/ios-toolchain.js';
 import type { PlayBillingInfo } from './fetchers/requirements.js';
 import type { GithubMacosRunner } from './fetchers/ci-images.js';
+import type { OsShare } from './fetchers/os-share.js';
 import type {
   ActionItem,
   ActionStatus,
@@ -61,12 +62,13 @@ export function buildiOSActions(
     requirements?: Deadline[];
     announcedDevices?: AnnouncedDevice[];
     ciRunners?: GithubMacosRunner[];
+    osShare?: OsShare | null;
   } = {},
   now = new Date(),
 ): ActionItem[] {
   const actions: ActionItem[] = [];
   const releases = toolchain?.releases ?? [];
-  const { adoption = null, xcodeSupport = [], requirements = [], announcedDevices = [], ciRunners = [] } = extra;
+  const { adoption = null, xcodeSupport = [], requirements = [], announcedDevices = [], ciRunners = [], osShare = null } = extra;
 
   // 1. App Store SDK requirement → which Xcode / macOS you need
   const iosReq = deadline?.requirements.find(r => /\biOS\b/.test(r.platform) || /\biOS\b/.test(r.sdk));
@@ -219,6 +221,8 @@ export function buildiOSActions(
   // 4. Minimum deployment target, from Apple's official usage share
   const deployment = adoption ? deploymentTargetAction(adoption) : null;
   if (deployment) actions.push(deployment);
+  const taiwan = osShare ? minVersionAction('iOS', osShare) : null;
+  if (taiwan) actions.push(taiwan);
 
   return actions;
 }
@@ -246,6 +250,27 @@ function deploymentTargetAction(adoption: iOSAdoption): ActionItem | null {
       + (previousRecent ? `（近四年推出的裝置為 ${previousRecent.covered}%）` : '')
       + `。${measured}`,
     url: 'https://developer.apple.com/support/app-store/',
+  };
+}
+
+const COVERAGE_TARGET = 95;
+
+/** Suggests the lowest major version whose "this or newer" share in Taiwan reaches COVERAGE_TARGET */
+function minVersionAction(platform: 'iOS' | 'Android', osShare: OsShare): ActionItem | null {
+  const key = platform === 'iOS' ? 'ios' : 'android';
+  const tw = osShare[key].TW;
+  if (!tw) return null;
+  const pick = tw.coverage.find(c => c.covered >= COVERAGE_TARGET);
+  if (!pick) return null;
+  const ww = osShare[key].ww?.coverage.find(c => c.min === pick.min);
+  const label = platform === 'iOS' ? `iOS ${pick.min}` : `Android ${pick.min}${pick.api ? `（API ${pick.api}）` : ''}`;
+  const setting = platform === 'iOS' ? 'Deployment Target' : 'minSdk';
+  return {
+    status: 'info',
+    title: `${setting} 參考：${label}${label.endsWith('）') ? '' : ' '}以上涵蓋台灣 ${pick.covered}% 裝置`,
+    detail: `依 ${osShare.month} 台灣行動裝置的版本占比，支援到 ${label} 可涵蓋 ${pick.covered}%`
+      + (ww ? `（全球 ${ww.covered}%）` : '') + `。各版本的完整分布見下方「版本分布」。資料來源：StatCounter。`,
+    url: tw.url,
   };
 }
 
@@ -285,11 +310,12 @@ export function buildAndroidActions(
     billing?: PlayBillingInfo;
     policies?: Deadline[];
     pageSize?: Deadline[];
+    osShare?: OsShare | null;
   } = {},
   now = new Date(),
 ): ActionItem[] {
   const actions: ActionItem[] = [];
-  const { toolchain = null, compat = null, billing, policies = [], pageSize = [] } = extra;
+  const { toolchain = null, compat = null, billing, policies = [], pageSize = [], osShare = null } = extra;
   const toolsFor = (api: number) => {
     const row = compat?.apiLevels.find(r => Number(r.api) === api);
     return row ? `需要 AGP ${row.minAgp} 以上、Android Studio ${row.minStudio} 以上。` : '';
@@ -416,6 +442,10 @@ export function buildAndroidActions(
       });
     }
   }
+
+  // 1f. minSdk: lowest version that still reaches ~95% of Taiwanese devices
+  const minSdk = osShare ? minVersionAction('Android', osShare) : null;
+  if (minSdk) actions.push(minSdk);
 
   // 2. Latest Android release affects every installed app, regardless of targetSdk
   const stableMajor = stable ? majorOf(stable.version) : undefined;

@@ -1,0 +1,35 @@
+{
+  "resultCount": 3,
+  "results": [
+    {
+      "trackId": 373500505,
+      "trackName": "國泰世華網路銀行CUBE",
+      "sellerName": "Cathay United Bank",
+      "bundleId": "com.cathaybk.cathaybk",
+      "minimumOsVersion": "15.0",
+      "version": "7.10.1701",
+      "currentVersionReleaseDate": "2026-10-06T02:38:46Z",
+      "trackViewUrl": "https://apps.apple.com/tw/app/%E5%9C%8B%E6%B3%B0%E4%B8%96%E8%8F%AF%E7%B6%B2%E8%B7%AF%E9%8A%80%E8%A1%8Ccube/id373500505?uo=4"
+    },
+    {
+      "trackId": 417698185,
+      "trackName": "中國信託行動銀行",
+      "sellerName": "CTBC Bank Co., Ltd.",
+      "bundleId": "com.chinatrust.mobilebank",
+      "minimumOsVersion": "14",
+      "version": "5.2.26",
+      "currentVersionReleaseDate": "2026-08-21T16:32:29Z",
+      "trackViewUrl": "https://apps.apple.com/tw/app/%E4%B8%AD%E5%9C%8B%E4%BF%A1%E8%A8%97%E8%A1%8C%E5%8B%95%E9%8A%80%E8%A1%8C/id417698185?uo=4"
+    },
+    {
+      "trackId": 6479990131,
+      "trackName": "Fubon+ 台北富邦行動銀行",
+      "sellerName": "TAIPEI FUBON COMMERCIAL BANK CO., LTD.",
+      "bundleId": "com.fubon.aibank",
+      "minimumOsVersion": "13.0",
+      "version": "1.3.3",
+      "currentVersionReleaseDate": "2026-10-01T09:54:58Z",
+      "trackViewUrl": "https://apps.apple.com/tw/app/fubon-%E5%8F%B0%E5%8C%97%E5%AF%8C%E9%82%A6%E8%A1%8C%E5%8B%95%E9%8A%80%E8%A1%8C/id6479990131?uo=4"
+    }
+  ]
+}
