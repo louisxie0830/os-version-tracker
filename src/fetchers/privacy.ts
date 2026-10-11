@@ -1,6 +1,6 @@
 import { cleanText, fetchHtml } from './html-table.js';
+import { SLOW_NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 
-const TIMEOUT_MS = 20_000;
 const APPLE_DOCS_JSON = 'https://developer.apple.com/tutorials/data/documentation';
 export const REQUIRED_REASON_TYPES_JSON_URL = `${APPLE_DOCS_JSON}/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype.json`;
 export const REQUIRED_REASON_DOC_URL = 'https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api';

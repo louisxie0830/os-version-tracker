@@ -78,7 +78,18 @@ export interface ActionItem {
   url?: string;
   /** Derived from historical patterns rather than an official announcement */
   estimated?: boolean;
+  /** Where the item comes from; defaults to official (or estimate when `estimated`) */
+  basis?: ActionBasis;
+  /** Project checker: which upgrade step the item belongs to, and the version to move to */
+  step?: UpgradeStep;
+  target?: string;
 }
+
+/** official: vendor requirement or compatibility table · estimate: projected from past patterns ·
+ *  community: unconfirmed reports · reference: third-party statistics */
+export type ActionBasis = 'official' | 'estimate' | 'community' | 'reference';
+
+export type UpgradeStep = 'macos' | 'xcode' | 'deployment' | 'jdk' | 'gradle' | 'agp' | 'kotlin' | 'targetSdk' | 'billing' | 'ndk';
 
 export interface NewsItem {
   title: string;

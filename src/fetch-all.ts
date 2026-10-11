@@ -30,6 +30,8 @@ import { fetchCrashReport, type CrashReport } from './fetchers/crashes.js';
 import { fetchOsShare, STATCOUNTER_URL, type OsShare } from './fetchers/os-share.js';
 import { fetchTaiwanBankApps, type TaiwanBankApp } from './fetchers/tw-banks.js';
 import { anonymizeAppStoreUrl, maskName } from './mask.js';
+import { createRefreshCache } from './refresh-cache.js';
+import { safeUrl } from './safe-url.js';
 import { buildAndroidActions, buildDeadlineTimeline, buildiOSActions, zhPlatform, zhSdk } from './insights.js';
 import { notifyWebhook, recentItems, recordItems, toTrackedItems, type TrackedItem } from './changes.js';
 import type {
@@ -80,7 +82,11 @@ export interface AllVersions {
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-export const SITE_URL = (process.env.SITE_URL ?? 'https://louisxie0830.github.io/os-version-tracker').replace(/\/$/, '');
+const DEFAULT_SITE_URL = 'https://louisxie0830.github.io/os-version-tracker';
+export const SITE_URL = (safeUrl(process.env.SITE_URL ?? DEFAULT_SITE_URL) ?? (() => {
+  console.warn(`[config] SITE_URL "${process.env.SITE_URL}" is not an http(s) URL; using ${DEFAULT_SITE_URL}`);
+  return DEFAULT_SITE_URL;
+})()).replace(/\/$/, '');
 
 const SOURCES = {
   ios: { label: 'Apple 軟體更新目錄 / Developer Releases', url: 'https://developer.apple.com/news/releases/' },
@@ -108,12 +114,10 @@ const SOURCES = {
 
 export type SourceKey = keyof typeof SOURCES;
 
-let cache: AllVersions | null = null;
 
 function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-let cacheTime = 0;
 
 /**
  * xcodereleases.com sometimes lags on a release's SDK (e.g. lists 27.0 for Xcode 27.1 RC);
@@ -132,12 +136,14 @@ function correctXcodeSdks(releases: XcodeRelease[], support: XcodeSupportRow[]):
   }
 }
 
-export async function fetchAllVersions(): Promise<AllVersions> {
-  const now = Date.now();
-  if (cache && now - cacheTime < CACHE_TTL_MS) {
-    return cache;
-  }
+/** Cached for CACHE_TTL_MS; concurrent callers share one in-flight refresh */
+const versionsCache = createRefreshCache(refreshAllVersions, CACHE_TTL_MS);
 
+export function fetchAllVersions(): Promise<AllVersions> {
+  return versionsCache.get();
+}
+
+async function refreshAllVersions(): Promise<AllVersions> {
   const sources = {} as Record<SourceKey, SourceInfo>;
   async function track<T>(key: SourceKey, task: Promise<T>, fallback: T): Promise<T> {
     try {
@@ -215,7 +221,7 @@ export async function fetchAllVersions(): Promise<AllVersions> {
   const { items: tracked, added } = recordItems(toTrackedItems({ deadlines: timeline, appleNews, androidNews, devices: announcedDevices, crashes: crashes?.sdks }));
   void notifyWebhook(added, SITE_URL);
 
-  cache = {
+  return {
     ios,
     android,
     appleDeadline,
@@ -265,7 +271,4 @@ export async function fetchAllVersions(): Promise<AllVersions> {
     sources,
     cachedAt: new Date().toISOString(),
   };
-  cacheTime = now;
-
-  return cache;
 }

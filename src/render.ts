@@ -1,12 +1,13 @@
 import { SITE_URL, type AllVersions, type SourceKey } from './fetch-all.js';
 import { deadlineId } from './calendar.js';
 import { buildNotificationsJson, type TrackedItem } from './changes.js';
-import { checkProject, type ProjectConfig } from './checker.js';
+import { checkProject, upgradePlan, type ProjectConfig } from './checker.js';
 import type { CrashItem } from './fetchers/crashes.js';
 import type { VersionShare } from './fetchers/os-share.js';
 import { compareVersions } from './fetchers/ios-toolchain.js';
 import { zhDate, zhPlatform, zhSdk } from './insights.js';
-import { esc, renderActions, STATUS_LABEL } from './render-actions.js';
+import { esc, externalLink, renderActions, renderUpgradePlan, STATUS_LABEL } from './render-actions.js';
+import { calendarSubscriptionUrl, safeUrl } from './safe-url.js';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,8 +37,9 @@ function renderTiles(tiles: Tile[]): string {
 
 function renderTileGrid(tiles: Tile[]): string {
   return `<div class="tile-grid">${tiles.map(t => {
-    const tag = t.url ? 'a' : 'div';
-    const href = t.url ? ` href="${esc(t.url)}" target="_blank" rel="noopener"` : '';
+    const url = safeUrl(t.url);
+    const tag = url ? 'a' : 'div';
+    const href = url ? ` href="${esc(url)}" target="_blank" rel="noopener noreferrer"` : '';
     const badge = t.preview ? '<span class="badge badge-beta badge-sm">預覽版</span>' : '';
     return `<${tag} class="tile"${href}>
       <div class="tile-label">${esc(t.label)}${badge}</div>
@@ -129,80 +131,88 @@ function renderNews(title: string, items: NewsItem[], moreUrl: string): string {
   return `<div class="case" style="margin-top:18px">
     <div class="case-head">
       <span class="case-no">${title}</span>
-      <a class="case-count" href="${esc(moreUrl)}" target="_blank" rel="noopener">查看全部 →</a>
+      ${externalLink(moreUrl, `查看全部 →`, 'case-count')}
     </div>
     <ul class="news">${items.map(n => `<li data-key="news:${esc(n.url)}">
       <span class="news-date">${esc(n.date)}</span>
       ${n.important ? '<span class="status status-urgent news-flag">重要</span>' : ''}
-      <a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>
+      ${externalLink(n.url, `${esc(n.title)}`)}
     </li>`).join('')}</ul>
   </div>`;
 }
 
-function renderAdoptionBar(label: string, shares: iOSAdoption['allDevices']): string {
-  return `<div class="adoption-row">
-    <div class="adoption-label">${label}</div>
-    <div class="adoption-bar">${shares.map((sh, i) => `<span class="seg seg-${Math.min(i, 2)}" style="width:${sh.value}%" title="${esc(sh.name)} ${sh.value}%">${sh.value >= 8 ? `${esc(sh.name.replace('Earlier', '更早'))} ${sh.value}%` : ''}</span>`).join('')}</div>
-  </div>`;
-}
 
 /** Stacked bar of the 4 newest majors (plus "更早") */
-function renderShareBar(label: string, platform: 'ios' | 'android', byMajor: VersionShare[]): string {
-  const known = byMajor.filter(m => m.version !== '其他');
-  const head = known.slice(0, 4);
-  const rest = Math.round(byMajor.filter(m => !head.includes(m)).reduce((n, m) => n + m.share, 0) * 10) / 10;
+
+interface BarRow { label: string; shares: Array<{ version: string; share: number }> }
+
+const BAR_COLORS = 4;
+
+/** Stacked bars where a version keeps the same colour in every row, plus a legend */
+function renderVersionBars(platform: 'ios' | 'android', rows: BarRow[]): string {
+  const versions = [...new Set(rows.flatMap(r => r.shares.map(s => s.version)).filter(v => /^\d/.test(v)))]
+    .sort((a, b) => compareVersions(b, a))
+    .slice(0, BAR_COLORS);
+  const colorOf = (v: string) => versions.indexOf(v);
   const name = (v: string) => (platform === 'ios' ? `iOS ${v}` : `Android ${v}`);
-  const segs = [...head.map(m => ({ name: name(m.version), short: m.version, share: m.share })), ...(rest > 0 ? [{ name: '更早', short: '更早', share: rest }] : [])];
-  return `<div class="adoption-row">
-    <div class="adoption-label">${label}</div>
-    <div class="adoption-bar">${segs.map((sg, i) => `<span class="seg seg-${Math.min(i, 2)}" style="width:${sg.share}%" title="${esc(sg.name)} ${sg.share}%">${sg.share >= 8 ? `${esc(sg.short)} · ${Math.round(sg.share)}%` : ''}</span>`).join('')}</div>
-  </div>`;
+  const bars = rows.map(row => {
+    const segs = versions.map(v => ({ v, share: row.shares.find(s => s.version === v)?.share ?? 0 })).filter(s => s.share > 0);
+    const rest = Math.max(0, Math.round((row.shares.reduce((n, s) => n + s.share, 0) - segs.reduce((n, s) => n + s.share, 0)) * 10) / 10);
+    const parts = [
+      ...segs.map(sg => `<span class="seg c${colorOf(sg.v)}" style="width:${sg.share}%" title="${esc(name(sg.v))} ${sg.share}%">${sg.share >= 9 ? `${Math.round(sg.share)}%` : ''}</span>`),
+      ...(rest > 0 ? [`<span class="seg c-rest" style="width:${rest}%" title="更早 ${rest}%">${rest >= 9 ? `${Math.round(rest)}%` : ''}</span>`] : []),
+    ];
+    return `<div class="adoption-row"><div class="adoption-label">${row.label}</div><div class="adoption-bar">${parts.join('')}</div></div>`;
+  }).join('');
+  const legend = [...versions.map(v => `<span><i class="c${colorOf(v)}"></i>${esc(name(v))}</span>`), '<span><i class="c-rest"></i>更早</span>'].join('');
+  return `<div class="adoption">${bars}</div><div class="bar-legend">${legend}</div>`;
 }
 
 function renderVersionDistribution(platform: 'ios' | 'android', data: AllVersions): string {
   const share = data.osShare;
   const tw = share?.[platform].TW;
   const ww = share?.[platform].ww;
+  const apple = platform === 'ios' ? data.iosAdoption : null;
   if (!share || (!tw && !ww)) return '';
   const name = platform === 'ios' ? 'iOS' : 'Android';
+  const appleShares = (list: Array<{ name: string; value: number }>) =>
+    list.map(s => ({ version: s.name.match(/\d+/)?.[0] ?? '更早', share: s.value }));
+  const rows: BarRow[] = [
+    ...(tw ? [{ label: '台灣', shares: tw.byMajor.filter(m => m.version !== '其他') }] : []),
+    ...(ww ? [{ label: '全球', shares: ww.byMajor.filter(m => m.version !== '其他') }] : []),
+    ...(apple ? [
+      { label: 'Apple 近四年裝置', shares: appleShares(apple.recentDevices) },
+      { label: 'Apple 所有裝置', shares: appleShares(apple.allDevices) },
+    ] : []),
+  ];
+  const sourceNote = `台灣、全球：StatCounter ${esc(share.month)}（網站流量估算）`
+    + (apple ? ` · Apple：App Store 交易裝置${apple.measuredAt ? `，統計至 ${esc(zhDate(apple.measuredAt))}` : ''}` : '');
   const base = tw ?? ww!;
   // Rows until ~99.5% is covered: older versions don't change the decision
-  const rows: string[] = [];
+  const coverageRows: string[] = [];
   for (const c of base.coverage) {
     const w = ww?.coverage.find(x => x.min === c.min);
-    rows.push(`<tr><td class="row-title" data-label="最低支援版本"><strong>${name} ${esc(c.min)}</strong>${c.api ? ` <span class="tl-source">API ${c.api}</span>` : ''} 以上</td>
+    coverageRows.push(`<tr><td class="row-title" data-label="最低支援版本"><strong>${name} ${esc(c.min)}</strong>${c.api ? ` <span class="tl-source">API ${c.api}</span>` : ''} 以上</td>
       <td data-label="台灣">${tw ? `${tw.coverage.find(x => x.min === c.min)?.covered ?? '—'}%` : '—'}</td>
       <td data-label="全球">${w ? `${w.covered}%` : '—'}</td></tr>`);
-    if (c.covered >= 99.5 || rows.length >= 8) break;
+    if (c.covered >= 99.5 || coverageRows.length >= 8) break;
   }
   const top = (tw ?? ww)!.topVersions.map(v => `<span>${esc(platform === 'ios' ? v.version : `Android ${v.version}`)} <strong>${v.share}%</strong></span>`).join('');
-  return `<div class="subhead">${name} 版本分布 <span class="subhead-note">StatCounter · ${esc(share.month)} · 行動裝置</span></div>
-  <div class="adoption">
-    ${tw ? renderShareBar('台灣', platform, tw.byMajor) : ''}
-    ${ww ? renderShareBar('全球', platform, ww.byMajor) : ''}
-  </div>
+  return `<div class="subhead">${name} 版本分布 <span class="subhead-note">${sourceNote}</span></div>
+  ${renderVersionBars(platform, rows)}
   <div class="share-grid">
     <div class="table-wrap share-table"><table class="compat-table">
       <thead><tr><th>最低支援版本（${platform === 'ios' ? 'Deployment Target' : 'minSdk'}）</th><th>台灣</th><th>全球</th></tr></thead>
-      <tbody>${rows.join('')}</tbody>
+      <tbody>${coverageRows.join('')}</tbody>
     </table></div>
     <div class="share-top">
       <div class="tile-label">台灣最多人使用的版本</div>
       <div class="share-chips">${top}</div>
-      <p class="tl-source">占比以已知版本計算；「涵蓋」= 該版本以上的裝置比例。<a href="${esc(base.url)}" target="_blank" rel="noopener">查看 StatCounter 原始資料</a></p>
+      <p class="tl-source">占比以已知版本計算；「涵蓋」= 該版本以上的裝置比例。${externalLink(base.url, `查看 StatCounter 原始資料`)}</p>
     </div>
   </div>`;
 }
 
-function renderAdoption(adoption: iOSAdoption | null): string {
-  if (!adoption) return '';
-  const measured = adoption.measuredAt ? `統計至 ${esc(zhDate(adoption.measuredAt))}` : '';
-  return `<div class="subhead">iOS 採用率（Apple 官方） <span class="subhead-note">App Store 交易裝置 ${measured}</span></div>
-  <div class="adoption">
-    ${renderAdoptionBar('近四年推出的裝置', adoption.recentDevices)}
-    ${renderAdoptionBar('所有裝置', adoption.allDevices)}
-  </div>`;
-}
 
 function renderVersionCard(v: OSVersionInfo): string {
   const isStable = !v.isBeta;
@@ -292,7 +302,7 @@ function taipeiTime(iso: string): string {
 
 function renderSources(data: AllVersions, keys: SourceKey[]): string {
   const items = keys.map(k => data.sources[k]).filter(Boolean).map(src => `<li>
-      <a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.label)}</a>
+      ${externalLink(src.url, `${esc(src.label)}`)}
       ${src.ok ? `<span class="src-time">${taipeiTime(src.fetchedAt)}</span>` : '<span class="src-fail">抓取失敗，資料可能不完整</span>'}
     </li>`).join('');
   return `<details class="sources"><summary>資料來源與抓取時間</summary><ul>${items}</ul></details>`;
@@ -388,7 +398,7 @@ function renderTimeline(data: AllVersions): string {
         <div class="tl-head">
           <span class="tl-platform tl-${d.platform === 'iOS' ? 'ios' : 'android'}">${d.platform}</span>
           <span class="status status-${status}">${text}</span>
-          <a class="tl-title" href="${esc(d.url)}" target="_blank" rel="noopener">${esc(d.title)}</a>
+          ${externalLink(d.url, `${esc(d.title)}`, 'tl-title')}
         </div>
         <div class="action-detail">${esc(d.detail)}${d.extensionDate ? `（可延長至 ${esc(zhDate(d.extensionDate))}）` : ''}</div>
         <div class="tl-source">來源：${esc(d.source)}</div>
@@ -415,13 +425,13 @@ const KIND_LABEL: Record<TrackedItem['kind'], string> = {
 const platformClass = (p: string) => p === 'iOS' ? 'tl-ios' : p === 'Android' ? 'tl-android' : 'tl-cross';
 
 function renderRecent(data: AllVersions): string {
-  const webcal = `${SITE_URL.replace(/^https?:/, 'webcal:')}/calendar.ics`;
+  const webcal = calendarSubscriptionUrl(SITE_URL) ?? 'calendar.ics';
   const list = data.recent.length
     ? `<ul class="news">${data.recent.slice(0, 8).map(item => `<li>
         <span class="news-date">${esc((item.firstSeen ?? item.date).slice(0, 10))}</span>
         <span class="tl-platform ${platformClass(item.platform)}">${esc(item.platform)}</span>
         <span class="status status-info news-flag">${KIND_LABEL[item.kind]}</span>
-        <a href="${esc(item.url)}" target="_blank" rel="noopener">${esc(item.title)}</a>
+        ${externalLink(item.url, `${esc(item.title)}`)}
       </li>`).join('')}</ul>`
     : '<div class="case-body empty">最近 7 天沒有新的上架規定或重要公告。</div>';
   return `<section class="panel" id="recent">
@@ -447,6 +457,7 @@ const CHECK_FIELDS: Array<{ name: keyof ProjectConfig; label: string; placeholde
   { name: 'xcode', label: 'Xcode 版本', placeholder: '例：26.3', group: 'iOS' },
   { name: 'macos', label: 'CI / 開發機 macOS', placeholder: '例：15.6', group: 'iOS' },
   { name: 'deployment', label: '最低部署版本（iOS）', placeholder: '例：15', group: 'iOS' },
+  { name: 'jdk', label: 'JDK', placeholder: '例：17', group: 'Android' },
   { name: 'agp', label: 'AGP', placeholder: '例：8.7.3', group: 'Android' },
   { name: 'gradle', label: 'Gradle', placeholder: '例：8.9', group: 'Android' },
   { name: 'kotlin', label: 'Kotlin', placeholder: '例：2.0.21', group: 'Android' },
@@ -462,7 +473,8 @@ function renderChecker(data: AllVersions, config: ProjectConfig | null, staticSi
   const group = (g: 'iOS' | 'Android') => CHECK_FIELDS.filter(f => f.group === g).map(field).join('');
   const results = config ? checkProject(config, data) : null;
   const resultHtml = results
-    ? `<div class="check-results${results.ios.length && results.android.length ? '' : ' single'}">
+    ? `${renderUpgradePlan('iOS', upgradePlan(results.ios, 'ios'))}${renderUpgradePlan('Android', upgradePlan(results.android, 'android'))}
+      <div class="check-results${results.ios.length && results.android.length ? '' : ' single'}">
         ${results.ios.length ? renderActions(results.ios, 'iOS 檢查結果', false) : ''}
         ${results.android.length ? renderActions(results.android, 'Android 檢查結果', false) : ''}
         ${!results.ios.length && !results.android.length ? '<div class="empty">沒有可檢查的項目，請至少填一個欄位。</div>' : ''}
@@ -497,6 +509,7 @@ function renderCheckerClient(data: AllVersions): string {
     googleDeadline: data.googleDeadline,
     androidCompat: data.androidCompat,
     androidToolchain: data.androidToolchain,
+    agpJdk: data.agpJdk,
   };
   return `<script type="application/json" id="checker-data">${JSON.stringify(subset).replace(/</g, '\\u003c')}</script>
     <script type="module" src="js/client/checker-client.js"></script>`;
@@ -516,7 +529,7 @@ function renderCrashList(title: string, items: CrashItem[], note: string, limit 
           ${c.newOs ? '<span class="status status-urgent">新系統相關</span>' : ''}
           <span class="crash-context">${esc(c.context)}</span>
         </div>
-        <a class="crash-title" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.title)}</a>
+        ${externalLink(c.url, `${esc(c.title)}`, 'crash-title')}
         ${c.source === 'GitHub' || c.source === 'Stack Overflow' ? `<div class="tl-source">${c.date ? `${esc(c.date)} ${c.source === 'GitHub' ? '回報' : '發問'} · ` : ''}${c.source === 'GitHub' ? '👍' : '▲'} ${c.reactions ?? 0} · ${c.source === 'GitHub' ? '💬' : '回答'} ${c.comments ?? 0}</div>` : ''}
       </li>`).join('')}</ul>`
     : '<div class="case-body empty">目前沒有相關的閃退紀錄。</div>';
@@ -567,7 +580,7 @@ function renderCiTable(ci: AllVersions['ciImages']): string {
       <td data-label="映像檔日期">${esc(r.imageDate ?? r.imageVersion ?? '—')}</td>
     </tr>`).join('');
   const cloud = ci.xcodeCloud?.latestAnnouncedXcode
-    ? `<p class="table-note" style="margin-top:10px">Xcode Cloud：Apple 公開的 release notes 最近公告提供的版本為 Xcode ${esc(ci.xcodeCloud.latestAnnouncedXcode)}。這份公開紀錄可能落後，實際可選版本以 App Store Connect 的 Workflow 設定為準。<a href="${esc(ci.xcodeCloud.url)}" target="_blank" rel="noopener">查看 Xcode Cloud release notes</a></p>`
+    ? `<p class="table-note" style="margin-top:10px">Xcode Cloud：Apple 公開的 release notes 最近公告提供的版本為 Xcode ${esc(ci.xcodeCloud.latestAnnouncedXcode)}。這份公開紀錄可能落後，實際可選版本以 App Store Connect 的 Workflow 設定為準。${externalLink(ci.xcodeCloud.url, `查看 Xcode Cloud release notes`)}</p>`
     : '';
   return `<div class="subhead">CI：GitHub Actions macOS runner 內建的 Xcode</div>
   <div class="table-wrap"><table class="compat-table stack-on-mobile">
@@ -609,8 +622,8 @@ function renderBanksSection(data: AllVersions): string {
     const api = b.android ? androidApi(b.android.minOs) : undefined;
     return `<tr>
       <td class="row-title" data-label="銀行"><strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}</div></td>
-      <td data-label="最低 iOS">${b.ios ? `<a href="${esc(b.ios.url)}" target="_blank" rel="noopener">iOS ${esc(b.ios.minOs)}</a>` : '—'}</td>
-      <td data-label="最低 Android">${b.android ? `<span><a href="${esc(b.android.url)}" target="_blank" rel="noopener">Android ${esc(b.android.minOs)}</a>${api ? ` <span class="tl-source">API ${api}</span>` : ''}</span>` : '—'}</td>
+      <td data-label="最低 iOS">${b.ios ? `${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`)}` : '—'}</td>
+      <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`)}${api ? ` <span class="tl-source">API ${api}</span>` : ''}</span>` : '—'}</td>
       <td class="bank-updated" data-label="最近更新">${esc([b.ios?.updated && `iOS ${b.ios.updated}`, b.android?.updated && `Android ${b.android.updated}`].filter(Boolean).join(' · ') || '—')}</td>
     </tr>`;
   }).join('');
@@ -660,13 +673,13 @@ function renderPrivacySection(data: AllVersions): string {
   const p = data.privacy;
   if (!p) return '';
   const apis = p.appleRequiredReasonApis.map(c => `<div class="privacy-card">
-      <a class="crash-title" href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.category)}</a>
+      ${externalLink(c.url, `${esc(c.category)}`, 'crash-title')}
       <div class="tl-source"><code>${esc(c.key)}</code></div>
       <div class="action-detail">API：${esc(c.apis.join('、'))}</div>
       <div class="privacy-reasons">${c.reasons.map(r => `<span title="${esc(r.description)}"><code>${esc(r.code)}</code></span>`).join('')}</div>
     </div>`).join('');
   const links = (platform: 'ios' | 'android') => p.links.filter(l => l.platform === platform).map(l =>
-    `<li><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title)}</a><span>${esc(l.note)}</span></li>`).join('');
+    `<li>${externalLink(l.url, `${esc(l.title)}`)}<span>${esc(l.note)}</span></li>`).join('');
   return `<section class="panel" id="privacy">
     <h2>隱私清單與第三方 SDK 規範</h2>
     <div class="subhead">iOS：Required Reason API（使用這些 API 須在 PrivacyInfo.xcprivacy 宣告原因）</div>
@@ -795,7 +808,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     }
 
     * { box-sizing: border-box; }
-    html { -webkit-text-size-adjust: 100%; scroll-padding-top: 90px; }
+    html { -webkit-text-size-adjust: 100%; scroll-padding-top: 120px; }
     body {
       margin: 0;
       min-height: 100vh;
@@ -831,10 +844,6 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       position: sticky;
       top: 0;
       z-index: 20;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 14px 28px;
       background: rgba(255, 255, 255, 0.82);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
@@ -865,7 +874,29 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       white-space: nowrap;
     }
     .spacer { flex: 1; }
-    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .header-top { display: flex; align-items: center; gap: 16px; padding: 12px 28px 8px; }
+    .section-nav {
+      display: flex;
+      gap: 6px;
+      padding: 0 28px 10px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    .section-nav::-webkit-scrollbar { display: none; }
+    .section-nav a {
+      flex: none;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-deep);
+      text-decoration: none;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+    .section-nav a:hover { background: var(--accent-soft); border-color: var(--line); }
+    .section-nav .nav-api { margin-left: auto; color: var(--muted); }
     .btn {
       font-weight: 600;
       font-size: 14px;
@@ -921,7 +952,8 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       border-radius: 4px;
       background: linear-gradient(180deg, var(--accent), var(--accent-2));
     }
-    .subhead { font-size: 13px; color: var(--muted); margin: 26px 0 12px; }
+    .subhead { font-size: 13px; color: var(--muted); margin: 26px 0 12px; flex-wrap: wrap; row-gap: 2px; }
+    .subhead-note { flex-basis: auto; }
 
     /* Version cards */
     .version-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); gap: 14px; }
@@ -1049,23 +1081,14 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .adoption-bar { display: flex; height: 28px; border-radius: 999px; overflow: hidden; background: var(--accent-soft); }
     .seg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; }
     .seg + .seg { border-left: 2px solid #fff; }
-    .seg-0 { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
-    .seg-1 { background: #7cc7e8; color: var(--ink); }
-    .seg-2 { background: #c9dde8; color: var(--ink); }
-
-    /* Estimated badge */
-    .est {
-      display: inline-block;
-      margin-left: 8px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--warn);
-      border: 1px dashed rgba(180, 105, 14, 0.5);
-      border-radius: 999px;
-      padding: 0 8px;
-      vertical-align: 2px;
-      cursor: help;
-    }
+    .seg.c0, .bar-legend .c0 { background: #0a6ea1; }
+    .seg.c1, .bar-legend .c1 { background: #12b3a4; }
+    .seg.c2, .bar-legend .c2 { background: #7cc7e8; color: var(--ink); }
+    .seg.c3, .bar-legend .c3 { background: #b9e6de; color: var(--ink); }
+    .seg.c-rest, .bar-legend .c-rest { background: #d5e2ea; color: var(--ink); }
+    .bar-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+    .bar-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .bar-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 
     /* Sources */
     .sources { margin-top: 18px; font-size: 12.5px; color: var(--muted); }
@@ -1319,6 +1342,24 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .legal-body .table-wrap { margin: 8px 0; }
     .legal-table { white-space: normal; }
 
+    /* Basis tags + upgrade plan */
+    .basis { display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 0 8px; vertical-align: 2px; cursor: help; }
+    .basis-official { color: var(--muted); border: 1px solid var(--line); }
+    .basis-estimate { color: var(--warn); border: 1px dashed rgba(180, 105, 14, 0.5); }
+    .basis-community { color: #7b61c4; border: 1px dashed rgba(123, 97, 196, 0.5); }
+    .basis-reference { color: var(--accent-deep); border: 1px dotted var(--line); }
+    .basis-legend { padding: 8px 20px 10px; font-size: 11.5px; color: var(--muted); border-top: 1px solid rgba(13, 150, 212, 0.12); line-height: 2; }
+    .basis-legend .basis { margin: 0 4px 0 0; }
+    .upgrade-plan { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 16px; padding: 12px 16px; background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--r-sm); }
+    .upgrade-plan-label { font-size: 13px; font-weight: 700; color: var(--accent-deep); }
+    .upgrade-plan ol { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; counter-reset: plan; }
+    .upgrade-plan li { counter-increment: plan; font-size: 13px; padding: 3px 12px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); }
+    .upgrade-plan li::before { content: counter(plan) ". "; color: var(--muted); }
+    .upgrade-plan li + li { position: relative; margin-left: 14px; }
+    .upgrade-plan li + li::after { content: "→"; position: absolute; left: -16px; top: 3px; color: var(--muted); }
+    .upgrade-plan li.plan-urgent { border-color: rgba(207, 63, 88, 0.4); background: var(--fail-soft); }
+    .upgrade-plan li span { color: var(--muted); }
+
     /* Deadlines */
     .deadline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
     .deadline-date { font-size: 17px; font-weight: 700; color: var(--accent-deep); }
@@ -1340,13 +1381,11 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .crash-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 760px) {
-      header { padding: 12px 16px; flex-wrap: wrap; gap: 6px 10px; }
-      .header-actions { order: 1; margin-left: auto; }
+      .header-top { padding: 10px 16px 6px; flex-wrap: wrap; gap: 6px 10px; }
+      .notif { order: 1; margin-left: auto; }
       .spacer { order: 2; flex-basis: 100%; height: 0; }
       .summary { order: 3; }
-      .header-actions .btn:not(.primary) { display: none; }
-      .header-actions .btn.primary { display: none; }
-      .notif-panel { position: fixed; top: 70px; right: 12px; left: 12px; width: auto; max-height: calc(100vh - 90px); }
+      .section-nav { padding: 0 16px 8px; }
       .wrap { padding: 20px 14px 56px; }
       .panel { padding: 22px 18px; border-radius: var(--r-md); }
       .action { flex-direction: column; gap: 6px; padding: 14px 16px; }
@@ -1376,9 +1415,9 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .bank-table tr { padding: 8px 14px; margin-bottom: 8px; }
       /* iOS Safari zooms the page when focusing inputs smaller than 16px */
       .check-form input[type=text] { font-size: 16px; }
-      .summary { white-space: normal; max-width: 100%; border-radius: var(--r-sm); }
+      .summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; font-size: 12px; }
+      .subhead-note { flex-basis: 100%; }
       /* Keep the brand and the JSON button on one line */
-      header .btn.primary { padding: 6px 12px; font-size: 13px; }
       .brand h1 { font-size: 15px; }
       .brand-sub { font-size: 10px; letter-spacing: .08em; }
       .brand-mark { width: 34px; height: 34px; }
@@ -1390,6 +1429,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
 </head>
 <body>
   <header>
+    <div class="header-top">
     <a class="brand" href="./">
       <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2.2" fill="#fff" stroke="none"/><path d="M8.46 15.54a5 5 0 0 1 0-7.08"/><path d="M15.54 8.46a5 5 0 0 1 0 7.08"/><path d="M5.64 18.36a9 9 0 0 1 0-12.72"/><path d="M18.36 5.64a9 9 0 0 1 0 12.72"/></svg></span>
       <div>
@@ -1399,16 +1439,6 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     </a>
     <span class="summary">${renderSummary(data)}</span>
     <span class="spacer"></span>
-    <nav class="header-actions">
-      <a class="btn" href="#ios">iOS</a>
-      <a class="btn" href="#android">Android</a>
-      <a class="btn" href="#checker">專案檢查</a>
-      <a class="btn" href="#crashes">閃退</a>
-      <a class="btn" href="#compat">相容性</a>
-      <a class="btn" href="#deadlines">上架期限</a>
-      <a class="btn" href="#banks">銀行</a>
-      <a class="btn" href="#privacy">隱私</a>
-      <a class="btn primary" href="api.json">JSON API</a>
       <div class="notif">
         <button class="notif-bell" id="notif-bell" type="button" aria-label="通知" aria-expanded="false" aria-controls="notif-panel">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -1426,6 +1456,19 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
           </div>
         </div>
       </div>
+    </div>
+    <nav class="section-nav" aria-label="頁面區塊">
+      <a href="#recent">最新</a>
+      <a href="#checker">專案檢查</a>
+      <a href="#crashes">閃退</a>
+      <a href="#ios">iOS</a>
+      <a href="#android">Android</a>
+      <a href="#compat">相容性</a>
+      <a href="#deadlines">上架期限</a>
+      <a href="#banks">銀行</a>
+      <a href="#privacy">隱私</a>
+      <a href="#legal">免責聲明</a>
+      <a class="nav-api" href="api.json">JSON API</a>
     </nav>
   </header>
   <div class="toasts" id="toasts" aria-live="polite"></div>
@@ -1442,7 +1485,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     ${renderCrashesSection(data)}
 
     ${renderPlatformSection('ios', 'Apple iOS', ios,
-      renderActions(data.iosActions) + renderVersionDistribution('ios', data) + renderAdoption(data.iosAdoption) + renderTiles(iOSTiles(data.iosToolchain, data.announcedDevices))
+      renderActions(data.iosActions) + renderVersionDistribution('ios', data) + renderTiles(iOSTiles(data.iosToolchain, data.announcedDevices))
       + renderNews('Apple 開發者公告', data.appleNews, 'https://developer.apple.com/news/')
       + renderSources(data, ['ios', 'appleDeadline', 'appleRequirements', 'iosToolchain', 'xcodeSupport', 'adoption', 'osShare', 'appleNews']))}
 

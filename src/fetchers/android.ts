@@ -1,5 +1,6 @@
 import RssParser from 'rss-parser';
 import type { OSVersionInfo } from '../types.js';
+import { fetchWithTimeout, NETWORK_TIMEOUT_MS } from '../net.js';
 
 interface EndOfLifeAndroid {
   cycle: string;
@@ -47,7 +48,7 @@ function parseBetaTitle(title: string): string | null {
 }
 
 async function fetchBetaFromBlog(): Promise<OSVersionInfo | null> {
-  const parser = new RssParser();
+  const parser = new RssParser({ timeout: NETWORK_TIMEOUT_MS });
   const feed = await parser.parseURL(BLOG_FEED);
 
   const betaEntry = feed.items.find(item => {
@@ -76,7 +77,7 @@ export async function fetchAndroidVersions(): Promise<OSVersionInfo[]> {
   const results: OSVersionInfo[] = [];
 
   // Fetch stable version
-  const res = await fetch('https://endoflife.date/api/android.json');
+  const res = await fetchWithTimeout('https://endoflife.date/api/android.json');
   if (!res.ok) {
     throw new Error(`Android API request failed: ${res.status}`);
   }

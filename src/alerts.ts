@@ -1,3 +1,4 @@
+import { WEBHOOK_TIMEOUT_MS } from './net.js';
 /**
  * Source health alerting. Every refresh reports each scraped source's outcome; failures are logged,
  * and when ALERT_WEBHOOK_URL is set a Slack-compatible `{ "text": ... }` message is POSTed only on
@@ -16,7 +17,6 @@ interface SourceState {
 
 const states = new Map<string, SourceState>();
 
-const WEBHOOK_TIMEOUT_MS = 5_000;
 
 /** For tests: forget all remembered source states */
 export function resetAlertState(): void {

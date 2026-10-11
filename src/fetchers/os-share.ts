@@ -1,4 +1,5 @@
 import { compareVersions } from './ios-toolchain.js';
+import { SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 
 /**
  * iOS / Android version market share from StatCounter Global Stats (CC BY-SA 3.0, attribution required).
@@ -130,7 +131,7 @@ export function summarize(platform: Platform, shares: VersionShare[], url: strin
 async function fetchCsv(platform: Platform, region: Region, yyyymm: string): Promise<VersionShare[]> {
   const res = await fetch(csvUrl(platform, region, yyyymm), {
     headers: { 'User-Agent': 'Mozilla/5.0 (os-version-tracker)' },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(SLOW_NETWORK_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`StatCounter ${platform}/${region} failed: ${res.status}`);
   return parseShareCsv(await res.text());

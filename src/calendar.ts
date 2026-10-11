@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Deadline } from './types.js';
+import { safeUrl } from './safe-url.js';
 
 /** RFC 5545 text escaping */
 function icsText(value: string): string {
@@ -7,7 +8,9 @@ function icsText(value: string): string {
     .replace(/\\/g, '\\\\')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
-    .replace(/\r?\n/g, '\\n');
+    .replace(/\r\n|\r|\n/g, '\\n')
+    // Any other control character could break the line structure; drop it
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '');
 }
 
 /** Lines longer than 75 octets must be folded with CRLF + space */
@@ -55,7 +58,7 @@ function allDayEvent(uid: string, date: string, summary: string, description: st
     `DTEND;VALUE=DATE:${compactDate(nextDay(date))}`,
     `SUMMARY:${icsText(summary)}`,
     `DESCRIPTION:${icsText(description)}`,
-    `URL:${url}`,
+    ...(safeUrl(url) ? [`URL:${safeUrl(url)}`] : []),
     'TRANSP:TRANSPARENT',
     // Remind a week before and on the day
     'BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsText(summary)}`, 'TRIGGER:-P7D', 'END:VALARM',
@@ -80,7 +83,7 @@ export function buildCalendar(deadlines: Deadline[], siteUrl: string, now = new 
   ];
 
   for (const d of deadlines) {
-    const description = `${d.detail}\n\n來源：${d.source}\n${d.url}\n\n${siteUrl}/#deadlines`;
+    const description = `${d.detail}\n\n來源：${d.source}${safeUrl(d.url) ? `\n${safeUrl(d.url)}` : ''}\n\n${siteUrl}/#deadlines`;
     lines.push(...allDayEvent(deadlineId(d), d.date, `[${d.platform}] ${d.title}`, description, d.url, stamp));
     if (d.extensionDate && d.extensionDate > d.date) {
       lines.push(...allDayEvent(

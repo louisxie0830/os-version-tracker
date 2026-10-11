@@ -1,7 +1,8 @@
 import type { AndroidToolchain, ToolVersion } from '../types.js';
 import { compareVersions } from './ios-toolchain.js';
+import { settleSources } from './settle.js';
+import { NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 
-const TIMEOUT_MS = 15_000;
 
 async function getText(url: string): Promise<string> {
   const res = await fetch(url, {
@@ -127,24 +128,19 @@ async function fetchSdkRepository(): Promise<Pick<AndroidToolchain, 'sdkPlatform
   };
 }
 
-export async function fetchAndroidToolchain(): Promise<AndroidToolchain> {
-  const sources = [
-    ['Android Studio', fetchAndroidStudio()],
-    ['AGP', fetchAgp()],
-    ['Gradle', fetchGradle().then(gradle => ({ gradle }))],
-    ['Kotlin', fetchKotlin().then(kotlin => ({ kotlin }))],
-    ['SDK repository', fetchSdkRepository()],
-    ['Compose BOM', fetchComposeBom().then(composeBom => ({ composeBom }))],
-  ] as const;
+export type ToolchainPart = Partial<AndroidToolchain>;
 
-  const results = await Promise.allSettled(sources.map(([, p]) => p));
-  const toolchain: AndroidToolchain = {};
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled') {
-      Object.assign(toolchain, r.value);
-    } else {
-      console.warn(`[Android toolchain] ${sources[i][0]} failed (${(r.reason as Error).message})`);
-    }
-  });
-  return toolchain;
+export const ANDROID_TOOLCHAIN_SOURCES: ReadonlyArray<readonly [string, () => Promise<ToolchainPart>]> = [
+  ['Android Studio', fetchAndroidStudio],
+  ['AGP', fetchAgp],
+  ['Gradle', () => fetchGradle().then(gradle => ({ gradle }))],
+  ['Kotlin', () => fetchKotlin().then(kotlin => ({ kotlin }))],
+  ['SDK repository', fetchSdkRepository],
+  ['Compose BOM', () => fetchComposeBom().then(composeBom => ({ composeBom }))],
+];
+
+/** Partial results are kept; throws only when no upstream produced any tool version */
+export async function fetchAndroidToolchain(sources = ANDROID_TOOLCHAIN_SOURCES): Promise<AndroidToolchain> {
+  const { values } = await settleSources('Android toolchain', sources, part => Object.values(part).some(v => v !== undefined));
+  return Object.assign({}, ...values.values()) as AndroidToolchain;
 }

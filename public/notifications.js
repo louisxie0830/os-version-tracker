@@ -32,6 +32,16 @@
   const known = store.get(KNOWN_KEY);
   const read = store.get(READ_KEY);
 
+  // Only absolute http(s) links from the feed become clickable (mirrors src/safe-url.ts)
+  const safeUrl = value => {
+    if (typeof value !== 'string' || /[\u0000-\u001f\u007f\s]/.test(value)) return null;
+    try {
+      const url = new URL(value);
+      return url.protocol === 'https:' || url.protocol === 'http:' ? url.href : null;
+    } catch {
+      return null;
+    }
+  };
   const escapeHtml = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const when = item => item.firstSeen || `${item.date}T00:00:00Z`;
   // Same rule as the server's "last 7 days": first-seen time, or the publish date of news. A deadline's
@@ -60,7 +70,7 @@
     bell.setAttribute('aria-label', unread.length ? `通知，${unread.length} 則未讀` : '通知');
     list.innerHTML = items.length
       ? items.map(item => `<li class="notif-item${read.has(item.id) ? '' : ' unread'}">
-          <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" data-id="${escapeHtml(item.id)}">
+          <a ${safeUrl(item.url) ? `href="${escapeHtml(safeUrl(item.url))}" target="_blank" rel="noopener noreferrer"` : 'role="button" tabindex="0"'} data-id="${escapeHtml(item.id)}">
             <span class="notif-meta">
               <span class="tl-platform ${item.platform === 'iOS' ? 'tl-ios' : item.platform === 'Android' ? 'tl-android' : 'tl-cross'}">${escapeHtml(item.platform)}</span>
               <span>${escapeHtml(KIND[item.kind] || '')}</span>
@@ -91,7 +101,7 @@
       icon: 'icons/icon-192.png',
       badge: 'icons/icon-192.png',
       tag: 'os-tracker-updates',
-      data: { url: newItems.length === 1 ? newItems[0].url : location.href.split('#')[0] },
+      data: { url: (newItems.length === 1 && safeUrl(newItems[0].url)) || location.href.split('#')[0] },
     };
     try {
       // Android only shows notifications created through the service worker

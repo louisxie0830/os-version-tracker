@@ -1,7 +1,7 @@
 import { cleanText, fetchHtml } from './html-table.js';
 import { compareVersions } from './ios-toolchain.js';
+import { NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 
-const TIMEOUT_MS = 15_000;
 const RAW_BASE = 'https://raw.githubusercontent.com/actions/runner-images/main';
 export const RUNNER_IMAGES_README_URL = `${RAW_BASE}/README.md`;
 export const RUNNER_IMAGES_REPO_URL = 'https://github.com/actions/runner-images';

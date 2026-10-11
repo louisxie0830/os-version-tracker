@@ -2,6 +2,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { deadlineId } from './calendar.js';
 import type { AnnouncedDevice, Deadline, NewsItem } from './types.js';
 import type { CrashItem } from './fetchers/crashes.js';
+import { safeUrl } from './safe-url.js';
+import { WEBHOOK_TIMEOUT_MS } from './net.js';
 
 export interface TrackedItem {
   id: string;
@@ -16,7 +18,6 @@ export interface TrackedItem {
   firstSeen?: string;
 }
 
-const WEBHOOK_TIMEOUT_MS = 5_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Optional persistence so "first seen" survives restarts; the default keeps state in memory only,
@@ -180,7 +181,7 @@ async function postNotification(added: TrackedItem[], siteUrl: string): Promise<
   const queue = [...new Map([...(state.pending ?? []), ...added].map(item => [item.id, item])).values()];
   if (!queue.length) return;
 
-  const lines = queue.slice(0, 15).map(item => `• [${item.platform}] ${item.title}${item.kind === 'deadline' ? `（${item.date}）` : ''}\n  ${item.url}`);
+  const lines = queue.slice(0, 15).map(item => `• [${item.platform}] ${item.title}${item.kind === 'deadline' ? `（${item.date}）` : ''}${safeUrl(item.url) ? `\n  ${safeUrl(item.url)}` : ''}`);
   const text = `📡 OS Version Tracker：${queue.length} 項新的規定／公告\n${lines.join('\n')}${queue.length > 15 ? `\n…還有 ${queue.length - 15} 項` : ''}\n${siteUrl}`;
 
   const outcome = await postWithRetry(url, text);
@@ -236,7 +237,7 @@ export function buildAtomFeed(items: TrackedItem[], siteUrl: string, updated: st
       return `  <entry>
     <id>urn:os-version-tracker:${xml(item.id)}</id>
     <title>${xml(prefix + item.title)}</title>
-    <link href="${xml(item.url)}"/>
+    ${safeUrl(item.url) ? `<link href="${xml(safeUrl(item.url)!)}"/>` : ''}
     <updated>${published}</updated>
     <published>${published}</published>
     <summary>${xml(item.detail)}</summary>
@@ -268,6 +269,6 @@ export function buildNotificationsJson(items: TrackedItem[], cachedAt: string, l
     .sort((a, b) => rank(b) - rank(a)
       || (rank(a) === 0 ? a.date.localeCompare(b.date) : (b.firstSeen ?? b.date).localeCompare(a.firstSeen ?? a.date)))
     .slice(0, limit)
-    .map(({ id, kind, platform, title, detail, url, date, firstSeen }) => ({ id, kind, platform, title, detail, url, date, firstSeen }));
+    .map(({ id, kind, platform, title, detail, url, date, firstSeen }) => ({ id, kind, platform, title, detail, url: safeUrl(url) ?? '', date, firstSeen }));
   return JSON.stringify({ cachedAt, items: sorted });
 }

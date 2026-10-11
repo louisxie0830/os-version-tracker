@@ -224,7 +224,7 @@ export function buildiOSActions(
   const taiwan = osShare ? minVersionAction('iOS', osShare) : null;
   if (taiwan) actions.push(taiwan);
 
-  return actions;
+  return byUrgency(actions);
 }
 
 /** Cumulative share for "this version or later", given shares ordered newest first */
@@ -245,6 +245,7 @@ function deploymentTargetAction(adoption: iOSAdoption): ActionItem | null {
   const measured = adoption.measuredAt ? `資料來源：Apple 官方，統計至 ${zhDate(adoption.measuredAt)}。` : '資料來源：Apple 官方。';
   return {
     status: 'info',
+    basis: 'reference',
     title: `最低支援版本建議：${previous.name} 以上可涵蓋 ${previous.covered}% 裝置`,
     detail: `只支援 ${latest.name} 可涵蓋 ${latest.covered}% 的裝置；支援到 ${previous.name} 可涵蓋 ${previous.covered}%`
       + (previousRecent ? `（近四年推出的裝置為 ${previousRecent.covered}%）` : '')
@@ -267,11 +268,19 @@ function minVersionAction(platform: 'iOS' | 'Android', osShare: OsShare): Action
   const setting = platform === 'iOS' ? 'Deployment Target' : 'minSdk';
   return {
     status: 'info',
+    basis: 'reference',
     title: `${setting} 參考：${label}${label.endsWith('）') ? '' : ' '}以上涵蓋台灣 ${pick.covered}% 裝置`,
     detail: `依 ${osShare.month} 台灣行動裝置的版本占比，支援到 ${label} 可涵蓋 ${pick.covered}%`
       + (ww ? `（全球 ${ww.covered}%）` : '') + `。各版本的完整分布見下方「版本分布」。資料來源：StatCounter。`,
     url: tw.url,
   };
+}
+
+const URGENCY: Record<ActionStatus, number> = { urgent: 0, upcoming: 1, info: 2, ok: 3 };
+
+/** Most actionable first; items of equal urgency keep their original order */
+function byUrgency(actions: ActionItem[]): ActionItem[] {
+  return actions.map((a, i) => [a, i] as const).sort((x, y) => URGENCY[x[0].status] - URGENCY[y[0].status] || x[1] - y[1]).map(([a]) => a);
 }
 
 const PLATFORM_ZH: Array<[RegExp, string]> = [
@@ -468,7 +477,7 @@ export function buildAndroidActions(
     });
   }
 
-  return actions;
+  return byUrgency(actions);
 }
 
 /** Requirements from the past year and everything upcoming: upcoming first (soonest on top), then recent ones */

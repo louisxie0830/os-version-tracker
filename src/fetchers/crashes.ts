@@ -1,5 +1,7 @@
 import { cleanText, fetchHtml } from './html-table.js';
 import { compareVersions } from './ios-toolchain.js';
+import { settleSources } from './settle.js';
+import { NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 
 export interface CrashItem {
   platform: 'iOS' | 'Android' | '跨平台';
@@ -17,7 +19,6 @@ export interface CrashItem {
   newOs?: boolean;
 }
 
-const TIMEOUT_MS = 15_000;
 
 // Word boundaries matter: "hang" must not match "change"
 export const CRASH_PATTERN = /\b(crash(?:es|ed|ing)?|quits? unexpectedly|hangs?|hung|freez(?:e|es|ing)|unresponsive|deadlocks?|ANRs?|EXC_[A-Z_]+|SIGABRT|SIGSEGV|terminat(?:e|es|ed|ion) unexpectedly|(?:unexpected(?:ly)?|spontaneous(?:ly)?) reboot(?:s|ing)?)\b/i;
@@ -339,19 +340,42 @@ export interface CrashReport {
   community: CrashItem[];
 }
 
-export async function fetchCrashReport(opts: { iosMajor?: string; androidMajor?: string; xcodeNotesUrl?: string }): Promise<CrashReport> {
+export interface CrashReportDeps {
+  apple: (iosMajor: string, xcodeNotesUrl?: string) => Promise<CrashItem[]>;
+  android: (androidMajor: string) => Promise<CrashItem[]>;
+  sdks: (newOsPattern?: RegExp) => Promise<CrashItem[]>;
+  community: (newOsPattern?: RegExp) => Promise<CrashItem[]>;
+}
+
+const CRASH_REPORT_DEPS: CrashReportDeps = {
+  apple: fetchAppleCrashes,
+  android: fetchAndroidCrashes,
+  sdks: fetchSdkCrashes,
+  community: fetchStackOverflowCrashes,
+};
+
+/**
+ * Partial results are kept. Release notes need the current OS version: when it's unknown that part
+ * counts as failed rather than as a successful empty list. Throws when every part failed.
+ */
+export async function fetchCrashReport(
+  opts: { iosMajor?: string; androidMajor?: string; xcodeNotesUrl?: string },
+  deps: CrashReportDeps = CRASH_REPORT_DEPS,
+): Promise<CrashReport> {
   const newOs = [opts.iosMajor && `iOS ${opts.iosMajor}`, opts.androidMajor && `Android ${opts.androidMajor}`].filter(Boolean);
   const newOsPattern = newOs.length ? new RegExp(newOs.map(v => `\\b${v!.replace(' ', '\\s*')}\\b`).join('|'), 'i') : undefined;
-  const [ios, android, sdks, community] = await Promise.allSettled([
-    opts.iosMajor ? fetchAppleCrashes(opts.iosMajor, opts.xcodeNotesUrl) : Promise.resolve([]),
-    opts.androidMajor ? fetchAndroidCrashes(opts.androidMajor) : Promise.resolve([]),
-    fetchSdkCrashes(newOsPattern),
-    fetchStackOverflowCrashes(newOsPattern),
+  const missing = (what: string) => () => Promise.reject(new Error(`current ${what} version unknown`));
+
+  const { values } = await settleSources('crashes', [
+    ['Apple release notes', opts.iosMajor ? () => deps.apple(opts.iosMajor!, opts.xcodeNotesUrl) : missing('iOS')],
+    ['Android release notes', opts.androidMajor ? () => deps.android(opts.androidMajor!) : missing('Android')],
+    ['GitHub SDK issues', () => deps.sdks(newOsPattern)],
+    ['Stack Overflow', () => deps.community(newOsPattern)],
   ]);
-  for (const [label, r] of [['Apple', ios], ['Android', android], ['GitHub', sdks], ['Stack Overflow', community]] as const) {
-    if (r.status === 'rejected') console.warn(`[crashes] ${label} failed (${(r.reason as Error).message})`);
-  }
-  if ([ios, android, sdks, community].every(r => r.status === 'rejected')) throw new Error('All crash sources failed');
-  const value = <T,>(r: PromiseSettledResult<T[]>) => r.status === 'fulfilled' ? r.value : [];
-  return { ios: value(ios), android: value(android), sdks: value(sdks), community: value(community) };
+  return {
+    ios: values.get('Apple release notes') ?? [],
+    android: values.get('Android release notes') ?? [],
+    sdks: values.get('GitHub SDK issues') ?? [],
+    community: values.get('Stack Overflow') ?? [],
+  };
 }

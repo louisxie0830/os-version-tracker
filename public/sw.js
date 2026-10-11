@@ -41,7 +41,12 @@ self.addEventListener('fetch', event => {
 // Clicking a notification focuses an open tab of the site (or opens one) at the notification's link
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const url = event.notification.data?.url || SCOPE;
+  // Only http(s) destinations are opened; anything else falls back to the site itself
+  let url = SCOPE;
+  try {
+    const target = new URL(event.notification.data?.url);
+    if (target.protocol === 'https:' || target.protocol === 'http:') url = target.href;
+  } catch {}
   event.waitUntil((async () => {
     const tabs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const sameSite = url.startsWith(SCOPE);

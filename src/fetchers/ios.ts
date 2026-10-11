@@ -3,8 +3,8 @@ import tls from 'node:tls';
 import RssParser from 'rss-parser';
 import type { OSVersionInfo } from '../types.js';
 import { APPLE_ROOT_CA } from './apple-root-ca.js';
+import { fetchWithTimeout, NETWORK_TIMEOUT_MS } from '../net.js';
 
-const HTTPS_TIMEOUT_MS = 15_000;
 
 // gdmf.apple.com chains to "Apple Root CA", which isn't in Node's bundled
 // store. Trust the public roots plus that one Apple root; verification stays on.
@@ -24,8 +24,8 @@ function httpsGet(url: string): Promise<string> {
       res.on('end', () => resolve(Buffer.concat(chunks).toString()));
       res.on('error', reject);
     });
-    req.setTimeout(HTTPS_TIMEOUT_MS, () => {
-      req.destroy(new Error(`Request to ${url} timed out after ${HTTPS_TIMEOUT_MS}ms`));
+    req.setTimeout(NETWORK_TIMEOUT_MS, () => {
+      req.destroy(new Error(`Request to ${url} timed out after ${NETWORK_TIMEOUT_MS}ms`));
     });
     req.on('error', reject);
   });
@@ -110,7 +110,7 @@ async function fetchStableFromRSS(parser: RssParser): Promise<OSVersionInfo> {
 }
 
 async function fetchStableFromEndOfLife(): Promise<OSVersionInfo> {
-  const res = await fetch('https://endoflife.date/api/ios.json');
+  const res = await fetchWithTimeout('https://endoflife.date/api/ios.json');
   if (!res.ok) {
     throw new Error(`endoflife.date iOS request failed: ${res.status}`);
   }
@@ -164,7 +164,7 @@ async function fetchBetaFromRSS(parser: RssParser): Promise<OSVersionInfo | null
 }
 
 export async function fetchiOSVersions(): Promise<OSVersionInfo[]> {
-  const parser = new RssParser();
+  const parser = new RssParser({ timeout: NETWORK_TIMEOUT_MS });
   const results: OSVersionInfo[] = [];
 
   // Fetch stable version

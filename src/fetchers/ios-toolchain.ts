@@ -1,6 +1,7 @@
 import type { iOSToolchain, iPhoneModel, XcodeRelease } from '../types.js';
+import { settleSources } from './settle.js';
+import { NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 
-const TIMEOUT_MS = 15_000;
 
 interface XcodeReleasesEntry {
   name: string;
@@ -102,21 +103,22 @@ export function minXcodeForiOSSdk(releases: XcodeRelease[], minSdk: string): Xco
   return qualifying.find(r => !r.isBeta) ?? qualifying.at(-1);
 }
 
-export async function fetchiOSToolchain(): Promise<iOSToolchain> {
-  const [xcodeResult, iphoneResult] = await Promise.allSettled([
-    fetchXcodeReleases(),
-    fetchiPhones(),
-  ]);
+export interface iOSToolchainDeps {
+  xcode: () => Promise<XcodeRelease[]>;
+  iphones: () => Promise<{ newest: iPhoneModel[]; known: string[] }>;
+}
 
-  if (xcodeResult.status === 'rejected') {
-    console.warn(`[iOS toolchain] Xcode releases failed (${(xcodeResult.reason as Error).message})`);
-  }
-  if (iphoneResult.status === 'rejected') {
-    console.warn(`[iOS toolchain] iPhone models failed (${(iphoneResult.reason as Error).message})`);
-  }
+const IOS_TOOLCHAIN_DEPS: iOSToolchainDeps = { xcode: fetchXcodeReleases, iphones: fetchiPhones };
 
-  const releases = xcodeResult.status === 'fulfilled' ? xcodeResult.value : [];
-  const iphones = iphoneResult.status === 'fulfilled' ? iphoneResult.value : { newest: [], known: [] };
+/** Partial results are kept; throws only when neither Xcode releases nor iPhone models are available */
+export async function fetchiOSToolchain(deps: iOSToolchainDeps = IOS_TOOLCHAIN_DEPS): Promise<iOSToolchain> {
+  const { values } = await settleSources<XcodeRelease[] | { newest: iPhoneModel[]; known: string[] }>('iOS toolchain', [
+    ['Xcode releases', deps.xcode],
+    ['iPhone models', deps.iphones],
+  ], value => (Array.isArray(value) ? value.length > 0 : value.known.length > 0));
+
+  const releases = (values.get('Xcode releases') as XcodeRelease[] | undefined) ?? [];
+  const iphones = (values.get('iPhone models') as { newest: iPhoneModel[]; known: string[] } | undefined) ?? { newest: [], known: [] };
 
   // data.json is ordered newest first
   const xcodeStable = releases.find(r => !r.isBeta);

@@ -1,8 +1,8 @@
 // Runs the project checker in the browser on the static site, where there is no server to compute it.
 // Only imports browser-safe modules; build-static verifies the module graph has no Node built-ins.
-import { checkProject, parseConfig } from '../checker.js';
+import { checkProject, parseConfig, upgradePlan } from '../checker.js';
 import type { AllVersions } from '../fetch-all.js';
-import { renderActions } from '../render-actions.js';
+import { renderActions, renderUpgradePlan } from '../render-actions.js';
 
 const form = document.getElementById('check-form') as HTMLFormElement | null;
 const results = document.getElementById('check-results');
@@ -23,15 +23,23 @@ if (form && results && dataEl?.textContent) {
     }
     const { ios, android } = checkProject(config, data);
     const single = !(ios.length && android.length);
-    results.innerHTML = `<div class="check-results${single ? ' single' : ''}">
+    results.innerHTML = `${renderUpgradePlan('iOS', upgradePlan(ios, 'ios'))}${renderUpgradePlan('Android', upgradePlan(android, 'android'))}
+    <div class="check-results${single ? ' single' : ''}">
       ${ios.length ? renderActions(ios, 'iOS 檢查結果', false) : ''}
       ${android.length ? renderActions(android, 'Android 檢查結果', false) : ''}
       ${!ios.length && !android.length ? '<div class="empty">沒有可檢查的項目，請至少填一個欄位。</div>' : ''}
     </div>`;
   };
 
-  // Shared result links carry the inputs in the query string
-  const initial = new URLSearchParams(location.search);
+  // Shared result links carry the inputs in the query string; otherwise reuse the configuration this
+  // browser saved last time (the page's inline script stores it under "project-config")
+  let initial = new URLSearchParams(location.search);
+  if (!parseConfig(initial)) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('project-config') || 'null') as Record<string, string> | null;
+      if (saved) initial = new URLSearchParams(Object.entries(saved).filter(([, v]) => v));
+    } catch { /* storage unavailable */ }
+  }
   if (parseConfig(initial)) {
     for (const [name, value] of initial) {
       const input = form.elements.namedItem(name);

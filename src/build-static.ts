@@ -11,6 +11,8 @@ import { copyFile, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BUILD_MARKER, resolveOutputDir } from './output-dir.js';
+import { publishDecision } from './publish-health.js';
+import { NETWORK_TIMEOUT_MS } from './net.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
@@ -26,9 +28,6 @@ const STATE_DIR = path.join(ROOT, '.state');
 const CHANGES_STATE = path.join(STATE_DIR, 'changes.json');
 const ALERTS_STATE = path.join(STATE_DIR, 'alerts.json');
 
-// Refuse to publish when most sources failed (e.g. a network outage on the runner):
-// the previous deployment stays live instead of being replaced by an empty page.
-const MIN_HEALTHY_SOURCES = 0.6;
 
 // Must match the cron schedule in .github/workflows/pages.yml
 const REFRESH_MINUTES = 30;
@@ -52,7 +51,7 @@ async function loadState(file: string): Promise<string | null> {
 
 async function downloadState(name: string): Promise<string | null> {
   try {
-    const res = await fetch(`${SITE_URL}/state/${name}`, { signal: AbortSignal.timeout(15_000) });
+    const res = await fetch(`${SITE_URL}/state/${name}`, { signal: AbortSignal.timeout(NETWORK_TIMEOUT_MS) });
     if (!res.ok) return null;
     const text = await res.text();
     JSON.parse(text); // only accept valid JSON
@@ -114,12 +113,11 @@ async function main(): Promise<void> {
   // (changes.ts already wrote CHANGES_STATE, including any undelivered notifications)
   await writeFile(ALERTS_STATE, JSON.stringify(alerts.exportAlertState()));
 
-  const sources = Object.entries(data.sources);
-  const healthy = sources.filter(([, s]) => s.ok).length;
-  console.log(`Sources: ${healthy}/${sources.length} ok${healthy < sources.length ? ` (failed: ${sources.filter(([, s]) => !s.ok).map(([k]) => k).join(', ')})` : ''}`);
-  if (healthy / sources.length < MIN_HEALTHY_SOURCES) {
-    throw new Error(`Only ${healthy}/${sources.length} sources succeeded; not publishing`);
-  }
+  // Refuse to publish when core or most sources failed (e.g. a network outage on the runner):
+  // the previous deployment stays live instead of being replaced by an empty page.
+  const decision = publishDecision(data.sources);
+  console.log(`Sources: ${decision.healthy}/${decision.total} ok${decision.failed.length ? ` (failed: ${decision.failed.join(', ')})` : ''}`);
+  if (!decision.publish) throw new Error(`Not publishing: ${decision.reason}`);
 
   // 3. Write the site
   // Re-check right before deleting: the directory may have changed while sources were fetched
@@ -135,7 +133,7 @@ async function main(): Promise<void> {
   await writeFile(path.join(OUT, 'calendar.ics'), buildCalendar(data.timeline, SITE_URL));
   await writeFile(path.join(OUT, 'feed.xml'), buildAtomFeed(data.tracked, SITE_URL, data.cachedAt));
   await writeFile(path.join(OUT, 'notifications.json'), buildNotificationsJson(data.tracked, data.cachedAt));
-  await writeFile(path.join(OUT, 'health.json'), JSON.stringify({ status: 'ok', builtAt: data.cachedAt, sources: `${healthy}/${sources.length}` }));
+  await writeFile(path.join(OUT, 'health.json'), JSON.stringify({ status: 'ok', builtAt: data.cachedAt, sources: `${decision.healthy}/${decision.total}` }));
   await writeFile(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>${SITE_URL}/</loc><lastmod>${data.cachedAt}</lastmod><changefreq>hourly</changefreq></url>

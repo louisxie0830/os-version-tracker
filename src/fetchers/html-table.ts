@@ -1,3 +1,5 @@
+import { fetchWithTimeout, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
+
 export function cleanText(html: string): string {
   return html
     .replace(/<[^>]+>/g, ' ')
@@ -32,10 +34,9 @@ export function findTable(tables: HtmlTable[], match: (t: HtmlTable) => boolean)
 }
 
 export async function fetchHtml(url: string): Promise<string> {
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (os-version-tracker)', 'Accept-Language': 'en-US,en' },
-    signal: AbortSignal.timeout(20_000),
-  });
+  }, SLOW_NETWORK_TIMEOUT_MS);
   if (!res.ok) {
     throw new Error(`${url} failed: ${res.status}`);
   }

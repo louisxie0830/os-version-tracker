@@ -1,3 +1,4 @@
+import { NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 /**
  * Minimum iOS / Android versions required by the official mobile banking apps of major Taiwan banks.
  *
@@ -56,7 +57,6 @@ export const TW_BANK_APPS: readonly TaiwanBankAppEntry[] = [
 
 const BROWSER_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36';
-const TIMEOUT_MS = 15_000;
 const PLAY_CONCURRENCY = 4;
 
 export const itunesLookupUrl = (ids: number[]): string =>
