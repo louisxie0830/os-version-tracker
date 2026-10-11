@@ -1,5 +1,5 @@
 // Bump when the precached shell or caching strategy changes, so old caches are dropped
-const CACHE = 'os-tracker-v3';
+const CACHE = 'os-tracker-v4';
 // Paths are relative to the worker's scope, so the site works at a domain root or under /<repo>/ on GitHub Pages
 const SCOPE = self.registration.scope;
 const PRECACHE = ['./', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png']
@@ -29,7 +29,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (request.mode === 'navigate' || path === '' || path === 'api' || path === 'api.json' || path.startsWith('js/') || path.startsWith('notifications.')) {
+  if (request.mode === 'navigate' || path === '' || path === 'api' || path === 'api.json' || path.startsWith('js/') || path.startsWith('notifications.') || path === 'app.js') {
     // Every navigation (whatever its query string) shares the cached page
     const key = request.mode === 'navigate' ? SCOPE : request;
     event.respondWith(

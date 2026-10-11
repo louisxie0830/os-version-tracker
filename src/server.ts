@@ -7,6 +7,7 @@ import { buildCalendar } from './calendar.js';
 import { buildAtomFeed, buildNotificationsJson } from './changes.js';
 import { parseConfig } from './checker.js';
 import { renderHTML } from './render.js';
+import { SECURITY_HEADERS } from './security-headers.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -21,7 +22,7 @@ const STATIC_TYPES: Record<string, string> = {
 };
 
 async function serveStatic(pathname: string, res: http.ServerResponse): Promise<boolean> {
-  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/og-image.png' || pathname === '/notifications.js' || /^\/icons\/[\w.-]+$/.test(pathname);
+  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/og-image.png' || pathname === '/notifications.js' || pathname === '/app.js' || /^\/icons\/[\w.-]+$/.test(pathname);
   if (!allowed) return false;
   try {
     const body = await readFile(path.join(PUBLIC_DIR, pathname));
@@ -42,6 +43,7 @@ async function serveStatic(pathname: string, res: http.ServerResponse): Promise<
 export function createHandler(getData: () => Promise<AllVersions> = fetchAllVersions): http.RequestListener {
   return async (req, res) => {
     const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
     if (req.method === 'GET' && await serveStatic(pathname, res)) {
       return;
     }

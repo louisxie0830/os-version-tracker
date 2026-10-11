@@ -1,0 +1,22 @@
+# Weekly update PRs for npm packages, the pinned GitHub Actions and the Docker base image.
+# Security fixes are opened as soon as an advisory is published (repo setting), regardless of this schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

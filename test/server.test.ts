@@ -24,13 +24,13 @@ after(() => new Promise(r => {
 }));
 
 /** Raw request, so paths like "/icons/../x" reach the server un-normalized */
-function get(path: string): Promise<{ status: number; type: string; body: string }> {
+function get(path: string): Promise<{ status: number; type: string; body: string; headers: http.IncomingHttpHeaders }> {
   return new Promise((resolve, reject) => {
     http.get(`${base}${path}`, res => {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', c => { body += c; });
-      res.on('end', () => resolve({ status: res.statusCode ?? 0, type: String(res.headers['content-type'] ?? ''), body }));
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, type: String(res.headers['content-type'] ?? ''), body, headers: res.headers }));
     }).on('error', reject);
   });
 }
@@ -64,6 +64,31 @@ test('the page renders every section and no active-scheme links', async () => {
     assert.ok(page.body.includes(`id="${id}"`), id);
   }
   assert.ok(!/href="\s*(javascript|data|vbscript):/i.test(page.body));
+});
+
+test('the page carries a CSP that forbids inline scripts, and has none', async () => {
+  const page = await get('/');
+  const csp = page.body.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/)?.[1];
+  assert.ok(csp, 'CSP meta tag');
+  assert.match(csp!, /script-src 'self';/);
+  assert.match(csp!, /object-src 'none'/);
+  assert.match(page.body, /<meta name="referrer" content="strict-origin-when-cross-origin">/);
+  // Only external scripts or non-executable data blocks
+  for (const tag of page.body.match(/<script\b[^>]*>/g) ?? []) {
+    assert.ok(/\ssrc="/.test(tag) || /type="application\/(?:json|ld\+json)"/.test(tag), tag);
+  }
+  assert.ok(!/\son[a-z]+="/i.test(page.body), 'no inline event handlers');
+  assert.equal((await get('/app.js')).status, 200);
+});
+
+test('every response carries the security headers', async () => {
+  for (const path of ['/', '/api.json', '/sw.js', '/nope']) {
+    const { headers } = await get(path);
+    assert.match(String(headers['content-security-policy']), /frame-ancestors 'none'/, path);
+    assert.equal(headers['x-content-type-options'], 'nosniff', path);
+    assert.equal(headers['x-frame-options'], 'DENY', path);
+    assert.equal(headers['referrer-policy'], 'strict-origin-when-cross-origin', path);
+  }
 });
 
 test('server-rendered project checker shows the upgrade plan', async () => {
