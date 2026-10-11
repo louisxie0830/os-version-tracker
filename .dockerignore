@@ -2,4 +2,15 @@ node_modules
 dist
 .git
 .gitignore
+.claude
+.vscode
+.idea
+.DS_Store
+*.log
+npm-debug.log*
+.env
+.env.*
 *.md
+Dockerfile
+.dockerignore
+render.yaml

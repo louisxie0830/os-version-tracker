@@ -5,7 +5,8 @@
   "scripts": {
     "start": "tsx src/index.ts",
     "build": "tsc",
-    "start:server": "node dist/server.js"
+    "start:server": "node dist/server.js",
+    "test": "node --import tsx --test test/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.3",

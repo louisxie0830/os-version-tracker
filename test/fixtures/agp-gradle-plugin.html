@@ -1,0 +1,475 @@
+
+
+<!doctype html>
+<html
+      lang="en"
+      dir="ltr">
+  <head>
+
+      <title>Android Gradle plugin 9.4.0 (September 2026) &nbsp;|&nbsp; Android Studio &nbsp;|&nbsp; Android Developers</title>
+
+    </head>
+  <body class="color-scheme--light"
+        template="page"
+        theme="android-theme"
+        type="article"
+
+        appearance
+
+        layout="docs"
+
+        display-toc
+        pending>
+
+    <devsite-progress type="indeterminate" id="app-progress"></devsite-progress>
+
+    <a href="#main-content" class="skip-link button">
+
+      Skip to main content
+    </a>
+    <section class="devsite-wrapper">
+      <devsite-cookie-notification-bar></devsite-cookie-notification-bar>
+
+      <section id="gc-wrapper">
+        <main role="main" id="main-content" class="devsite-main-content"
+
+              has-book-nav
+              has-sidebar
+            >
+          <div class="devsite-sidebar">
+            <div class="devsite-sidebar-content">
+
+                <devsite-recommendations-sidebar class="nocontent devsite-nav" data-nosnippet>
+                </devsite-recommendations-sidebar>
+            </div>
+          </div>
+          <devsite-content>
+
+<article class="devsite-article">
+
+  <div class="devsite-article-meta nocontent" role="navigation" data-nosnippet>
+
+    <ul class="devsite-breadcrumb-list"
+
+    aria-label="Breadcrumb">
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+  <a href="https://developer.android.com/"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="1"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="1"
+
+        track-metadata-eventdetail="Android Developers"
+
+    >
+
+          Android Developers
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/develop"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="2"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="2"
+
+        track-metadata-eventdetail=""
+
+    >
+
+          Develop
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/studio"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="3"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="3"
+
+        track-metadata-eventdetail="Android Studio"
+
+    >
+
+          Android Studio
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/build/gradle-build-overview"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="4"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="4"
+
+        track-metadata-eventdetail=""
+
+    >
+
+          Gradle build guides
+
+  </a>
+
+  </li>
+
+</ul>
+
+  </div>
+
+    <h1 class="devsite-page-title" tabindex="-1">
+      Android Gradle plugin 9.4.0 (September 2026)
+
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+
+    <devsite-recommendations-dropdown class="nocontent" data-nosnippet>
+    </devsite-recommendations-dropdown>
+
+  <div class="devsite-article-body clearfix
+  ">
+
+</p>
+
+<p>Android Gradle plugin 9.4 is a minor release that includes a variety of new
+features and improvements.</p>
+
+<h2 id="compatibility" data-text="Compatibility" tabindex="-1">Compatibility</h2>
+
+<p>The maximum API level that Android Gradle plugin 9.4 supports is API level 37.
+Here is other compatibility info:</p>
+
+<p>
+
+    <table>
+      <thead>
+        <tr>
+          <th align="right"></th>
+          <th align="center">Minimum version</th>
+          <th align="center">Default version</th>
+          <th align="center">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td align="right">Gradle</td>
+          <td align="center">9.6.0</td>
+          <td align="center">9.6.0</td>
+          <td align="left">To learn more, see <a href='/build/releases/gradle-plugin?buildsystem=ndk-build#updating-gradle'>updating Gradle</a>.</td>
+        </tr>
+
+        <tr>
+          <td align="right">SDK Build Tools</td>
+          <td align="center">36.0.0</td>
+          <td align="center">36.0.0</td>
+          <td align="left"><a href='/studio/intro/update#sdk-manager'>Install</a> or <a href='/tools/releases/build-tools'>configure</a> SDK Build Tools.</td>
+        </tr>
+
+        <tr>
+          <td align="right">NDK</td>
+          <td align="center">N/A</td>
+          <td align="center">28.2.13676358</td>
+          <td align="left"><a href='/studio/projects/install-ndk#specific-version'>Install</a> or <a href='/studio/projects/install-ndk#apply-specific-version'>configure</a> a different version of the NDK.</td>
+        </tr>
+
+        <tr>
+          <td align="right">JDK</td>
+          <td align="center">17</td>
+          <td align="center">17</td>
+          <td align="left">To learn more, see <a href='/studio/intro/studio-config#jdk'>setting the JDK version</a>.</td>
+        </tr>
+
+      </tbody>
+    </table>
+
+</p>
+
+<h2 id="new-dsl-opt-out" data-text="Variant API module opt-out" tabindex="-1">Variant API module opt-out</h2>
+
+<p>Starting with AGP 10, the new Variant API is mandatory for all projects. To
+support a gradual migration, you can temporarily opt specific modules out of
+this requirement before AGP 10 by applying the following to your
+<code translate="no" dir="ltr">gradle.properties</code> file.</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">android.newDsl.optOut=:example-lib1
+</code></pre></devsite-code>
+<h2 id="variant-parity-df-app" data-text="Strict 1:1 variant parity between dynamic feature and android apps" tabindex="-1">Strict 1:1 variant parity between dynamic feature and android apps</h2>
+
+<p>Starting in AGP 9.4, the build system checks for strict 1:1 flavor dimension
+parity between Android app modules and dynamic feature modules,
+reporting any missing, extra, or mismatched dimensions as build warnings.
+To help you prepare for stricter validation without breaking existing
+build pipelines, this check operates in warning mode by default, but can be
+promoted to an execution error by enabling the
+<code translate="no" dir="ltr">android.enforceDynamicFeatureVariantMatching=true</code> Gradle option.
+From AGP 10.0 onwards, strict 1:1 variant parity will become enforced by
+default, turning all dimension mismatches between base apps and their
+dynamic feature modules into fatal build failures.</p>
+
+<h2 id="fixed-issues" data-text="Fixed issues" tabindex="-1">Fixed issues</h2>
+
+<p>
+
+    <h3 id="fixed-issues-agp-9.4.0-alpha04" data-text="Android Gradle plugin 9.4.0-alpha04" tabindex="-1">Android Gradle plugin 9.4.0-alpha04</h3>
+    <table class="responsive">
+      <colgroup>
+        <col width="20%">
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th colspan="2">Fixed Issues</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr class="alt">
+          <td colspan="2">
+            No public issues were marked as fixed in AGP 9.4.0-alpha04
+          </td>
+        </tr>
+      </tbody>
+    </table><h3 id="fixed-issues-agp-9.4.0-alpha03" data-text="Android Gradle plugin 9.4.0-alpha03" tabindex="-1">Android Gradle plugin 9.4.0-alpha03</h3>
+    <table class="responsive">
+      <colgroup>
+        <col width="20%">
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th colspan="2">Fixed Issues</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td><b>Shrinker (R8)</b></td>
+          <td>
+            <table class="nested responsive">
+              <tbody>
+
+                <tr><td>
+
+                  <div><a href="https://issuetracker.google.com/issues/146403477" target="_blank"
+    rel="noopener noreferrer">Issue #146403477</a></div>
+
+                  <div>L8 obfucation mapping not included in app mapping.txt</div>
+                </td></tr>
+
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+      </tbody>
+    </table><h3 id="fixed-issues-agp-9.4.0-alpha02" data-text="Android Gradle plugin 9.4.0-alpha02" tabindex="-1">Android Gradle plugin 9.4.0-alpha02</h3>
+    <table class="responsive">
+      <colgroup>
+        <col width="20%">
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th colspan="2">Fixed Issues</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td><b>Android Gradle Plugin</b></td>
+          <td>
+            <table class="nested responsive">
+              <tbody>
+
+                <tr><td>
+
+                  <div><a href="https://issuetracker.google.com/issues/499166350" target="_blank"
+    rel="noopener noreferrer">Issue #499166350</a></div>
+
+                  <div>AGP SigningConfig is too eager</div>
+                </td></tr>
+
+                <tr><td>
+
+                  <div><a href="https://issuetracker.google.com/issues/257765153" target="_blank"
+    rel="noopener noreferrer">Issue #257765153</a></div>
+
+                  <div>"Unable to get provider" (ClassNotFoundException) when running `./gradlew :app:connectedDebugAndroidTest` with a provider defined in a dynamic feature module</div>
+                </td></tr>
+
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+      </tbody>
+    </table><h3 id="fixed-issues-agp-9.4.0-alpha01" data-text="Android Gradle plugin 9.4.0-alpha01" tabindex="-1">Android Gradle plugin 9.4.0-alpha01</h3>
+    <table class="responsive">
+      <colgroup>
+        <col width="20%">
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th colspan="2">Fixed Issues</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td><b>Android Gradle Plugin</b></td>
+          <td>
+            <table class="nested responsive">
+              <tbody>
+
+                <tr><td>
+
+                  <div><a href="https://issuetracker.google.com/issues/499166350" target="_blank"
+    rel="noopener noreferrer">Issue #499166350</a></div>
+
+                  <div>AGP SigningConfig is too eager</div>
+                </td></tr>
+
+              </tbody>
+            </table>
+          </td>
+        </tr>
+
+      </tbody>
+    </table></p>
+
+</div>
+
+      <devsite-recommendations display="in-page" hidden yield>
+      </devsite-recommendations>
+
+      <devsite-recommendations id="recommendations-link" yield></devsite-recommendations>
+
+  <div class="devsite-floating-action-buttons"></div></article>
+
+<devsite-content-footer class="nocontent" data-nosnippet>
+  <p>Content and code samples on this page are subject to the licenses described in the <a href="/license">Content License</a>. Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.</p>
+  <p>Last updated 2026-10-08 UTC.</p>
+</devsite-content-footer>
+
+<devsite-notification
+
+        link="https://google.qualtrics.com/jfe/form/SV_brOPtHjm8smSm4C?link=dac"
+        link-text="Take survey"
+        message="Help us improve the Android Developer experience by taking a survey."
+>
+</devsite-notification>
+
+<div class="devsite-content-data">
+
+</div>
+
+          </devsite-content>
+        </main>
+
+        <devsite-panel>
+
+        </devsite-panel>
+
+      </section>
+      </section>
+    <devsite-sitemask></devsite-sitemask>
+
+    <devsite-tooltip ></devsite-tooltip>
+    <devsite-heading-link></devsite-heading-link>
+    <devsite-analytics>
+
+    </devsite-analytics>
+
+      <devsite-badger></devsite-badger>
+
+<android-fully-clickable
+    target="
+        .android-case-study .devsite-landing-row-item,
+        .android-editorial-and-updates-cards .devsite-card-content-wrapper,
+        .android-editorial-and-updates-cards .devsite-landing-row-item,
+        .android-grouped-resources .devsite-landing-row-item,
+        .android-grouped-resources-contained--primary .devsite-landing-row-item,
+        .android-grouped-resources-contained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-contained--tertiary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--primary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--tertiary .devsite-landing-row-item,
+        .android-guide-cards .devsite-landing-row-item,
+        .android-illustrated-resources-index .devsite-landing-row-item,
+        .android-illustrated-resources-primary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary-small .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary-small .devsite-landing-row-item,
+        .android-promo .devsite-landing-row-item,
+        .android-quick-link,
+        .android-samples .devsite-card-wrapper,
+        .fully-clickable"
+    watch=".android-editorial-and-updates-cards, .android-samples, devsite-content"></android-fully-clickable>
+
+    <devsite-a11y-announce></devsite-a11y-announce>
+  </body>
+</html>

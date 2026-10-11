@@ -1,0 +1,685 @@
+
+
+<!doctype html>
+<html
+      lang="en"
+      dir="ltr">
+  <head>
+
+      <title>About Android Gradle plugin &nbsp;|&nbsp; Android Studio &nbsp;|&nbsp; Android Developers</title>
+
+    </head>
+  <body class="color-scheme--light"
+        template="page"
+        theme="android-theme"
+        type="article"
+
+        appearance
+
+        layout="docs"
+
+        display-toc
+        pending>
+
+    <devsite-progress type="indeterminate" id="app-progress"></devsite-progress>
+
+    <a href="#main-content" class="skip-link button">
+
+      Skip to main content
+    </a>
+    <section class="devsite-wrapper">
+      <devsite-cookie-notification-bar></devsite-cookie-notification-bar>
+
+      <section id="gc-wrapper">
+        <main role="main" id="main-content" class="devsite-main-content"
+
+              has-book-nav
+              has-sidebar
+            >
+          <div class="devsite-sidebar">
+            <div class="devsite-sidebar-content">
+
+                <devsite-recommendations-sidebar class="nocontent devsite-nav" data-nosnippet>
+                </devsite-recommendations-sidebar>
+            </div>
+          </div>
+          <devsite-content>
+
+<article class="devsite-article">
+
+  <div class="devsite-article-meta nocontent" role="navigation" data-nosnippet>
+
+    <ul class="devsite-breadcrumb-list"
+
+    aria-label="Breadcrumb">
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+  <a href="https://developer.android.com/"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="1"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="1"
+
+        track-metadata-eventdetail="Android Developers"
+
+    >
+
+          Android Developers
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/develop"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="2"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="2"
+
+        track-metadata-eventdetail=""
+
+    >
+
+          Develop
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/studio"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="3"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="3"
+
+        track-metadata-eventdetail="Android Studio"
+
+    >
+
+          Android Studio
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/build/gradle-build-overview"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="4"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="4"
+
+        track-metadata-eventdetail=""
+
+    >
+
+          Gradle build guides
+
+  </a>
+
+  </li>
+
+</ul>
+
+  </div>
+
+    <h1 class="devsite-page-title" tabindex="-1">
+      About Android Gradle plugin
+
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+
+    <devsite-recommendations-dropdown class="nocontent" data-nosnippet>
+    </devsite-recommendations-dropdown>
+
+  <div class="devsite-article-body clearfix
+  ">
+
+<aside class="special"><strong>Important:</strong><span> For a detailed log of Android Gradle plugin API deprecations and
+removals, see the
+<a href="/studio/releases/gradle-plugin-api-updates">Android Gradle plugin API updates</a>.</span></aside>
+<p>The Android Studio build system is based on Gradle, and the Android Gradle
+plugin adds several features that are specific to build Android apps.</p>
+
+<p>This page explains how to keep your Gradle tools up to date. For release notes
+on the Android Gradle plugin, see the <a href="/build/releases/gradle-plugin">release notes page</a>.</p>
+
+<p>For a high-level summary of upcoming breaking changes in the Android Gradle
+plugin, see the <a href="/studio/releases/gradle-plugin-roadmap">Android
+Gradle plugin roadmap</a>.</p>
+
+<p>For details about how to configure your Android builds with Gradle,
+see the following pages:</p>
+
+<ul>
+  <li>
+    <a href="/build">Configure your build</a>
+  </li>
+  <li>
+    <a href="/reference/tools/gradle-api">Android Gradle plugin DSL reference</a>
+  </li>
+  <li>
+    <a class="external-link"
+       href="https://docs.gradle.org/current/dsl/">Gradle DSL reference</a>
+  </li>
+  <li>
+    <a class="external-link"
+       href="https://docs.gradle.org/current/userguide/performance.html">Gradle performance user guide</a>
+  </li>
+</ul>
+
+<p>For more information about the Gradle build system, see the
+  <a href="https://docs.gradle.org/current/userguide/userguide.html"
+     class="external-link">Gradle user guide</a>.</p>
+
+<p>
+
+<section class="android-skills-card nocontent">
+  <div class="android-skills-card-inner">
+
+      <div class="android-skills-card-description">Use the AGP 9 Upgrade <a href='/tools/agents/android-skills'>Android skill</a> to upgrade your project to AGP version 9.x (non-KMP projects).</div>
+
+      <div class="android-skills-card-description">To install the skill from the <a href='/tools/agents/android-cli'>Android CLI</a>, run:</div>
+
+      <div></div><devsite-code><pre data-copy-event-label="android-skills-card AGP 9 Upgrade" class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code class="android-skills-card-text" translate="no" dir="ltr">android skills add agp-9-upgrade</code></pre></devsite-code>
+
+      <div class="android-skills-card-description">If your app uses Kotlin Multiplatform (KMP), use the skill from <a href="https://github.com/Kotlin/kotlin-agent-skills/tree/main/skills/kotlin-tooling-agp9-migration" class='external'>JetBrains</a>.</div>
+
+  </div>
+</section></p>
+
+<h2 id="updating-plugin" data-text="Update the Android Gradle plugin" tabindex="-1">Update the Android Gradle plugin</h2>
+
+<p>
+  When you update Android Studio, you may receive a prompt to automatically
+  update the Android Gradle plugin to the latest available version. You
+  can choose to accept the update or manually specify a version based on
+  your project's build requirements.
+</p>
+
+<p>
+  You can specify the plugin version in
+  either the <strong>File</strong> &gt; <strong>Project
+  Structure</strong> &gt; <strong>Project</strong> menu in Android Studio, or
+  the top-level <code translate="no" dir="ltr">build.gradle.kts</code> file. The plugin version applies to
+  all modules built in that Android Studio project. The following example sets
+  the plugin to version 9.4.0 from the
+  <code translate="no" dir="ltr">build.gradle.kts</code> file:
+</p>
+
+<div>
+<div class="ds-selector-tabs"><section><h3 class="two-line-tab" tab-label="build.gradle.kts" id="kts" data-text="Kotlin" tabindex="-1">Kotlin</h3>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Kotlin"><span class="devsite-syntax-n">plugins</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-p">{</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-n">id</span><span class="devsite-syntax-p">(</span><span class="devsite-syntax-s">"com.android.application"</span><span class="devsite-syntax-p">)</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">version</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s">"9.4.0"</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">apply</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">false</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-n">id</span><span class="devsite-syntax-p">(</span><span class="devsite-syntax-s">"com.android.library"</span><span class="devsite-syntax-p">)</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">version</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s">"9.4.0"</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">apply</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">false</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-n">id</span><span class="devsite-syntax-p">(</span><span class="devsite-syntax-s">"org.jetbrains.kotlin.android"</span><span class="devsite-syntax-p">)</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">version</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s">"2.4.10"</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">apply</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">false</span>
+<span class="devsite-syntax-p">}</span></pre></devsite-code>
+</section><section><h3 class="two-line-tab" tab-label="build.gradle" id="groovy" data-text="Groovy" tabindex="-1">Groovy</h3>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Groovy"><span class="devsite-syntax-n">plugins</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-o">{</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-n">id</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s1">'com.android.application'</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">version</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s1">'9.4.0'</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">apply</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">false</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-n">id</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s1">'com.android.library'</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">version</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s1">'9.4.0'</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">apply</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">false</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-n">id</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s1">'org.jetbrains.kotlin.android'</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">version</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-s1">'2.4.10'</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-n">apply</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">false</span>
+<span class="devsite-syntax-o">}</span></pre></devsite-code>
+</section></div>
+</div>
+
+<p class="caution">
+  <strong>Caution:</strong> You should not use dynamic dependencies in version
+  numbers, such as
+  <code translate="no" dir="ltr">'com.android.tools.build:gradle:9.4.+'</code>.
+  Using this feature can cause unexpected version updates and difficulty
+  resolving version differences.
+</p>
+
+<p>
+  If the specified plugin version has not been downloaded, Gradle downloads it
+  the next time you build your project or click <strong>File</strong> &gt;
+  <strong>Sync Project with Gradle Files</strong>
+  from the Android Studio menu bar.
+</p>
+
+<h2 id="updating-gradle" data-text="Update Gradle" tabindex="-1">Update Gradle</h2>
+
+<p>
+  When you update Android Studio, you may receive a prompt to also
+  update Gradle to the latest available version. You can choose to accept the
+  update or manually specify a version based on your project's build
+  requirements.
+</p>
+
+<p>The following table lists which version of Gradle is required for each
+version of the Android Gradle plugin. For the best performance, you should
+use the latest possible version of both Gradle and the plugin.</p>
+
+<table>
+<tr><th>Plugin version</th><th>Minimum required Gradle version</th></tr>
+<tr><td>9.4</td><td>9.6.0</td></tr>
+<tr><td>9.3</td><td>9.5.0</td></tr>
+<tr><td>9.2</td><td>9.4.1</td></tr>
+<tr><td>9.1</td><td>9.3.1</td></tr>
+<tr><td>9.0</td><td>9.1.0</td></tr>
+<tr><td>8.13</td><td>8.13</td></tr>
+<tr><td>8.12</td><td>8.13</td></tr>
+<tr><td>8.11</td><td>8.13</td></tr>
+<tr><td>8.10</td><td>8.11.1</td></tr>
+<tr><td>8.9</td><td>8.11.1</td></tr>
+<tr><td>8.8</td><td>8.10.2</td></tr>
+<tr><td>8.7</td><td>8.9</td></tr>
+<tr><td>8.6</td><td>8.7</td></tr>
+<tr><td>8.5</td><td>8.7</td></tr>
+<tr><td>8.4</td><td>8.6</td></tr>
+<tr><td>8.3</td><td>8.4</td></tr>
+<tr><td>8.2</td><td>8.2</td></tr>
+<tr><td>8.1</td><td>8.0</td></tr>
+<tr><td>8.0</td><td>8.0</td></tr>
+</table>
+
+<div>
+  <devsite-expandable>
+    <h3 class="showalways" id="older-versions" data-text="Older versions" tabindex="-1">Older versions</h3>
+    <table>
+    <tr><th>Plugin version</th><th>Required Gradle version</th></tr>
+    <tr><td>7.4</td><td>7.5</td></tr>
+    <tr><td>7.3</td><td>7.4</td></tr>
+    <tr><td>7.2</td><td>7.3.3</td></tr>
+    <tr><td>7.1</td><td>7.2</td></tr>
+    <tr><td>7.0</td><td>7.0</td></tr>
+    <tr><td>4.2.0+</td><td>6.7.1</td></tr>
+    <tr><td>4.1.0+</td><td>6.5+</td></tr>
+    <tr><td>4.0.0+</td><td>6.1.1+</td></tr>
+    <tr><td>3.6.0 - 3.6.4</td><td>5.6.4+</td></tr>
+    <tr><td>3.5.0 - 3.5.4</td><td>5.4.1+</td></tr>
+    <tr><td>3.4.0 - 3.4.3</td><td>5.1.1+</td></tr>
+    <tr><td>3.3.0 - 3.3.3</td><td>4.10.1+</td></tr>
+    <tr><td>3.2.0 - 3.2.1</td><td>4.6+</td></tr>
+    <tr><td>3.1.0+</td><td>4.4+</td></tr>
+    <tr><td>3.0.0+</td><td>4.1+</td></tr>
+    <tr><td>2.3.0+</td><td>3.3+</td></tr>
+    <tr><td>2.1.3 - 2.2.3</td><td>2.14.1 - 3.5</td></tr>
+    <tr><td>2.0.0 - 2.1.2</td><td>2.10 - 2.13</td></tr>
+    <tr><td>1.5.0</td><td>2.2.1 - 2.13</td></tr>
+    <tr><td>1.2.0 - 1.3.1</td><td>2.2.1 - 2.9</td></tr>
+    <tr><td>1.0.0 - 1.1.3</td><td>2.2.1 - 2.3</td></tr>
+    </table>
+  </devsite-expandable>
+</div>
+
+<p>
+ You can specify the Gradle version in either the <strong>File</strong> &gt;
+<strong>Project Structure</strong> &gt; <strong>Project</strong> menu in Android Studio,
+or update your Gradle version using the command line.
+The preferred way is to use the
+<a href="https://docs.gradle.org/current/userguide/gradle_wrapper.html" class="external">Gradle Wrapper</a>
+command line tool, which updates the <code translate="no" dir="ltr">gradlew</code> scripts. The following
+example sets the Gradle version to 9.6.0 using the Gradle Wrapper.
+Note, you need to run this command <em>twice</em> to upgrade both Gradle and the
+Gradle Wrapper itself (for more information, see
+<a href="https://docs.gradle.org/current/userguide/gradle_wrapper.html#sec:upgrading_wrapper" class="external">Upgrading the Gradle Wrapper</a>).
+</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">gradle wrapper --gradle-version 9.6.0
+</code></pre></devsite-code>
+<p>
+  However this might fail in some cases, for example if you've just updated AGP
+  and it's no longer compliant with the current Gradle version. In this case,
+  you need to edit the Gradle distribution reference in the
+  <code translate="no" dir="ltr">gradle/wrapper/gradle-wrapper.properties</code> file. The following
+  example sets the Gradle version to 9.6.0 in the
+  <code translate="no" dir="ltr">gradle-wrapper.properties</code> file.
+</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">...
+distributionUrl = https\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
+...
+</code></pre></devsite-code>
+<p>
+<h2 id="android_gradle_plugin_and_android_studio_compatibility" data-text="Android Gradle plugin and Android Studio compatibility" tabindex="-1">Android Gradle
+plugin and Android Studio compatibility</h2>
+
+<p>The Android Studio build system is based on Gradle, and the Android Gradle
+plugin (AGP) adds several features that are specific to building Android apps. The
+following table lists which version of AGP is required for each version of
+Android Studio.</p>
+
+<aside class="note">
+There is now a time-based compatibility policy for AGP and Android Studio.
+ Each Android Studio version will support AGP versions released within the
+  previous 3 years. AGP versions older than 3 years will no longer be supported
+   in newer Android Studio versions. If your project's AGP version is
+    incompatible, Android Studio will require you to update AGP.
+</aside>
+
+<aside class="note">
+  If your project is not supported by a specific version of Android Studio, you
+  can still open and update your project using an
+  <a href="/studio/archive">older version of Android Studio</a>.</aside>
+
+<table>
+  <tr>
+    <th>Android Studio version</th>
+    <th>Required AGP version</th>
+  </tr>
+  <tr>
+    <td>Rabbit 1 | 2026.2.1</td>
+    <td>7.1-9.4</td>
+  </tr>
+  <tr>
+    <td>Quail 4 | 2026.1.4</td>
+    <td>7.1-9.4</td>
+  </tr>
+  <tr>
+    <td>Quail 3 | 2026.1.3</td>
+    <td>7.1-9.3</td>
+  </tr>
+  <tr>
+    <td>Quail 2 | 2026.1.2</td>
+    <td>7.1-9.3</td>
+  </tr>
+  <tr>
+    <td>Quail 1 | 2026.1.1</td>
+    <td>7.1-9.2</td>
+  </tr>
+  <tr>
+    <td>Panda 4 | 2025.3.4</td>
+    <td>7.1-9.2</td>
+  </tr>
+  <tr>
+    <td>Panda 3 | 2025.3.3</td>
+    <td>7.0-9.1</td>
+  </tr>
+  <tr>
+    <td>Panda 2 | 2025.3.2</td>
+    <td>7.0-9.1</td>
+  </tr>
+  <tr>
+    <td>Panda 1 | 2025.3.1</td>
+    <td>7.0-9.0</td>
+  </tr>
+  <tr>
+    <td>Otter 3 Feature Drop | 2025.2.3</td>
+    <td>4.2-9.0</td>
+  </tr>
+  <tr>
+    <td>Otter 2 Feature Drop | 2025.2.2</td>
+    <td>4.1-8.13</td>
+  </tr>
+  <tr>
+    <td>Otter | 2025.2.1</td>
+    <td>4.0-8.13</td>
+  </tr>
+  <tr>
+    <td>Narwhal 4 Feature Drop | 2025.1.4</td>
+    <td>4.0-8.13</td>
+  </tr>
+  <tr>
+    <td>Narwhal 3 Feature Drop | 2025.1.3</td>
+    <td>4.0-8.13</td>
+  </tr>
+  <tr>
+    <td>Narwhal Feature Drop | 2025.1.2</td>
+    <td>4.0-8.12</td>
+  </tr>
+  <tr>
+    <td>Narwhal | 2025.1.1</td>
+    <td>3.2-8.11</td>
+  </tr>
+  <tr>
+    <td>Meerkat Feature Drop | 2024.3.2</td>
+    <td>3.2-8.10</td>
+  </tr>
+  <tr>
+    <td>Meerkat | 2024.3.1</td>
+    <td>3.2-8.9</td>
+  </tr>
+</table>
+
+<div>
+  <devsite-expandable>
+    <h3 class="showalways" id="older-versions_1" data-text="Older versions" tabindex="-1">Older versions</h3>
+    <table>
+    <th>Android Studio version</th>
+    <th>Required AGP version</th>
+    <tr>
+      <td>Ladybug Feature Drop | 2024.2.2</td>
+      <td>3.2-8.8</td>
+    </tr>
+    <tr>
+      <td>Ladybug | 2024.2.1</td>
+      <td>3.2-8.7</td>
+    </tr>
+    <tr>
+      <td>Koala Feature Drop | 2024.1.2</td>
+      <td>3.2-8.6</td>
+    </tr>
+    <tr>
+      <td>Koala | 2024.1.1</td>
+      <td>3.2-8.5</td>
+    </tr>
+    <tr>
+      <td>Jellyfish | 2023.3.1</td>
+      <td>3.2-8.4</td>
+    </tr>
+    <tr>
+      <td>Iguana | 2023.2.1</td>
+      <td>3.2-8.3</td>
+    </tr>
+    <tr>
+      <td>Hedgehog | 2023.1.1</td>
+      <td>3.2-8.2</td>
+    </tr>
+    <tr>
+      <td>Giraffe | 2022.3.1</td>
+      <td>3.2-8.1</td>
+    </tr>
+    <tr>
+      <td>Flamingo | 2022.2.1</td>
+      <td>3.2-8.0</td>
+    </tr>
+    <tr>
+      <td>Electric Eel | 2022.1.1</td>
+      <td>3.2-7.4</td>
+    </tr>
+    <tr>
+      <td>Dolphin | 2021.3.1</td>
+      <td>3.2-7.3</td>
+    </tr>
+    <tr>
+      <td>Chipmunk | 2021.2.1</td>
+      <td>3.2-7.2</td>
+    </tr>
+    <tr>
+      <td>Bumblebee | 2021.1.1</td>
+      <td>3.2-7.1</td>
+    </tr>
+    <tr>
+      <td>Arctic Fox | 2020.3.1</td>
+      <td>3.1-7.0</td>
+    </tr>
+    </table>
+  </devsite-expandable>
+</div>
+
+<p>For information on what’s new in the Android Gradle plugin, see the
+  <a href="/studio/releases/gradle-plugin">Android Gradle plugin release notes</a>.
+  </p>
+
+</p>
+
+<p>
+<h2 id="api-level-support" data-text="Minimum versions of tools for Android API level" tabindex="-1">Minimum versions of tools for Android API level</h2>
+
+<p>There are minimum versions of Android Studio and AGP that support a specific
+API level. Using lower versions of Android Studio or AGP than required by your
+project's <code translate="no" dir="ltr">targetSdk</code> or <code translate="no" dir="ltr">compileSdk</code> could lead to
+unexpected issues. We recommend using the latest preview version of Android
+Studio and AGP to work on projects that target preview versions of the Android
+OS. You can
+<a href="/studio/preview/install-preview#install_alongside_your_stable_version">
+install preview versions of Android Studio alongside a stable version</a>.</p>
+
+<p>The minimum versions of Android Studio and AGP are as follows:</p>
+
+<table>
+  <th>API level</th>
+  <th>Minimum Android Studio version</th>
+  <th>Minimum AGP version</th>
+  <tr>
+    <td>37.0</td>
+    <td>Panda 3 | 2025.3.3 Patch 1</td>
+    <td>9.1.1</td>
+  </tr>
+  <tr>
+    <td>36.1</td>
+    <td>Narwhal 3 Feature Drop | 2025.1.3</td>
+    <td>8.13.0</td>
+  </tr>
+  <tr>
+    <td>36</td>
+    <td>Meerkat | 2024.3.1 Patch 1</td>
+    <td>8.9.1</td>
+  </tr>
+  <tr>
+    <td>35</td>
+    <td>Koala Feature Drop | 2024.2.1</td>
+    <td>8.6.0</td>
+  </tr>
+  <tr>
+    <td>34</td>
+    <td>Hedgehog | 2023.1.1</td>
+    <td>8.1.1</td>
+  </tr>
+  <tr>
+    <td>33</td>
+    <td>Flamingo | 2022.2.1</td>
+    <td>7.2</td>
+  </tr>
+</table>
+</p>
+
+</div>
+
+      <devsite-recommendations display="in-page" hidden yield>
+      </devsite-recommendations>
+
+      <devsite-recommendations id="recommendations-link" yield></devsite-recommendations>
+
+  <div class="devsite-floating-action-buttons"></div></article>
+
+<devsite-content-footer class="nocontent" data-nosnippet>
+  <p>Content and code samples on this page are subject to the licenses described in the <a href="/license">Content License</a>. Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.</p>
+  <p>Last updated 2026-10-08 UTC.</p>
+</devsite-content-footer>
+
+<devsite-notification
+
+        link="https://google.qualtrics.com/jfe/form/SV_brOPtHjm8smSm4C?link=dac"
+        link-text="Take survey"
+        message="Help us improve the Android Developer experience by taking a survey."
+>
+</devsite-notification>
+
+<div class="devsite-content-data">
+
+</div>
+
+          </devsite-content>
+        </main>
+
+        <devsite-panel>
+
+        </devsite-panel>
+
+      </section>
+      </section>
+    <devsite-sitemask></devsite-sitemask>
+
+    <devsite-tooltip ></devsite-tooltip>
+    <devsite-heading-link></devsite-heading-link>
+    <devsite-analytics>
+
+    </devsite-analytics>
+
+      <devsite-badger></devsite-badger>
+
+<android-fully-clickable
+    target="
+        .android-case-study .devsite-landing-row-item,
+        .android-editorial-and-updates-cards .devsite-card-content-wrapper,
+        .android-editorial-and-updates-cards .devsite-landing-row-item,
+        .android-grouped-resources .devsite-landing-row-item,
+        .android-grouped-resources-contained--primary .devsite-landing-row-item,
+        .android-grouped-resources-contained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-contained--tertiary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--primary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--tertiary .devsite-landing-row-item,
+        .android-guide-cards .devsite-landing-row-item,
+        .android-illustrated-resources-index .devsite-landing-row-item,
+        .android-illustrated-resources-primary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary-small .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary-small .devsite-landing-row-item,
+        .android-promo .devsite-landing-row-item,
+        .android-quick-link,
+        .android-samples .devsite-card-wrapper,
+        .fully-clickable"
+    watch=".android-editorial-and-updates-cards, .android-samples, devsite-content"></android-fully-clickable>
+
+    <devsite-a11y-announce></devsite-a11y-announce>
+  </body>
+</html>

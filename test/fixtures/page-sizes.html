@@ -1,0 +1,990 @@
+
+
+<!doctype html>
+<html
+      lang="en"
+      dir="ltr">
+  <head>
+
+      <title>Support 16&nbsp;KB page sizes &nbsp;|&nbsp; Compatibility &nbsp;|&nbsp; Android Developers</title>
+
+    </head>
+  <body class="color-scheme--light"
+        template="page"
+        theme="android-theme"
+        type="article"
+
+        appearance
+
+        layout="docs"
+
+        display-toc
+        pending>
+
+    <devsite-progress type="indeterminate" id="app-progress"></devsite-progress>
+
+    <a href="#main-content" class="skip-link button">
+
+      Skip to main content
+    </a>
+    <section class="devsite-wrapper">
+      <devsite-cookie-notification-bar></devsite-cookie-notification-bar>
+
+      <section id="gc-wrapper">
+        <main role="main" id="main-content" class="devsite-main-content"
+
+              has-book-nav
+              has-sidebar
+            >
+          <div class="devsite-sidebar">
+            <div class="devsite-sidebar-content">
+
+                <devsite-recommendations-sidebar class="nocontent devsite-nav" data-nosnippet>
+                </devsite-recommendations-sidebar>
+            </div>
+          </div>
+          <devsite-content>
+
+<article class="devsite-article">
+
+  <div class="devsite-article-meta nocontent" role="navigation" data-nosnippet>
+
+    <ul class="devsite-breadcrumb-list"
+
+    aria-label="Breadcrumb">
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+  <a href="https://developer.android.com/"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="1"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="1"
+
+        track-metadata-eventdetail="Android Developers"
+
+    >
+
+          Android Developers
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/develop"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="2"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="2"
+
+        track-metadata-eventdetail="Develop"
+
+    >
+
+          Develop
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/develop/devices"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="3"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="3"
+
+        track-metadata-eventdetail="Devices"
+
+    >
+
+          Devices
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/guide/practices/compatibility"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="4"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="4"
+
+        track-metadata-eventdetail="Compatibility"
+
+    >
+
+          Compatibility
+
+  </a>
+
+  </li>
+
+</ul>
+
+  </div>
+
+    <h1 class="devsite-page-title" tabindex="-1">
+      Support 16&nbsp;KB page sizes
+
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+
+    <devsite-recommendations-dropdown class="nocontent" data-nosnippet>
+    </devsite-recommendations-dropdown>
+
+  <div class="devsite-article-body clearfix
+  ">
+
+<p>Historically, Android has only supported 4&nbsp;KB memory page sizes, which has
+optimized system memory performance for the average amount of total memory that
+Android devices have typically had. Beginning with Android 15, AOSP supports
+devices that are configured to use a page size of 16&nbsp;KB (16&nbsp;KB
+devices). If your app uses any <a href="/ndk">NDK</a> libraries, either directly
+or indirectly through an SDK, then you will need to rebuild your app for it to
+work on these 16&nbsp;KB devices.</p>
+
+<p>As device manufacturers continue to build devices with larger amounts of
+physical memory (RAM), many of these devices will adopt 16&nbsp;KB (and
+eventually greater) page sizes to optimize the device&#39;s performance. Adding
+support for 16&nbsp;KB page size devices enables your app to run on these
+devices and helps your app benefit from the associated performance
+improvements. Without recompiling, apps won&#39;t work on 16&nbsp;KB devices in
+future Android releases.</p>
+
+<p>To help you add support for your app, we&#39;ve provided guidance on how to <a href="/guide/practices/page-sizes#16-kb-impact">check
+if your app is impacted</a>, how to
+<a href="/guide/practices/page-sizes#build">rebuild your app</a> (if applicable), and how to <a href="/guide/practices/page-sizes#test">test your app in
+a 16&nbsp;KB environment</a> using emulators (including Android 15
+system images for the Android Emulator).</p>
+
+<h2 id="google-play-compatibility-requirement" data-text="Google Play compatibility requirement" tabindex="-1">Google Play compatibility requirement</h2>
+
+<p>To ensure your app works correctly on the latest versions of Android, all
+apps targeting Android 15 (API level 35) and higher must support 16&nbsp;KB
+memory page sizes on 64-bit devices on Google Play. Starting February 1, 2027,
+if your app updates don&#39;t support 16&nbsp;KB memory page sizes,
+you won&#39;t be able to release these updates.</p>
+
+<figure style="display:block; margin:auto; text-align:center;">
+  <img class="invert"
+       src="/static/images/guide/practices/play-console-16kb.png"
+       width="850"
+       alt="Google Play Console warning that app updates must support 16 KB memory page sizes by February 1, 2027">
+  <figcaption><b>Figure 1.</b> Google Play Console compatibility warning.</figcaption>
+</figure>
+
+<h2 id="benefits" data-text="Benefits and performance gains" tabindex="-1">Benefits and performance gains</h2>
+
+<p>Devices configured with 16&nbsp;KB page sizes use slightly more memory on
+average, but also gain various performance improvements for both the system and
+apps:</p>
+
+<ul>
+<li>Lower app launch times while the system is under memory pressure: 3.16%
+lower on average, with more significant improvements (up to 30%) for some
+apps that we tested</li>
+<li>Reduced power draw during app launch: 4.56% reduction on average</li>
+<li>Faster camera launch: 4.48% faster hot starts on average, and 6.60% faster
+cold starts on average</li>
+<li>Improved system boot time: improved by 8% (approximately 950 milliseconds)
+on average</li>
+</ul>
+
+<p>These improvements are based on our initial testing, and results on actual
+devices will likely differ. We&#39;ll provide additional analysis of potential gains
+for apps as we continue our testing.</p>
+
+<h2 id="16-kb-impact" data-text="Check if your app is impacted" tabindex="-1">Check if your app is impacted</h2>
+
+<p>If your app <a href="/guide/practices/page-sizes#native-code">uses any native code</a>, then you should <a href="/guide/practices/page-sizes#build">rebuild
+your app with support for 16&nbsp;KB devices</a>. If you are unsure
+if your app uses native code, you can <a href="/guide/practices/page-sizes#identify-native-code">use the APK Analyzer to identify whether
+any native code is present</a> and then <a href="/guide/practices/page-sizes#elf-alignment">check the alignment of ELF
+segments for any shared libraries</a> that you find. Android Studio
+also provides features that help you to <a href="/guide/practices/page-sizes#auto-checks">automatically detect alignment
+issues</a>.</p>
+
+<p>If your app only uses code written in the Java programming language or in
+Kotlin, including all libraries or SDKs, then your app already supports
+16&nbsp;KB devices. Nevertheless, we recommend that you <a href="/guide/practices/page-sizes#test">test your app in a
+16&nbsp;KB environment</a> to verify that there are no unexpected
+regressions in app behavior.</p>
+
+<h3 id="native-code" data-text="Does your app use native code?" tabindex="-1">Does your app use native code?</h3>
+
+<p>Your app makes use of native code if any of the following apply:</p>
+
+<ul>
+<li>Your app uses any C/C++ (native) code. If your app uses the <a href="/ndk">Android
+NDK</a>, then your app uses native code.</li>
+<li>Your app links with any third-party native libraries or dependencies (such
+as SDKs) that use them.</li>
+<li>Your app is built by a third-party app builder that uses native libraries on
+device.</li>
+</ul>
+
+<h3 id="identify-native-code" data-text="Identify native libraries using APK Analyzer" tabindex="-1">Identify native libraries using APK Analyzer</h3>
+
+<p><a href="/studio/debug/apk-analyzer">APK Analyzer</a> is a tool that lets you evaluate various aspects of a built
+APK. To check whether your app uses native code (regardless of whether it is
+16&nbsp;KB compatible):</p>
+
+<ol>
+<li>Open <em>Android Studio</em>, then click <strong>File &gt; Open</strong> and choose any project.</li>
+<li><p>From the menu bar, click <strong>Build &gt; Analyze APK...</strong></p>
+
+<figure>
+  <img src="/static/images/guide/practices/studio-analyze-apk-option.png"
+       class="no-filter" width="340"
+       alt="Studio Build menu option to launch APK Analyzer">
+</figure></li>
+<li><p>Choose the APK you want to analyze.</p></li>
+<li><p>Look within the <code translate="no" dir="ltr">lib</code> folder, which hosts shared object (<code translate="no" dir="ltr">.so</code>) files if any
+are present. If any shared object files are present, your app uses native
+code. The <em>Alignment</em> column displays warning messages for any files that
+have alignment issues. If no shared object files are present or there is no
+<code translate="no" dir="ltr">lib</code> folder, then your app doesn&#39;t use native code.</p>
+
+<figure>
+  <img src="/static/images/guide/practices/apk-analyzer-so-files.png"
+       class="no-filter"
+       alt="APK Analyzer view showing that shared object files are present">
+</figure></li>
+</ol>
+
+<h3 id="auto-checks" data-text="Detect alignment issues with automated checks" tabindex="-1">Detect alignment issues with automated checks</h3>
+
+<p>Android Studio warns you proactively if your prebuilt libraries or APKs aren&#39;t
+16&nbsp;KB compliant. Use the <a href="#identify-native-code">APK
+Analyzer</a> tool to review which libraries need to be
+updated or if any code changes are required.</p>
+
+<figure>
+  <img src="/static/images/guide/practices/studio-align-warnings.png"
+       class="no-filter" width="300"
+       alt="Studio warning notifications about alignment issues in a project">
+</figure>
+
+<p><a href="/studio/write/lint">Lint in Android Studio</a> also highlights native libraries that
+aren&#39;t 16&nbsp;KB aligned.</p>
+
+<figure>
+  <img src="/static/images/guide/practices/studio-align-lint.png"
+       class="no-filter"
+       alt="Studio linter warning about a non-aligned native library">
+</figure>
+
+<h3 id="elf-alignment" data-text="Check the alignment of ELF segments for shared libraries" tabindex="-1">Check the alignment of ELF segments for shared libraries</h3>
+
+<p>For any shared libraries, verify that the shared libraries&#39; ELF segments are
+aligned properly using 16&nbsp;KB ELF alignment. If you are developing on either
+Linux or macOS, you can use the <code translate="no" dir="ltr">check_elf_alignment.sh</code> script as described in
+the following section. You can also <a href="#alignment-use-tools">use the command-line tools directly</a>.</p>
+
+<h4 id="alignment-use-script" data-text="Use the check_elf_alignment.sh script (Linux or macOS)" tabindex="-1">Use the check_elf_alignment.sh script (Linux or macOS)</h4>
+
+<p>Follow these steps to check the alignment of ELF segments using the
+<code translate="no" dir="ltr">check_elf_alignment.sh</code> script:</p>
+
+<ol>
+<li><p>Save the <a href="https://cs.android.com/android/platform/superproject/main/+/main:system/extras/tools/check_elf_alignment.sh"><code translate="no" dir="ltr">check_elf_alignment.sh</code></a> script to a file.</p></li>
+<li><p>Run the script on your app&#39;s APK file:</p>
+<div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">check_elf_alignment.sh <var translate="no">APK_NAME</var>.apk
+</code></pre></devsite-code>
+<p>The script outputs either <code translate="no" dir="ltr">ALIGNED</code> or <code translate="no" dir="ltr">UNALIGNED</code> for all the <code translate="no" dir="ltr">arm64-v8a</code>
+shared libraries.</p></li>
+<li><p>If any <code translate="no" dir="ltr">arm64-v8a</code> or <code translate="no" dir="ltr">x86_64</code> shared libraries are <code translate="no" dir="ltr">UNALIGNED</code>, you&#39;ll need
+to <a href="#update-packaging">update the packaging for those libraries</a>, then <a href="#compile-16-kb-alignment">recompile your
+app</a> and retest by following the steps in this section.</p></li>
+</ol>
+
+<h4 id="alignment-use-tools" data-text="Use command-line tools directly" tabindex="-1">Use command-line tools directly</h4>
+
+<p>Follow these steps to check the alignment of ELF segments using command-line
+tools directly:</p>
+<ol>
+<li>Make sure both Android SDK Build-Tools version 35.0.0 or higher and the
+Android NDK are installed using the <a href="/studio/intro/update#sdk-manager">SDK Manager in Android Studio</a> or
+<a href="/tools/sdkmanager"><code translate="no" dir="ltr">sdkmanager</code></a> command-line tool.</li>
+<li><p>Extract your app&#39;s APK file:</p>
+<div><devsite-selector data-ds-scope="code-sample">
+<section><h3 id="linux-or-macos" data-text="Linux or macOS" tabindex="-1">Linux or macOS</h3><div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">unzip <var translate="no">APK_NAME</var>.apk -d /tmp/my_apk_out
+</code></pre></devsite-code></section>
+<section><h3 id="windows-powershell" data-text="Windows (PowerShell)" tabindex="-1">Windows (PowerShell)</h3><div></div><devsite-code><pre data-terminal-prefix="&gt;" class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">Expand-Archive -Path .\<var translate="no">APK_NAME</var>.apk -DestinationPath ~\tmp\my_apk_out
+</code></pre></devsite-code></section>
+</devsite-selector></div></li>
+<li><p>In the temporary directory that you extracted your APK file to, check the
+contents of the <code translate="no" dir="ltr">lib</code> directory for shared object (<code translate="no" dir="ltr">.so</code>) files. These are
+the same shared object files that you would&#39;ve seen while <a href="#identify-native-code">identifying
+native libraries using APK Analyzer</a>. Run the following command on each
+shared object file:</p>
+<div><devsite-selector data-ds-scope="code-sample">
+<section><h3 id="linux-or-macos_1" data-text="Linux or macOS" tabindex="-1">Linux or macOS</h3><div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr"><var translate="no">SDK_ROOT_LOCATION</var>/Android/sdk/ndk/<var translate="no">NDK_VERSION</var>/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-objdump -p <var translate="no">SHARED_OBJECT_FILE</var>.so | grep LOAD
+</code></pre></devsite-code></section>
+<section><h3 id="windows-powershell_1" data-text="Windows (PowerShell)" tabindex="-1">Windows (PowerShell)</h3><div></div><devsite-code><pre data-terminal-prefix="&gt;" class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr"><var translate="no">SDK_ROOT_LOCATION</var>\Android\sdk\ndk\<var translate="no">NDK_VERSION</var>\toolchains\llvm\prebuilt\windows-x86_64\bin\llvm-objdump.exe -p <var translate="no">SHARED_OBJECT_FILE</var>.so | Select-String -Pattern &#34;LOAD&#34;
+</code></pre></devsite-code></section>
+</devsite-selector></div>
+<p>Where <var translate="no"><code translate="no" dir="ltr">SDK_ROOT_LOCATION</code></var> is the path to the
+directory where you&#39;ve installed the Android SDK,
+<var translate="no"><code translate="no" dir="ltr">SHARED_OBJECT_FILE</code></var> is the name of the shared object
+file that you&#39;re checking, and <var translate="no"><code translate="no" dir="ltr">NDK_VERSION</code></var> is the
+version of the Android NDK that you have installed (for example,
+<code translate="no" dir="ltr">28.0.12433566</code>). The output will look something like the following for each
+file you check:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">LOAD off    0x0000000000000000 vaddr 0x0000000000000000 paddr 0x0000000000000000 align 2**14
+LOAD off    0x0000000000042a90 vaddr 0x0000000000043a90 paddr 0x0000000000043a90 align 2**14
+LOAD off    0x0000000000046230 vaddr 0x0000000000048230 paddr 0x0000000000048230 align 2**14
+</code></pre></devsite-code></li>
+<li><p>Check the output lines to ensure that the load segments don&#39;t have values
+less than <code translate="no" dir="ltr">2**14</code>. If any load segments are <code translate="no" dir="ltr">2**13</code>, <code translate="no" dir="ltr">2**12</code>, or lower
+values, you&#39;ll need to <a href="#update-packaging">update the packaging for those libraries</a>, then
+<a href="#compile-16-kb-alignment">recompile your app</a> and retest by following the steps in this section.</p></li>
+<li><p>Next, run the <code translate="no" dir="ltr">zipalign</code> command-line tool on your app&#39;s APK file:</p>
+<div><devsite-selector data-ds-scope="code-sample">
+<section><h3 id="linux-or-macos_2" data-text="Linux or macOS" tabindex="-1">Linux or macOS</h3><div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr"><var translate="no">SDK_ROOT_LOCATION</var>/Android/sdk/build-tools/35.0.0/zipalign -v -c -P 16 4 <var translate="no">APK_NAME</var>.apk
+</code></pre></devsite-code></section>
+<section><h3 id="windows-powershell_2" data-text="Windows (PowerShell)" tabindex="-1">Windows (PowerShell)</h3><div></div><devsite-code><pre data-terminal-prefix="&gt;" class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr"><var translate="no">SDK_ROOT_LOCATION</var>\Android\sdk\build-tools\35.0.0\zipalign.exe -v -c -P 16 4 <var translate="no">APK_NAME</var>.apk
+</code></pre></devsite-code></section>
+</devsite-selector></div>
+<p>Where <var translate="no"><code translate="no" dir="ltr">SDK_ROOT_LOCATION</code></var> is the path to the
+directory where you&#39;ve installed the Android SDK, and
+<var translate="no"><code translate="no" dir="ltr">APK_NAME</code></var> is the name of your app&#39;s APK file. The
+last line of the output will say &quot;Verification successful&quot; if all of the
+shared libraries are aligned correctly.</p>
+
+<p>If the verification failed, some shared libraries need to be realigned, so
+you&#39;ll need to <a href="#update-packaging">update the packaging for those libraries</a>, then
+<a href="#compile-16-kb-alignment">recompile your app</a> and retest by following the steps in this section.</p></li>
+</ol>
+<h3 id="relro-flag" data-text="Check the RELRO security flag" tabindex="-1">Check the RELRO security flag</h3>
+
+<p>To mitigate security exploits, modern linkers use the
+<a href="https://www.redhat.com/en/blog/hardening-elf-binaries-using-relocation-read-only-relro">Relocation Read-Only (RELRO)</a> flag to make relocation
+sections of the shared object file read-only after loading.
+Enable the RELRO flag in your <a href="#compile-16-kb-alignment">build</a>.</p>
+
+<p>A RELRO section having a start address plus segment size (MemSize) that is not
+16 KB aligned crashes the app at runtime with a segmentation fault. This
+happens if the <code translate="no" dir="ltr">.so</code> file was built with NDK tool chain r27 and lower without
+enabling the <a href="#compile-r27-lower">relevant flags</a>.</p>
+
+<p>Run the following command on each shared object file (Linux or macOS):</p>
+<div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr"><var translate="no">SDK_ROOT_LOCATION</var>/Android/sdk/ndk/<var translate="no">NDK_VERSION</var>/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-readelf -Wl SHARED_OBJECT_FILE.so | grep &#39;RELRO\|Type&#39;
+</code></pre></devsite-code>
+<p>The <code translate="no" dir="ltr">GNU_RELRO</code> string is printed if there&#39;s a RELRO segment.</p>
+
+<p>Next, check the RELRO segment alignment by summing its virtual offset address
+(VirtAddr) with the segment memory size (MemSiz) and dividing by 16&nbsp;KB
+(0x4000). If the remainder (modulo) is zero, then the RELRO segment is
+16&nbsp;KB aligned.</p>
+
+<p>Here&#39;s a an example for a non-aligned <code translate="no" dir="ltr">.so</code> file:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">Type           Offset   VirtAddr           PhysAddr           FileSiz MemSiz  Flg Align
+GNU_RELRO      0x0cfaf0 0x00000000000dfaf0 0x00000000000dfaf0 0x01510 0x01510 R   0x1
+</code></pre></devsite-code>
+<p><strong>Formula</strong>: (VirtAddr + MemSiz) % 0x4000 == 0</p>
+
+<p><strong>Result</strong>: (0xdfaf0 + 0x01510) % 0x4000 = 0xE1000 % 0x4000 == 0x1000</p>
+
+<p>Since 0x1000 is not zero, this <code translate="no" dir="ltr">.so</code> file isn&#39;t 16&nbsp;KB compliant. The RELRO
+protection range from DC000 (the previous page break) to E4000 is read-only,
+but <a href="/ndk/reference/group/libdl">Android Linker</a> expects the sub-range from E1000 to E4000 to be
+writable, resulting in a segmentation fault. In this case, rebuild the <code translate="no" dir="ltr">.so</code>
+file as described in the
+<a href="#compile-16-kb-alignment">Compile your app using 16&nbsp;KB ELF alignment</a> section.</p>
+
+<p>Here is an example of an aligned <code translate="no" dir="ltr">.so</code> file, with a RELRO segment:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">Type           Offset   VirtAddr           PhysAddr           FileSiz MemSiz  Flg Align
+GNU_RELRO      0x0cfaf0 0x00000000000dfaf0 0x00000000000dfaf0 0x01510 0x00510 R   0x1
+</code></pre></devsite-code>
+<p>Here is a an example of an <code translate="no" dir="ltr">.so</code> file without a RELRO segment:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">Type           Offset   VirtAddr           PhysAddr           FileSiz MemSiz  Flg Align
+</code></pre></devsite-code>
+<p>This is a trivially 16&nbsp;KB compliant <code translate="no" dir="ltr">.so</code> file without having any RELRO
+segment.</p>
+
+<h2 id="build" data-text="Build your app with support for 16 KB devices" tabindex="-1">Build your app with support for 16 KB devices</h2>
+
+<p>If your app uses native code, then complete the steps that are outlined in the
+following sections to make sure that your app supports 16&nbsp;KB devices:</p>
+
+<ol>
+<li><a href="#update-packaging">Update the packaging of your shared libraries</a></li>
+<li><a href="#compile-16-kb-alignment">Compile your app using 16&nbsp;KB ELF alignment</a></li>
+<li><a href="#check-code">Fix code and resolve runtime issues</a></li>
+<li><a href="#custom-allocators">Optimize custom memory allocators (if applicable)</a></li>
+<li><a href="#check-sdks">Check SDKs for 16&nbsp;KB support</a></li>
+</ol>
+<aside class="tip"><strong>Tip:</strong><span> If you update your tools to the latest versions (AGP version 8.5.1 or
+higher and NDK version r28 or higher) and use 16&nbsp;KB-compatible prebuilt
+dependencies, then your app is 16&nbsp;KB compatible by default and you can
+skip to the step for <a href="#check-code">fixing code and resolving runtime issues</a>.</span></aside>
+<h3 id="update-packaging" data-text="Update the packaging of your shared libraries" tabindex="-1">Update the packaging of your shared libraries</h3>
+
+<p>Upgrade to AGP version 8.5.1 or higher and use uncompressed shared libraries.</p>
+
+<h4 id="use_bundletool_to_verify_zip_alignment" data-text="Use bundletool to verify zip alignment" tabindex="-1">Use <code translate="no" dir="ltr">bundletool</code> to verify zip alignment</h4>
+
+<p>To see the alignment of your bundle, use:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Bash"><code translate="no" dir="ltr">bundletool<span class="devsite-syntax-w"> </span>dump<span class="devsite-syntax-w"> </span>config<span class="devsite-syntax-w"> </span>--bundle<span class="devsite-syntax-o">=</span>&lt;my<span class="devsite-syntax-w"> </span>.aab&gt;<span class="devsite-syntax-w">  </span><span class="devsite-syntax-p">|</span><span class="devsite-syntax-w"> </span>grep<span class="devsite-syntax-w"> </span>alignment
+</code></pre></devsite-code>
+<p>If you see <code translate="no" dir="ltr">PAGE_ALIGNMENT_16K</code> then you know your bundle requests 16&nbsp;KB
+zip alignment. If you see <code translate="no" dir="ltr">PAGE_ALIGNMENT_4K</code>, this instructs the APK built from
+this AAB to have 4&nbsp;KB aligned <code translate="no" dir="ltr">.so</code> files in the zip file.</p>
+
+<h4 id="agp_version_851_or_higher" data-text="AGP version 8.5.1 or higher" tabindex="-1">AGP version 8.5.1 or higher</h4>
+
+<p>16&nbsp;KB devices require apps that ship with uncompressed shared libraries to
+align them on a 16&nbsp;KB zip-aligned boundary. To do this, you need to upgrade
+to Android Gradle Plugin (AGP) version 8.5.1 or higher. Refer to the <a href="/build/agp-upgrade-assistant">Android
+Gradle plugin Upgrade Assistant</a> section for details on the upgrade process.</p>
+
+<h4 id="agp_version_85_or_lower" data-text="AGP version 8.5 or lower" tabindex="-1">AGP version 8.5 or lower</h4>
+<aside class="note"><strong>Note:</strong><span> In AGP version 8.3 to 8.5, apps are 16&nbsp;KB aligned by default.
+However, <code translate="no" dir="ltr">bundletool</code> does not zipalign APKs by default. So, the app may appear
+to work, but when built from a bundle in Play, it won&#39;t install.</span></aside>
+<p>If you can&#39;t upgrade AGP to version 8.5.1 or higher, then the alternative is to
+switch to use compressed shared libraries. Update your Gradle configuration to
+have Gradle compress your shared libraries when packaging your app to avoid app
+installation issues with unaligned shared libraries.</p>
+<div><devsite-selector data-ds-scope="code-sample">
+<section><h3 id="groovy" data-text="Groovy" tabindex="-1">Groovy</h3><p>In your <code translate="no" dir="ltr">build.gradle</code> file, add the following option:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Groovy"><code translate="no" dir="ltr"><span class="devsite-syntax-n">android</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-o">{</span>
+<span class="devsite-syntax-w">  </span><span class="devsite-syntax-o">...</span>
+<span class="devsite-syntax-w">  </span><span class="devsite-syntax-n">packagingOptions</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-o">{</span>
+<span class="devsite-syntax-w">      </span><span class="devsite-syntax-n">jniLibs</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-o">{</span>
+<span class="devsite-syntax-w">        </span><span class="devsite-syntax-n">useLegacyPackaging</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">true</span>
+<span class="devsite-syntax-w">      </span><span class="devsite-syntax-o">}</span>
+<span class="devsite-syntax-w">  </span><span class="devsite-syntax-o">}</span>
+<span class="devsite-syntax-o">}</span>
+</code></pre></devsite-code></section>
+<section><h3 id="kotlin" data-text="Kotlin" tabindex="-1">Kotlin</h3><p>In your <code translate="no" dir="ltr">build.gradle.kts</code> file, add the following option:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Kotlin"><code translate="no" dir="ltr"><span class="devsite-syntax-n">android</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-p">{</span>
+<span class="devsite-syntax-w">  </span><span class="devsite-syntax-p">...</span>
+<span class="devsite-syntax-w">  </span><span class="devsite-syntax-n">packagingOptions</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-p">{</span>
+<span class="devsite-syntax-w">      </span><span class="devsite-syntax-n">jniLibs</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-p">{</span>
+<span class="devsite-syntax-w">        </span><span class="devsite-syntax-n">useLegacyPackaging</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-o">=</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-kc">true</span>
+<span class="devsite-syntax-w">      </span><span class="devsite-syntax-p">}</span>
+<span class="devsite-syntax-w">  </span><span class="devsite-syntax-p">}</span>
+<span class="devsite-syntax-p">}</span>
+</code></pre></devsite-code></section>
+</devsite-selector></div>
+<h5 id="agp_version_80_or_lower" data-text="AGP version 8.0 or lower" tabindex="-1">AGP version 8.0 or lower</h5>
+
+<p>If you are using an AGP version same or lower than 8.0, you also need to disable
+the uncompressed native library option for App Bundles in your
+<code translate="no" dir="ltr">gradle.properties</code> file:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Bash"><code translate="no" dir="ltr">android.bundle.enableUncompressedNativeLibs<span class="devsite-syntax-o">=</span><span class="devsite-syntax-nb">false</span>
+</code></pre></devsite-code><aside class="warning"><strong>Warning:</strong><span> When you use compressed shared libraries, your app takes up more space
+when installed, as libraries are extracted from the APK and copied onto disk.
+Your app might more frequently fail to install because this increase in disk
+usage means there is less space on device. To avoid this, upgrade to AGP version
+8.5.1 or higher.</span></aside>
+<h3 id="compile-16-kb-alignment" data-text="Compile your app using 16 KB ELF alignment" tabindex="-1">Compile your app using 16 KB ELF alignment</h3>
+
+<p>16&nbsp;KB devices require the shared libraries&#39; ELF segments to be aligned
+properly using 16&nbsp;KB ELF alignment in order for your app to run.</p>
+
+<p>For game developers, if your game runs on top of
+<a href="https://unity.com" class="external">Unity game engine</a>, refer to the <a href="/games/engines/unity/unity-on-android#16-kb-page-support">Unity guide</a>.
+If your game runs on top of <a href="https://www.unrealengine.com" class="external">Unreal game engine</a>,
+refer to the <a href="/games/engines/unreal/unreal-on-android#16-kb-page-support">Unreal guide</a>.For native game engines, continue
+with this guide.</p>
+<aside class="note"><strong>Note:</strong><span> If your app doesn&#39;t extract native libraries to the file system
+(<a href="/guide/topics/manifest/application-element#extractNativeLibs"><code translate="no" dir="ltr">extractNativeLibs</code></a> set to <code translate="no" dir="ltr">false</code>), you&#39;ll likely notice a slight
+increase in your app&#39;s binary size after compiling using a 16&nbsp;KB ELF
+alignment. Optimizations to the package manager in Android 15 negate the runtime
+costs from this increase.</span></aside>
+<p>To compile your app using 16&nbsp;KB ELF alignment, complete the steps in one of
+the following sections depending on the version of the Android NDK that you&#39;re
+using.</p>
+<aside class="special"><strong>Important:</strong><span> If your app uses any <a href="/ndk/guides/prebuilts">prebuilt shared libraries</a>, you must also
+recompile them in the same way and reimport the 16&nbsp;KB-aligned libraries
+into your app.</span></aside>
+<h4 id="compile-r28" data-text="Android NDK r28 and higher" tabindex="-1">Android NDK r28 and higher</h4>
+
+<p>NDK version r28 and higher compile 16&nbsp;KB-aligned by default.</p>
+
+<h4 id="compile-r27-lower" data-text="Android NDK r27 and lower" tabindex="-1">Android NDK r27 and lower</h4>
+
+<p><a id="compile-r27-higher"></a>
+<a id="compile-r26-lower"></a>
+<a id="compile-r22-lower"></a></p>
+
+<p>To support compiling 16&nbsp;KB-aligned shared libraries with Android NDK
+version r27 or lower, use the following linker flags:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">-Wl,-z,max-page-size=16384
+-Wl,-z,common-page-size=16384
+</code></pre></devsite-code>
+<p>Here&#39;s how to update your build system configuration files:</p>
+<div><devsite-selector data-ds-scope="code-sample">
+<section><h3 id="ndk-build" data-text="ndk-build" tabindex="-1">ndk-build</h3><p>If you&#39;re using ndk-build, update your <code translate="no" dir="ltr">Android.mk</code> to enable 16&nbsp;KB ELF
+alignment:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Makefile"><code translate="no" dir="ltr"><span class="devsite-syntax-nv">LOCAL_LDFLAGS</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-o">+=</span><span class="devsite-syntax-w"> </span>-Wl,-z,max-page-size<span class="devsite-syntax-o">=</span><span class="devsite-syntax-m">16384</span><span class="devsite-syntax-w"> </span>-Wl,-z,common-page-size<span class="devsite-syntax-o">=</span><span class="devsite-syntax-m">16384</span>
+</code></pre></devsite-code></section>
+<section><h3 id="cmake" data-text="CMake" tabindex="-1">CMake</h3><p>If you&#39;re using CMake, update your <code translate="no" dir="ltr">CMakeLists.txt</code> to enable 16&nbsp;KB ELF
+alignment:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Makefile"><code translate="no" dir="ltr"><span class="devsite-syntax-err">target_link_options(${CMAKE_PROJECT_NAME}</span><span class="devsite-syntax-w"> </span><span class="devsite-syntax-err">PRIVATE</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-s2">"-Wl,-z,max-page-size=16384"</span>
+<span class="devsite-syntax-w">    </span><span class="devsite-syntax-s2">"-Wl,-z,common-page-size=16384"</span>
+<span class="devsite-syntax-err">)</span>
+</code></pre></devsite-code></section>
+</devsite-selector></div><aside class="note"><strong>Note:</strong><span> Even if your app dynamically links to the C++ standard library
+(<code translate="no" dir="ltr">libc++_shared.so</code>) from NDKs r26 and lower, some of which don&#39;t have a
+16&nbsp;KB aligned <code translate="no" dir="ltr">libc++_shared.so</code>, you should still update the alignment
+of all other libraries here, and you should update your code to avoid depending
+on <code translate="no" dir="ltr">PAGE_SIZE</code>. In order to test on those lower versions of the NDK on
+16&nbsp;KB devices, canary releases of LTS NDK versions <a href="https://ci.android.com/builds/branches/aosp-ndk-release-r23/grid">r23</a> and <a href="https://ci.android.com/builds/branches/aosp-ndk-r25-release/grid">r25</a>
+are available on Android CI with 16&nbsp;KB aligned <code translate="no" dir="ltr">libc++_shared.so</code>
+libraries.</span></aside><aside class="note"><strong>Note:</strong><span> If you can&#39;t move to the newer Android NDK, then you might be able
+to update your app to statically compile the C++ standard library into your
+shared library. Refer to the <a href="/ndk/guides/cpp-support">C++ Library Support</a> section for details on
+statically linking to the C++ standard library and be sure to read the
+<a href="/ndk/guides/cpp-support#ic">Important Considerations</a> section.</span></aside>
+<h3 id="check-code" data-text="Fix code and resolve runtime issues" tabindex="-1">Fix code and resolve runtime issues</h3>
+
+<p>Even if your app is 16&nbsp;KB-aligned, your app can encounter errors if places
+in your code assume that a device is using a specific page size. To avoid this,
+complete the following steps:</p>
+
+<ol>
+<li><p>Remove any hard-coded dependencies that reference the <a href="https://cs.android.com/android/platform/superproject/main/+/main:bionic/libc/include/bits/page_size.h;l=34-39"><code translate="no" dir="ltr">PAGE_SIZE</code></a>
+constant or instances in your code logic that assume that a device&#39;s page
+size is 4&nbsp;KB (<code translate="no" dir="ltr">4096</code>).</p>
+
+<p>Use <a href="https://cs.android.com/android/platform/superproject/main/+/main:bionic/libc/bionic/getpagesize.cpp;l=32"><code translate="no" dir="ltr">getpagesize()</code></a> or <a href="https://cs.android.com/android/platform/superproject/main/+/main:bionic/libc/bionic/sysconf.cpp;l=151"><code translate="no" dir="ltr">sysconf(_SC_PAGESIZE)</code></a> instead.</p></li>
+<li><p>Look for usages of <a href="https://cs.android.com/android/platform/superproject/main/+/main:bionic/libc/bionic/mmap.cpp;l=59"><code translate="no" dir="ltr">mmap()</code></a> and other APIs that require page-aligned
+arguments and replace with alternatives where necessary.</p></li>
+</ol>
+
+<p>In some cases, if your app uses <code translate="no" dir="ltr">PAGE_SIZE</code> as a convenient value that isn&#39;t
+tied to the underlying page size, then this won&#39;t cause your app to break when
+used in 16&nbsp;KB mode. However, if this value is passed to the kernel with
+<code translate="no" dir="ltr">mmap</code> without <code translate="no" dir="ltr">MAP_FIXED</code>, the kernel still uses an entire page, which wastes
+some memory. For these reasons, <code translate="no" dir="ltr">PAGE_SIZE</code> is undefined when 16&nbsp;KB mode is
+enabled on NDK r27 and higher.</p>
+
+<p>If your app uses <code translate="no" dir="ltr">PAGE_SIZE</code> in this way and never directly passes this value to
+the kernel, then instead of using <code translate="no" dir="ltr">PAGE_SIZE</code>, create a new variable with a new
+name to reflect that it is used for other purposes and does not reflect a real
+memory page.</p>
+
+<h3 id="custom-allocators" data-text="Optimize custom memory allocators" tabindex="-1">Optimize custom memory allocators</h3>
+<aside class="note"><strong>Note:</strong><span> This section applies only if your app, game engine, or native library
+implements a custom memory manager, heap, or slab allocator (such as in custom
+game engines, embedded databases, or runtimes embedding jemalloc or mimalloc).
+If your app uses the standard Android memory allocator (scudo), you
+can skip this section.</span></aside>
+<p>On 16&nbsp;KB systems, the smallest unit of physical memory the operating system
+allocates is four times larger than on 4&nbsp;KB systems. If a custom allocator
+was designed around 4&nbsp;KB assumptions, it can scatter small objects across
+multiple 16&nbsp;KB pages and retain empty memory unnecessarily. This can
+substantially increase physical memory usage (RSS) and degrade compressed swap
+(ZRAM) efficiency.</p>
+
+<p>If your code manages its own memory pools, follow these recommendations:</p>
+
+<h4 id="1_avoid_hard-coded_byte_thresholds_for_freeing_memory" data-text="1. Avoid hard-coded byte thresholds for freeing memory" tabindex="-1">1. Avoid hard-coded byte thresholds for freeing memory</h4>
+
+<p>Many allocators use fixed byte limits to decide when to release memory back to
+the OS using <code translate="no" dir="ltr">madvise(MADV_DONTNEED)</code> (for example, <em>only release memory if
+active objects take up less than 8&nbsp;KB</em>).</p>
+
+<p>On a 16&nbsp;KB system, even a single 16-byte live object pins an entire
+16&nbsp;KB page (which is greater than 8&nbsp;KB). As a result, the release
+threshold is never met, and the allocator never returns the surrounding unused
+memory to the kernel.</p>
+
+<p><strong>What to do:</strong> Never use hard-coded byte constants for page-release heuristics.
+Scale release thresholds dynamically at runtime based on the actual page size
+using <code translate="no" dir="ltr">sysconf(_SC_PAGESIZE)</code>.</p>
+
+<h4 id="2_fill_up_already-used_pages_first_dense-first_allocation" data-text="2. Fill up already-used pages first (dense-first allocation)" tabindex="-1">2. Fill up already-used pages first (dense-first allocation)</h4>
+
+<p>If an allocator hands out memory in first-in-first-out (FIFO) or round-robin
+order, new allocations get scattered across many partially filled 16&nbsp;KB
+pages. A single object on a page keeps all 16&nbsp;KB resident in physical RAM.</p>
+
+<p><strong>What to do:</strong> Always allocate new objects from the most full (densest) page
+or slab before touching empty or lightly used pages. Concentrating new
+allocations on already-dirty pages allows lightly used pages to naturally drain
+to zero active objects, so the entire 16&nbsp;KB page can be released to the
+OS.</p>
+
+<h4 id="3_align_memory_pools_to_16kb_and_keep_pool_sizes_moderate" data-text="3. Align memory pools to 16 KB and keep pool sizes moderate" tabindex="-1">3. Align memory pools to 16 KB and keep pool sizes moderate</h4>
+
+<p>Multi-page spans designed for 4&nbsp;KB systems can hold excessive unreleased
+memory slack on 16&nbsp;KB kernels. In addition, size classes that don&#39;t divide
+evenly into 16&nbsp;KB cause fragmentation at the end of each page.</p>
+
+<p><strong>What to do:</strong></p>
+
+<ul>
+<li>Ensure all memory pools, slab boundaries, and buffer alignments are exact
+multiples of the runtime page size.</li>
+<li>Re-evaluate multi-page span sizes for small-object classes to avoid
+allocating overly large slabs that trap idle memory.</li>
+</ul>
+
+<h4 id="4_release_physical_memory_for_cached_large_buffers_immediately" data-text="4. Release physical memory for cached large buffers immediately" tabindex="-1">4. Release physical memory for cached large buffers immediately</h4>
+
+<p>Custom allocators often cache large buffers (&gt; 64&nbsp;KB) in an in-memory pool
+so they can be reused without paying the overhead of <code translate="no" dir="ltr">mmap</code> or <code translate="no" dir="ltr">munmap</code> system
+calls. However, holding onto these dirty buffers in memory wastes megabytes of
+physical RAM while waiting for an eviction timer.</p>
+
+<p><strong>What to do:</strong> Keep the virtual memory address range reserved for fast reuse,
+but call <code translate="no" dir="ltr">madvise(..., MADV_DONTNEED)</code> or <code translate="no" dir="ltr">madvise(..., MADV_FREE)</code> immediately
+when returning a buffer to the cache. The operating system reclaims the physical
+RAM right away, while your app can still reuse the virtual address instantly
+without re-allocating.</p>
+
+<h4 id="5_zero_out_memory_on_free_instead_of_on_allocation_for_zram_compression" data-text="5. Zero out memory on free instead of on allocation for ZRAM compression" tabindex="-1">5. Zero out memory on free instead of on allocation for ZRAM compression</h4>
+
+<p>Android uses compressed swap (ZRAM) to keep background apps in memory. On
+16&nbsp;KB devices, if a page holds even one live object, the entire 16&nbsp;KB
+page stays resident or gets swapped to ZRAM. Leftover <em>garbage</em> data
+(such as stale pointers and strings) on previously freed parts of that page
+compresses poorly.</p>
+
+<p>If your allocator zeroes memory (such as for security or zero-initialized
+allocations), consider zeroing upon deallocation (<code translate="no" dir="ltr">free()</code>) rather than on
+allocation:</p>
+
+<ul>
+<li><strong>Pinned pages cost less:</strong> Idle memory on partially filled 16&nbsp;KB
+pages compresses down to almost nothing in ZRAM, so pinned pages don&#39;t
+waste physical swap space.</li>
+<li><strong>Minimal cache overhead:</strong> At the time <code translate="no" dir="ltr">free()</code> is called, the memory is
+already hot in the CPU cache, avoiding additional cache misses later.</li>
+</ul>
+
+<h4 id="summary_of_recommendations" data-text="Summary of recommendations" tabindex="-1">Summary of recommendations</h4>
+
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Area</th>
+<th style="text-align: left">Recommendation</th>
+<th style="text-align: left">Expected impact</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td style="text-align: left"><strong>Purge thresholds</strong></td>
+<td style="text-align: left">Scale release thresholds dynamically using <code style="white-space: pre;" translate="no" dir="ltr">sysconf(_SC_PAGESIZE)</code>.</td>
+<td style="text-align: left">Prevents release logic from permanently deadlocking.</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>Allocation order</strong></td>
+<td style="text-align: left">Allocate from the densest (almost full) page or slab first.</td>
+<td style="text-align: left">Reduces resident memory (RSS) by packing active objects together.</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>Span sizing</strong></td>
+<td style="text-align: left">Align size classes to 16&nbsp;KB multiples and avoid oversized slabs.</td>
+<td style="text-align: left">Eliminates tail-page fragmentation and reduces memory slack.</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>Buffer caches</strong></td>
+<td style="text-align: left">Call <code translate="no" dir="ltr">madvise(MADV_DONTNEED)</code> immediately when caching large buffers.</td>
+<td style="text-align: left">Eliminates idle RAM bloat while keeping fast virtual reuse.</td>
+</tr>
+<tr>
+<td style="text-align: left"><strong>Swap / ZRAM</strong></td>
+<td style="text-align: left">Zero out memory on <code translate="no" dir="ltr">free()</code> instead of on allocation.</td>
+<td style="text-align: left">Improves ZRAM compression ratios so pinned pages cost less.</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="check-sdks" data-text="Check SDKs for 16 KB support" tabindex="-1">Check SDKs for 16 KB support</h3>
+
+<p>Many SDKs are compatible with 16&nbsp;KB page sizes, especially if you build
+them yourself or get recent prebuilts. However, because some SDK prebuilts or
+SDK versions aren&#39;t 16&nbsp;KB compatible, you should check the website for each
+SDK provider to determine which version to use with 16&nbsp;KB.</p>
+
+<h2 id="test" data-text="Test your app in a 16 KB environment" tabindex="-1">Test your app in a 16 KB environment</h2>
+
+<p>After you build your app with support for 16&nbsp;KB devices, you&#39;ll want to
+test your app in a 16&nbsp;KB environment to see whether your app experiences
+any regressions. To do this, follow these steps:</p>
+
+<ol>
+<li><p>Set up the <a href="/about/versions/15/setup-sdk">Android 15 SDK</a> or higher.</p></li>
+<li><p>Set up one of the following testing environments:</p>
+
+<ul>
+<li><a href="#16kb-emulator">Set up the Android Emulator with a 16&nbsp;KB&ndash;based, Android 15
+system image</a></li>
+<li><a href="https://source.android.com/docs/core/architecture/16kb-page-size/getting-started-cf-arm64-pgagnostic">Use Cuttlefish with 16&nbsp;KB page size on ARM64</a></li>
+<li><a href="https://source.android.com/docs/core/architecture/16kb-page-size/getting-started-cf-x86-64-pgagnostic">Simulate Cuttlefish with 16&nbsp;KB page size on x86-64</a></li>
+<li><a href="#developer-option">Enable 16&nbsp;KB mode on a device using developer options</a></li>
+<li><a href="https://developer.samsung.com/remote-test-lab/blog/en/2025/07/07/optimize-your-applications-for-16-kb-page-size-compatibility-using-samsungs-remote-test-lab" class="external">Use Samsung Remote Test Lab</a> on 16&nbsp;KB
+<a href="https://developer.samsung.com/remotetestlab/devices/129/16kb-page-size" class="external">supported devices</a> </li>
+</ul></li>
+<li><p>Start up your test device, then run the following command to verify that
+it&#39;s using a 16&nbsp;KB environment:</p>
+<div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">adb shell getconf PAGE_SIZE
+</code></pre></devsite-code>
+<p>The command should return a value of <code translate="no" dir="ltr">16384</code>.</p></li>
+<li><p>Run the following <a href="/tools/zipalign"><code translate="no" dir="ltr">zipalign</code></a> command to verify that your app is
+16&nbsp;KB-aligned, where <var translate="no">APK_NAME</var> is the name of
+your app&#39;s APK file:</p>
+<div></div><devsite-code><pre class="devsite-terminal devsite-click-to-copy devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code translate="no" dir="ltr">zipalign -c -P 16 -v 4 <var translate="no">APK_NAME</var>.apk
+</code></pre></devsite-code></li>
+<li><p>Thoroughly test your app, focusing on any areas that might be affected by
+<a href="#check-code">changing code instances that reference specific page sizes</a>.</p></li>
+</ol>
+
+<h3 id="16kb-emulator" data-text="Set up the Android Emulator with a 16-KB-based system image" tabindex="-1">Set up the Android Emulator with a 16-KB-based system image</h3>
+
+<p>To set up a 16&nbsp;KB environment using the Android Emulator, follow these
+steps:</p>
+
+<ol>
+<li>In Android Studio, click <strong>Tools &gt; SDK Manager</strong>.</li>
+<li><p>In the <strong>SDK Platforms</strong> tab, select <strong>Show Package Details</strong>, then expand
+the <strong>Android VanillaIceCream</strong> or higher section and select one or both of
+the following emulator system images, depending on the virtual devices you
+want to create:</p>
+
+<ul>
+<li>Google APIs Experimental 16&nbsp;KB Page Size ARM 64 v8a System Image</li>
+<li>Google APIs Experimental 16&nbsp;KB Page Size Intel x86_64 Atom System
+Image</li>
+</ul>
+<aside class="note"><strong>Note:</strong><span> If you&#39;re planning to <a href="/about/versions/15/get#google-pixel-devices">emulate a supported Google Pixel device</a>,
+    you will only need the ARM 64 v8a System Image.</span></aside>
+<figure>
+  <img src="/static/images/guide/practices/16kb-emulator-images.png"
+       class="no-filter"
+       alt="Download 16 KB emulator system images using the SDK Manager in Android Studio">
+</figure></li>
+<li><p>Click <strong>Apply &gt; OK</strong> to download whichever system images you selected.</p></li>
+<li><p>Follow the steps to <a href="/about/versions/15/get#on_emulator">set up a virtual device for Android 15</a>, and when
+prompted to select a system image, select the 16&nbsp;KB system image that
+you downloaded. If it&#39;s not recommended automatically, you can find the
+16&nbsp;KB system image in the <strong>Other Images</strong> tab.</p>
+
+<figure>
+  <img src="/static/images/guide/practices/16kb-other-images-tab.png"
+       class="no-filter"
+       alt="Find the 16 KB emulator image in the Other Images tab">
+</figure></li>
+</ol>
+
+<h4 id="launch-emulator" data-text="Launch the emulator" tabindex="-1">Launch the emulator</h4>
+
+<p>After you finish setting up the Android Emulator and virtual devices, launch the
+emulator <a href="/studio/run/emulator#runningapp">from the target device menu</a>, or <a href="/studio/run/emulator-commandline">from the command line</a>.</p>
+
+<h3 id="developer-option" data-text="Enable 16 KB mode on a device using developer options" tabindex="-1">Enable 16 KB mode on a device using developer options</h3>
+
+<div class="attempt-right" style="width:350px">
+<img src="/static/images/guide/practices/16-kb-dev-option.png" width="350" alt>
+<p class="img-caption">Toggle the <b>Boot with 16KB page size</b> developer
+option to boot a device in 16&nbsp;KB mode.</p>
+</div>
+
+<p>In QPR versions of Android 15, you can
+<a href="https://source.android.com/docs/core/architecture/16kb-page-size/16kb-developer-option#use_16kb_toggle">use the developer option</a> that&#39;s available on certain
+devices to boot the device in 16&nbsp;KB mode and perform on-device testing.
+Before using the developer option, go to <strong>Settings &gt; System &gt; Software
+updates</strong> and apply any updates that are available.</p>
+
+<p>This developer option is available on the following devices:</p>
+
+<ul>
+<li><p>Pixel 8 and 8 Pro (with Android 15 QPR1 or higher)</p></li>
+<li><p>Pixel 8a (with Android 15 QPR1 or higher)</p></li>
+<li><p>Pixel 9, 9 Pro, and 9 Pro XL (with Android 15 QPR2 or higher)</p></li>
+<li><p>Pixel 9a (with Android 16 or higher)</p></li>
+</ul>
+
+<p class="clear"></p>
+
+<h2 id="16kb-backcompat" data-text="16 KB backcompat mode" tabindex="-1">16 KB backcompat mode</h2>
+
+<div class="attempt-right" style="width:250px">
+  <img src="/static/images/guide/practices/appcompat-dialog-16kb.png" width="250"
+       alt="Warning in page size compat mod" class="no-filter">
+  <p class="img-caption">Warning in page size compat mode</p>
+</div>
+
+<p>The 16&nbsp;KB backcompat option is available when a device is running with a
+16&nbsp;KB kernel. The package manager runs an app in 16&nbsp;KB backcompat mode
+when the following conditions are met:</p>
+
+<ul>
+<li>If the app has ELF files (with an <code translate="no" dir="ltr">.so</code> extension) with a LOAD segment
+alignment of 4&nbsp;KB.</li>
+<li>If the zipped APK has uncompressed ELF files that are 4&nbsp;KB
+ZIP aligned.</li>
+</ul>
+
+<p>If the package manager has enabled 16&nbsp;KB backcompat mode for
+an app, the app displays a warning when it&#39;s first launched saying that it&#39;s
+running in 16&nbsp;KB backcompat mode.</p>
+
+<p>16&nbsp;KB backcompat mode allows some apps to work,
+but for best reliability and stability, apps should still be 16&nbsp;KB aligned.</p>
+
+<p>On the app info page, under <strong>Advanced</strong>, toggle the setting <strong>Run app with
+page size compat mode</strong> to enable or disable the 16&nbsp;KB backcompat mode
+for specific app. This setting is visible only when the device is running with
+16&nbsp;KB page size.</p>
+
+<p><img src="/static/images/guide/practices/appcompat-setting-16kb.png" alt="Page size compat mode setting" height="350" width="280" class="no-filter"> </p>
+
+<p><em>Page size compat mode setting</em></p>
+
+<p>To force 16&nbsp;KB backcompat on for every app on the device:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Bash"><code translate="no" dir="ltr">adb<span class="devsite-syntax-w"> </span>shell<span class="devsite-syntax-w"> </span>setprop<span class="devsite-syntax-w"> </span>bionic.linker.16kb.app_compat.enabled<span class="devsite-syntax-w"> </span><span class="devsite-syntax-nb">true</span>
+adb<span class="devsite-syntax-w"> </span>shell<span class="devsite-syntax-w"> </span>setprop<span class="devsite-syntax-w"> </span>pm.16kb.app_compat.disabled<span class="devsite-syntax-w"> </span><span class="devsite-syntax-nb">false</span>
+</code></pre></devsite-code>
+<p>To force 16&nbsp;KB backcompat off for every app on the device:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Bash"><code translate="no" dir="ltr">adb<span class="devsite-syntax-w"> </span>shell<span class="devsite-syntax-w"> </span>setprop<span class="devsite-syntax-w"> </span>bionic.linker.16kb.app_compat.enabled<span class="devsite-syntax-w"> </span><span class="devsite-syntax-nb">false</span>
+adb<span class="devsite-syntax-w"> </span>shell<span class="devsite-syntax-w"> </span>setprop<span class="devsite-syntax-w"> </span>pm.16kb.app_compat.disabled<span class="devsite-syntax-w"> </span><span class="devsite-syntax-nb">true</span>
+</code></pre></devsite-code>
+<p>In Android 17, you can also force 16&nbsp;KB backcompat off for every app and
+cause any incompatible binary to immediately abort:</p>
+<div></div><devsite-code><pre class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded syntax="Bash"><code translate="no" dir="ltr"><span class="devsite-syntax-w">    </span>adb<span class="devsite-syntax-w"> </span>shell<span class="devsite-syntax-w"> </span>setprop<span class="devsite-syntax-w"> </span>bionic.linker.16kb.app_compat.enabled<span class="devsite-syntax-w"> </span>fatal
+<span class="devsite-syntax-w">    </span>adb<span class="devsite-syntax-w"> </span>shell<span class="devsite-syntax-w"> </span>setprop<span class="devsite-syntax-w"> </span>pm.16kb.app_compat.disabled<span class="devsite-syntax-w"> </span><span class="devsite-syntax-nb">true</span>
+</code></pre></devsite-code>
+<p>Set the <code translate="no" dir="ltr">android:pageSizeCompat</code> property to enabled or disabled to turn on or
+off backcompat mode for a specific app in its <code translate="no" dir="ltr">AndroidManifest.xml</code>. When this
+property is set, the app won&#39;t display backcompat mode warnings when it
+launches.</p>
+
+</div>
+
+      <devsite-recommendations display="in-page" hidden yield>
+      </devsite-recommendations>
+
+      <devsite-recommendations id="recommendations-link" yield></devsite-recommendations>
+
+  <div class="devsite-floating-action-buttons"></div></article>
+
+<devsite-content-footer class="nocontent" data-nosnippet>
+  <p>Content and code samples on this page are subject to the licenses described in the <a href="/license">Content License</a>. Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.</p>
+  <p>Last updated 2026-09-16 UTC.</p>
+</devsite-content-footer>
+
+<devsite-notification
+
+        link="https://google.qualtrics.com/jfe/form/SV_brOPtHjm8smSm4C?link=dac"
+        link-text="Take survey"
+        message="Help us improve the Android Developer experience by taking a survey."
+>
+</devsite-notification>
+
+<div class="devsite-content-data">
+
+</div>
+
+          </devsite-content>
+        </main>
+
+        <devsite-panel>
+
+        </devsite-panel>
+
+      </section>
+      </section>
+    <devsite-sitemask></devsite-sitemask>
+
+    <devsite-tooltip ></devsite-tooltip>
+    <devsite-heading-link></devsite-heading-link>
+    <devsite-analytics>
+
+    </devsite-analytics>
+
+      <devsite-badger></devsite-badger>
+
+<android-fully-clickable
+    target="
+        .android-case-study .devsite-landing-row-item,
+        .android-editorial-and-updates-cards .devsite-card-content-wrapper,
+        .android-editorial-and-updates-cards .devsite-landing-row-item,
+        .android-grouped-resources .devsite-landing-row-item,
+        .android-grouped-resources-contained--primary .devsite-landing-row-item,
+        .android-grouped-resources-contained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-contained--tertiary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--primary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--tertiary .devsite-landing-row-item,
+        .android-guide-cards .devsite-landing-row-item,
+        .android-illustrated-resources-index .devsite-landing-row-item,
+        .android-illustrated-resources-primary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary-small .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary-small .devsite-landing-row-item,
+        .android-promo .devsite-landing-row-item,
+        .android-quick-link,
+        .android-samples .devsite-card-wrapper,
+        .fully-clickable"
+    watch=".android-editorial-and-updates-cards, .android-samples, devsite-content"></android-fully-clickable>
+
+    <devsite-a11y-announce></devsite-a11y-announce>
+  </body>
+</html>

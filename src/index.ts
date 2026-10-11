@@ -1,5 +1,5 @@
 import { fetchAllVersions } from './fetch-all.js';
-import type { OSVersionInfo, SubmissionDeadline } from './types.js';
+import type { ActionItem, OSVersionInfo, SubmissionDeadline } from './types.js';
 
 function formatVersion(info: OSVersionInfo): string {
   const parts = [info.version];
@@ -38,13 +38,32 @@ function formatDeadline(label: string, deadline: SubmissionDeadline | null): str
   return lines.join('\n');
 }
 
+const STATUS_ICON: Record<ActionItem['status'], string> = { urgent: '❗', upcoming: '⏳', ok: '✅', info: 'ℹ️ ' };
+
+function formatActions(label: string, actions: ActionItem[]): string {
+  if (!actions.length) return '';
+  const header = `── ${label} ${'─'.repeat(Math.max(0, 41 - label.length))}`;
+  return [header, ...actions.map(a => `  ${STATUS_ICON[a.status]} ${a.title}\n     ${a.detail}`)].join('\n');
+}
+
 async function main() {
   console.log('\n📱 OS Version Tracker\n');
 
-  const { ios, android, appleDeadline, googleDeadline } = await fetchAllVersions();
+  const { ios, android, appleDeadline, googleDeadline, iosToolchain, androidToolchain, iosActions, androidActions } = await fetchAllVersions();
 
   console.log(formatPlatform('iOS', ios));
+  const xcode = iosToolchain?.xcodeStable;
+  if (xcode) console.log(`  Xcode:   ${xcode.label} (iOS SDK ${xcode.iosSdk ?? '?'}, Swift ${xcode.swift ?? '?'}, macOS ${xcode.requiresMacOS}+)`);
   console.log(formatPlatform('Android', android));
+  const tc = androidToolchain;
+  if (tc) {
+    console.log(`  Studio:  ${tc.studioStable?.name ?? 'N/A'}`);
+    console.log(`  AGP ${tc.agpStable?.version ?? '?'} · Gradle ${tc.gradle?.version ?? '?'} · Kotlin ${tc.kotlin?.version ?? '?'} · ${tc.sdkPlatform?.version ?? ''}`);
+  }
+  const iosOut = formatActions('iOS Developer Checklist', iosActions);
+  if (iosOut) console.log(iosOut);
+  const androidOut = formatActions('Android Developer Checklist', androidActions);
+  if (androidOut) console.log(androidOut);
   const appleOutput = formatDeadline('App Store Deadline', appleDeadline);
   if (appleOutput) console.log(appleOutput);
   const googleOutput = formatDeadline('Google Play Deadline', googleDeadline);

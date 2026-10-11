@@ -1,0 +1,340 @@
+
+
+<!doctype html>
+<html
+      lang="en"
+      dir="ltr">
+  <head>
+
+      <title>Google Play Billing Library version deprecation &nbsp;|&nbsp; Android Developers</title>
+
+    </head>
+  <body class="color-scheme--light"
+        template="page"
+        theme="android-theme"
+        type="article"
+
+        appearance
+
+        layout="docs"
+
+        display-toc
+        pending>
+
+    <devsite-progress type="indeterminate" id="app-progress"></devsite-progress>
+
+    <a href="#main-content" class="skip-link button">
+
+      Skip to main content
+    </a>
+    <section class="devsite-wrapper">
+      <devsite-cookie-notification-bar></devsite-cookie-notification-bar>
+
+      <section id="gc-wrapper">
+        <main role="main" id="main-content" class="devsite-main-content"
+
+              has-book-nav
+              has-sidebar
+            >
+          <div class="devsite-sidebar">
+            <div class="devsite-sidebar-content">
+
+                <devsite-recommendations-sidebar class="nocontent devsite-nav" data-nosnippet>
+                </devsite-recommendations-sidebar>
+            </div>
+          </div>
+          <devsite-content>
+
+<article class="devsite-article">
+
+    <div class="devsite-banner devsite-banner-announcement nocontent" data-nosnippet
+
+      >
+      <div class="devsite-banner-message">
+        <div class="devsite-banner-message-text">
+          <b>Reminder:</b> By Aug 31, 2026, all new apps and updates to existing apps must use Billing Library version 8 or later. If you need more time to update your app, you can request an extension until Nov 1, 2026. Learn about <a href="/google/play/billing/deprecation-faq">Play Billing Library version deprecation</a>.
+        </div>
+      </div>
+    </div>
+
+  <div class="devsite-article-meta nocontent" role="navigation" data-nosnippet>
+
+    <ul class="devsite-breadcrumb-list"
+
+    aria-label="Breadcrumb">
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+  <a href="https://developer.android.com/"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="1"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="1"
+
+        track-metadata-eventdetail="Android Developers"
+
+    >
+
+          Android Developers
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/distribute"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="2"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="2"
+
+        track-metadata-eventdetail="Google Play"
+
+    >
+
+          Google Play
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/google/play/billing"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="3"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="3"
+
+        track-metadata-eventdetail="Play Billing"
+
+    >
+
+          Play Monetization
+
+  </a>
+
+  </li>
+
+</ul>
+
+  </div>
+
+    <h1 class="devsite-page-title" tabindex="-1">
+      Google Play Billing Library version deprecation
+
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+
+    <devsite-recommendations-dropdown class="nocontent" data-nosnippet>
+    </devsite-recommendations-dropdown>
+
+  <div class="devsite-article-body clearfix
+  ">
+
+<p>All versions of the Google Play Billing Library have a two-year deprecation
+cycle. Google announced this deprecation cycle at Google I/O 2019 and in the
+<a href="https://android-developers.googleblog.com/2020/06/meet-google-play-billing-library.html" title="Play Billing Library Version 3 Blog">Meet Google Play Billing Library Version 3</a> blog post.</p>
+
+<p>This page answers common questions about the Google Play
+Billing Library version deprecation and migrating to higher versions.</p>
+
+<p>
+
+<section class="android-skills-card nocontent">
+  <div class="android-skills-card-inner">
+
+      <div class="android-skills-card-description">Use the Play Billing Library <a href="https://developer.android.com/tools/agents/android-skills">Android skill</a> to automate your upgrade to the latest version.</div>
+
+      <div class="android-skills-card-description">To install the skill from the <a href="https://developer.android.com/tools/agents/android-cli">Android CLI</a>, run:</div>
+
+      <div></div><devsite-code><pre data-copy-event-label="android-skills-card Upgrade Play Billing Library" class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code class="android-skills-card-text" translate="no" dir="ltr">android skills add play-billing-library-version-upgrade</code></pre></devsite-code>
+
+      <div class="android-skills-card-description">To activate the skill, try the following prompt:</div>
+
+      <div></div><devsite-code><pre data-copy-event-label="android-skills-card Upgrade Play Billing Library" class="devsite-click-to-copy" translate="no" dir="ltr" is-upgraded><code class="android-skills-card-text" translate="no" dir="ltr">Help me upgrade my Play Billing Library implementation.</code></pre></devsite-code>
+
+  </div>
+</section>
+</p>
+
+<h2 id="support-timeline" data-text="Support timeline for different versions" tabindex="-1">Support timeline for different versions</h2>
+
+<p>The following table shows the deprecation and extension deadlines for each
+Google Play Billing Library version.</p>
+
+<table>
+<thead>
+<tr>
+<th style="text-align: center">Version</th>
+<th style="text-align: center">New app and update deadline</th>
+<th style="text-align: center">Extension deadline</th>
+</tr>
+</thead>
+
+<tbody>
+<tr>
+<td style="text-align: center">5</td>
+<td style="text-align: center">August 31, 2024</td>
+<td style="text-align: center">November 1, 2024</td>
+</tr>
+<tr>
+<td style="text-align: center">6</td>
+<td style="text-align: center">August 31, 2025</td>
+<td style="text-align: center">November 1, 2025</td>
+</tr>
+<tr>
+<td style="text-align: center">7</td>
+<td style="text-align: center">August 31, 2026</td>
+<td style="text-align: center">November 1, 2026</td>
+</tr>
+<tr>
+<td style="text-align: center">8</td>
+<td style="text-align: center">August 31, 2027</td>
+<td style="text-align: center">November 1, 2027</td>
+</tr>
+<tr>
+<td style="text-align: center">9</td>
+<td style="text-align: center">August 31, 2028</td>
+<td style="text-align: center">November 1, 2028</td>
+</tr>
+</tbody>
+</table>
+
+<dl>
+<dt><strong>How do you find which APKs use a deprecated Play Billing Library version?</strong></dt>
+<dd>Check your <code translate="no" dir="ltr">build.gradle</code> file. Apps must use a supported version from the
+table. These dependencies only appear in APKs that require the
+<code translate="no" dir="ltr">com.android.vending.BILLING</code> permission.</dd>
+<dt><strong>Do you need to update unmaintained APKs?</strong></dt>
+<dd>We recommend updating maintained APKs. Unmaintained APKs don&#39;t need updates;
+existing apps still work, but new apps and updates must use supported
+versions.</dd>
+<dt><strong>How do you fix a deprecation warning if you&#39;ve already updated your app to a supported version?</strong></dt>
+<dd>Make sure your <code translate="no" dir="ltr">AndroidManifest.xml</code> file contains
+<code translate="no" dir="ltr">com.google.android.play.billingclient.version</code>. If it&#39;s missing,
+check whether <a href="/studio/build/manage-manifests#merge-manifests">manifest merging</a> removes this attribute.</dd>
+<dt><strong>How do you upgrade from a lower version of the Google Play Billing Library?</strong></dt>
+<dd><p>Update the dependency in your release to use a supported version from
+the table. To learn what changed between releases, see the
+<a href="/google/play/billing/release-notes">release notes</a>.</p>
+
+<p>To migrate, see the <a href="/google/play/billing/migrate-gpblv9">migration guide for version 9</a>.</p></dd>
+<dt><strong>Where do you find the extension form to continue distributing to users until the extension deadline?</strong></dt>
+<dd><p>If your app uses an unsupported Google Play Billing Library version, you&#39;ll
+receive a warning in the Google Play Console. On the warning&#39;s details page
+on the <a href="https://play.google.com/console/developers/app/policy-center" title="Policy Center" target="_blank" class="external"><strong>Policy status</strong></a> page,
+open the extension form.</p></dd>
+</dl>
+
+</div>
+
+      <devsite-recommendations display="in-page" hidden yield>
+      </devsite-recommendations>
+
+      <devsite-recommendations id="recommendations-link" yield></devsite-recommendations>
+
+  <div class="devsite-floating-action-buttons"></div></article>
+
+<devsite-content-footer class="nocontent" data-nosnippet>
+  <p>Content and code samples on this page are subject to the licenses described in the <a href="/license">Content License</a>. Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.</p>
+  <p>Last updated 2026-09-09 UTC.</p>
+</devsite-content-footer>
+
+<devsite-notification
+
+        link="https://google.qualtrics.com/jfe/form/SV_brOPtHjm8smSm4C?link=dac"
+        link-text="Take survey"
+        message="Help us improve the Android Developer experience by taking a survey."
+>
+</devsite-notification>
+
+<div class="devsite-content-data">
+
+</div>
+
+          </devsite-content>
+        </main>
+
+        <devsite-panel>
+
+        </devsite-panel>
+
+      </section>
+      </section>
+    <devsite-sitemask></devsite-sitemask>
+
+    <devsite-tooltip ></devsite-tooltip>
+    <devsite-heading-link></devsite-heading-link>
+    <devsite-analytics>
+
+    </devsite-analytics>
+
+      <devsite-badger></devsite-badger>
+
+<android-fully-clickable
+    target="
+        .android-case-study .devsite-landing-row-item,
+        .android-editorial-and-updates-cards .devsite-card-content-wrapper,
+        .android-editorial-and-updates-cards .devsite-landing-row-item,
+        .android-grouped-resources .devsite-landing-row-item,
+        .android-grouped-resources-contained--primary .devsite-landing-row-item,
+        .android-grouped-resources-contained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-contained--tertiary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--primary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--tertiary .devsite-landing-row-item,
+        .android-guide-cards .devsite-landing-row-item,
+        .android-illustrated-resources-index .devsite-landing-row-item,
+        .android-illustrated-resources-primary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary-small .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary-small .devsite-landing-row-item,
+        .android-promo .devsite-landing-row-item,
+        .android-quick-link,
+        .android-samples .devsite-card-wrapper,
+        .fully-clickable"
+    watch=".android-editorial-and-updates-cards, .android-samples, devsite-content"></android-fully-clickable>
+
+    <devsite-a11y-announce></devsite-a11y-announce>
+  </body>
+</html>

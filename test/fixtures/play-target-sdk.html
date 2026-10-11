@@ -1,0 +1,850 @@
+
+
+<!doctype html>
+<html
+      lang="en"
+      dir="ltr">
+  <head>
+
+      <title>Meet Google Play&#39;s target API level requirement &nbsp;|&nbsp; Other Play guides &nbsp;|&nbsp; Android Developers</title>
+
+    </head>
+  <body class="color-scheme--light"
+        template="page"
+        theme="android-theme"
+        type="article"
+
+        appearance
+
+        layout="docs"
+
+        display-toc
+        pending>
+
+    <devsite-progress type="indeterminate" id="app-progress"></devsite-progress>
+
+    <a href="#main-content" class="skip-link button">
+
+      Skip to main content
+    </a>
+    <section class="devsite-wrapper">
+      <devsite-cookie-notification-bar></devsite-cookie-notification-bar>
+
+      <section id="gc-wrapper">
+        <main role="main" id="main-content" class="devsite-main-content"
+
+              has-book-nav
+              has-sidebar
+            >
+          <div class="devsite-sidebar">
+            <div class="devsite-sidebar-content">
+
+                <devsite-recommendations-sidebar class="nocontent devsite-nav" data-nosnippet>
+                </devsite-recommendations-sidebar>
+            </div>
+          </div>
+          <devsite-content>
+
+<article class="devsite-article">
+
+  <div class="devsite-article-meta nocontent" role="navigation" data-nosnippet>
+
+    <ul class="devsite-breadcrumb-list"
+
+    aria-label="Breadcrumb">
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+  <a href="https://developer.android.com/"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="1"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="1"
+
+        track-metadata-eventdetail="Android Developers"
+
+    >
+
+          Android Developers
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/distribute"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="2"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="2"
+
+        track-metadata-eventdetail="Google Play"
+
+    >
+
+          Google Play
+
+  </a>
+
+  </li>
+
+  <li class="devsite-breadcrumb-item
+             ">
+
+      <div class="devsite-breadcrumb-guillemet material-icons" aria-hidden="true"></div>
+
+  <a href="https://developer.android.com/guide/app-bundle"
+
+        class="devsite-breadcrumb-link gc-analytics-event"
+
+        data-category="Site-Wide Custom Events"
+
+        data-label="Breadcrumbs"
+
+        data-value="3"
+
+        track-type="globalNav"
+
+        track-name="breadcrumb"
+
+        track-metadata-position="3"
+
+        track-metadata-eventdetail="Other Play guides"
+
+    >
+
+          Other Play guides
+
+  </a>
+
+  </li>
+
+</ul>
+
+  </div>
+
+    <h1 class="devsite-page-title" tabindex="-1">
+      Meet Google Play&#39;s target API level requirement
+
+    </h1>
+  <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
+
+    <devsite-recommendations-dropdown class="nocontent" data-nosnippet>
+    </devsite-recommendations-dropdown>
+
+  <div class="devsite-article-body clearfix
+  ">
+
+<p>When you upload an APK, it must meet Google Play&#39;s <a href="https://support.google.com/googleplay/android-developer/answer/11926878">target API level
+requirements</a>.</p>
+
+<p>Starting August 31 2026:</p>
+
+<ul>
+<li>New apps and app updates must target Android 16 (API level 36) or higher to be
+submitted to Google Play; except for Wear OS and Android Automotive OS apps,
+which must target Android 15 (API level 35) or higher, and Android TV and
+Android XR apps, which must target Android 14 (API level 34) or higher.</li>
+<li>Existing apps must target Android 15 (API level 35) or higher to remain
+available to new users on devices running Android OS higher than your app&#39;s
+target API level. Apps that target Android 14 (API level 34) or lower,
+including Android 13 (API level 33) or lower for Wear OS, Android TV, and
+Android XR, and Android 12 (API level 31) or lower for Android
+Automotive OS, will only be available on devices running Android OS that
+are the same or lower than your app&#39;s target API level.</li>
+</ul>
+
+<p>If you need more time to update your app, you&#39;ll be able to request an
+extension to November 1, 2026. You&#39;ll be able to access your app&#39;s extension
+forms in Play Console later this year.</p>
+
+<p>Exceptions to these requirements include:</p>
+
+<ul>
+<li>Permanently private apps that are restricted to users in a specific
+organization and intended for internal distribution only.</li>
+</ul>
+<aside class="note"><strong>Note:</strong><span> Out-of-date apps are unavailable to new users of devices that run newer
+versions of Android. For more information, see the &quot;App availability
+requirements&quot; section in the <a href="https://support.google.com/googleplay/android-developer/answer/11926878" class="external">Target API level requirements for Google Play
+apps</a> article in the Play Console Help.</span></aside>
+<h2 id="why-target" data-text="Why target newer SDKs?" tabindex="-1">Why target newer SDKs?</h2>
+
+<p>Every new Android version introduces changes that bring security and performance
+improvements and enhance the Android user experience. Some of these changes only
+apply to apps that explicitly declare support through their <code translate="no" dir="ltr">targetSdkVersion</code>
+manifest attribute (also known as the target API level).</p>
+
+<p>Configuring your app to target a recent API level ensures that users can benefit
+from these improvements, while your app can still run on older Android versions.
+Targeting a recent API level also allows your app to take advantage of the
+platform&#39;s <a href="#modernize">latest features</a> to delight your users. Furthermore, as of
+Android&nbsp;10 (API level 29), users <a href="/about/versions/10/behavior-changes-all#low-target-sdk-warnings">see a warning</a> when they start an app for
+the first time if the app targets Android 5.1 (API level 22) or lower.</p>
+
+<p>This document highlights important points you need to know in updating your
+target API level to meet the <a href="https://support.google.com/googleplay/android-developer/answer/11926878">Google Play requirement</a>. See the instructions
+in the following sections, depending on which version you are migrating to.</p>
+<aside class="note"><strong>Note:</strong><span> If your Gradle file contains manifest entries, you can confirm or change
+the current value of <code translate="no" dir="ltr">targetSdkVersion</code> in your app&#39;s Gradle file, as described
+in <a href="/studio/build#module-level">Configure your build</a>. Alternatively, you can use the
+<code translate="no" dir="ltr">android:targetSdkVersion</code> attribute in the manifest file, as described in the
+documentation for the <a href="/guide/topics/manifest/uses-sdk-element"><code translate="no" dir="ltr">&lt;uses-sdk&gt;</code></a> manifest element.</span></aside>
+<h2 id="pre13" data-text="Migrate from Android 12 and higher (API level 31) to a more recent version" tabindex="-1">Migrate from Android 12 and higher (API level 31) to a more recent version</h2>
+
+<p>To update your app to target a more recent version of Android, follow the
+relevant behavior changes list:</p>
+
+<ul>
+<li><a href="/about/versions/13/behavior-changes-13">Android 13 behavior changes</a></li>
+<li><a href="/about/versions/14/behavior-changes-14">Android 14 behavior changes</a></li>
+<li><a href="/about/versions/15/behavior-changes-15">Android 15 behavior changes</a></li>
+<li><a href="/about/versions/16/behavior-changes-16">Android 16 behavior changes</a></li>
+</ul>
+
+<h2 id="pre12" data-text="Migrate from Android 11 (API level 30) to Android 12 (API level 31)" tabindex="-1">Migrate from Android 11 (API level 30) to Android 12 (API level 31)</h2>
+
+<p><strong>Security and Permissions</strong></p>
+
+<ul>
+<li><a href="/guide/topics/connectivity/bluetooth/permissions">Bluetooth</a>: You must replace declarations for the <a href="/reference/android/Manifest.permission#BLUETOOTH"><code translate="no" dir="ltr">BLUETOOTH</code></a> and
+<a href="/reference/android/Manifest.permission#BLUETOOTH_ADMIN"><code translate="no" dir="ltr">BLUETOOTH_ADMIN</code></a> permissions with <a href="/reference/android/Manifest.permission#BLUETOOTH_SCAN"><code translate="no" dir="ltr">BLUETOOTH_SCAN</code></a>,
+<a href="/reference/android/Manifest.permission#BLUETOOTH_ADVERTISE"><code translate="no" dir="ltr">BLUETOOTH_ADVERTISE</code></a>, or <a href="/reference/android/Manifest.permission#BLUETOOTH_CONNECT"><code translate="no" dir="ltr">BLUETOOTH_CONNECT</code></a> permissions. You
+no longer need to make <code translate="no" dir="ltr">LOCATION</code> runtime permission requests for Bluetooth
+operations.</li>
+<li>Location: Users can request apps to retrieve only approximate location
+information. You must request the <a href="/reference/android/Manifest.permission#ACCESS_COARSE_LOCATION"><code translate="no" dir="ltr">ACCESS_COARSE_LOCATION</code></a> permission
+any time you request <a href="/reference/android/Manifest.permission#ACCESS_FINE_LOCATION"><code translate="no" dir="ltr">ACCESS_FINE_LOCATION</code></a>.
+<ul>
+<li>Intent filters: If your app contains <a href="/guide/components/activities/intro-activities">activities</a>, <a href="/guide/components/services">services</a>,
+or <a href="/guide/components/broadcasts">broadcast receivers</a> that use <a href="/guide/components/intents-filters#Receiving">intent filters</a>, you must
+explicitly declare the <a href="/guide/topics/manifest/activity-element#exported">android:exported</a> attribute for these
+components.</li>
+</ul></li>
+<li>Hibernation: Apps may be put into hibernation mode if they are not used over
+a period of time. In hibernation mode your app&#39;s runtime permissions and
+cache are reset, and you can&#39;t run jobs or alerts. You can check your <a href="/topic/performance/app-hibernation">app&#39;s
+hibernation status</a>.</li>
+<li><a href="/about/versions/12/behavior-changes-12#pending-intent-mutability">Pending intent mutability</a>: You must specify the mutability of each
+PendingIntent object that your app creates.</li>
+</ul>
+
+<p><strong>User Experience</strong></p>
+
+<ul>
+<li><a href="/about/versions/12/behavior-changes-12#custom-notifications">Custom notifications</a>: Notifications with custom content views will no
+longer use the full notification area; instead, the system applies a
+standard template. This template ensures that custom notifications have the
+same decoration as other notifications in all states. This behavior is
+nearly identical to the behavior of <code translate="no" dir="ltr">Notification.DecoratedCustomViewStyle</code>.</li>
+<li><a href="/about/versions/12/behavior-changes-12#android-app-links-verification-changes">Android App Links verification changes</a>: When using Android App Link
+verification, make sure that your intent filters include the BROWSABLE
+category and support the HTTPS scheme.</li>
+</ul>
+
+<p><strong>Performance</strong></p>
+
+<ul>
+<li><p><a href="/about/versions/12/behavior-changes-12#foreground-service-launch-restrictions">Foreground service launch restrictions</a>: To target Android 12 or
+higher, your app can&#39;t start foreground services while it runs in the
+background, except for a few special cases. If an app attempts to start a
+foreground service while running in the background, an exception occurs
+(except for the few special cases).</p>
+
+<p>Consider using WorkManager to schedule and start <a href="/topic/libraries/architecture/workmanager/how-to/define-work#expedited">expedited work</a> while
+your app runs in the background. To complete time-sensitive actions that the
+user requests, start foreground services within an exact alarm.</p></li>
+<li><p><a href="/about/versions/12/behavior-changes-12#notification-trampolines">Notification trampoline restrictions</a>: When users tap notifications,
+some apps respond by launching an app component that starts the activity
+that the user sees and interacts with. This app component is known as a
+notification trampoline.</p>
+
+<p>Apps must not start activities from services or broadcast receivers that are
+used as notification trampolines. After a user taps on a notification or
+action button within the notification, your app cannot call
+<code translate="no" dir="ltr">startActivity()</code> inside of a service or broadcast receiver.</p></li>
+</ul>
+
+<p>View the complete set of <a href="/about/versions/12/behavior-changes-12">changes that affect apps targeting Android 12 (API
+level 31)</a>.</p>
+
+<div>
+  <devsite-expandable>
+    <h2 class="showalways" id="prepie" data-text="Migrate from lower than Android 11 (API level 30)" tabindex="-1">Migrate from lower than Android 11 (API level 30)</h2>
+    <p>Select the version of Android you will be migrating from:</p>
+    <h3 class="hide-from-toc" id="migrate-to-android-5-api-level-21" data-text="Migrate to Android 5 (API level 21)" tabindex="-1">Migrate to Android 5 (API level 21)</h3>
+    <p>See the respective Behavior Changes page for each of the following releases to ensure your that your app has accounted for changes introduced in these releases:</p>
+    <ul>
+      <li><a href="/about/versions/android-5.0">Android 5.0 (API level 21)</a></li>
+      <li><a href="/about/versions/android-4.4">Android 4.4 (API level 19)</a>.</li>
+      <li><a href="/about/versions/android-4.1">Android 4.1.x (API level 16)</a>.</li>
+    </ul>
+    <p>Continue by following the instructions in the next section.</p>
+    <h3 class="hide-from-toc" id="migrate-to-android-6-api-level-23" data-text="Migrate to Android 6 (API level 23)" tabindex="-1">Migrate to Android 6 (API level 23)</h3>
+    <p>The following considerations apply to apps targeting Android 6.0 and higher versions of the platform:</p>
+    <ul>
+      <li>
+        <p><a href="/training/permissions/requesting">Runtime Permissions</a></p>
+        <ul>
+          <li>
+            <p>Dangerous permissions are only granted at runtime. Your UI flows must provide affordances for granting these permissions.</p>
+          </li>
+          <li>
+            <p>Wherever possible, ensure your app is prepared to handle rejection of permission requests. For example, if a user declines a request to access the device&#39;s GPS, ensure your app has another way to proceed.</p>
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <p>
+      For an exhaustive list of changes introduced in Android 6.0 (API level 23), see the <a href="/about/versions/marshmallow/android-6.0-changes">Behavior Changes</a>
+      page for that version of the platform.
+    </p>
+    <p>Continue by following the instructions in the next section.</p>
+    <h3 class="hide-from-toc" id="migrate-to-android-7-api-level-24" data-text="Migrate to Android 7 (API level 24)" tabindex="-1">Migrate to Android 7 (API level 24)</h3>
+    <p>The following considerations apply to apps targeting Android 7.0 and higher versions of the platform:</p>
+    <ul>
+      <li>
+        <p>Doze and App Standby</p>
+        <p>Design for behaviors described in <a href="/training/monitoring-device-state/doze-standby">Optimizing for Doze and App Standby</a>, which encompasses incremental changes introduced across several platform releases.</p>
+        <p>When a device is in Doze and App Standby Mode, the system behaves as follows:</p>
+        <ul>
+          <li>Restricts network access</li>
+          <li>Defers alarms, syncs, and jobs</li>
+          <li>Restricts GPS and Wi-Fi scans</li>
+          <li>
+            Restricts normal-priority
+            <a href="https://firebase.google.com/docs/cloud-messaging">Firebase Cloud Messaging</a>
+            messages.
+          </li>
+        </ul>
+      </li>
+      <li>
+        <p>Permission Changes</p>
+        <ul>
+          <li>The system restricts access to app private directories.</li>
+          <li>
+            Exposing a <code translate="no" dir="ltr">file://</code> URI outside of your app triggers a <code translate="no" dir="ltr">FileUriExposedException</code>. If you need to share files outside of your app, implement
+            <a href="/training/secure-file-sharing/setup-sharing"><code translate="no" dir="ltr">FileProvider</code></a>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <p>
+          The system <a href="/about/versions/nougat/android-7.0-changes#ndk">forbids linking</a>
+          to non-NDK libraries.
+        </p>
+      </li>
+    </ul>
+    <p>
+      For an exhaustive list of changes introduced in Android 7.0 (API level 24), see the <a href="/about/versions/nougat/android-7.0-changes">Behavior Changes</a>
+      page for that version of the platform.
+    </p>
+    <p>Continue by following the instructions in the next section.</p>
+    <h3 class="hide-from-toc" id="migrate-to-android-8-api-level-26" data-text="Migrate to Android 8 (API level 26)" tabindex="-1">Migrate to Android 8 (API level 26)</h3>
+    <p>The following considerations apply to apps targeting Android 8.0 and higher versions of the platform:</p>
+    <ul>
+      <li>
+        <a href="/about/versions/oreo/background">Background Execution Limits</a>
+        <ul>
+          <li>
+            The system restricts services for apps not running in the foreground.
+            <ul>
+              <li>
+                <a href="/reference/kotlin/android/content/Context#startService(android.content.Intent)"> <code translate="no" dir="ltr">startService()</code></a> now throws an exception when an app tries to invoke it while <code translate="no" dir="ltr">startService()</code> is
+                prohibited.
+              </li>
+              <li>
+                To start foreground services, an app must use <a href="/reference/kotlin/android/app/Service#startForeground(int, android.app.Notification)"> <code translate="no" dir="ltr">startForeground()</code></a> and
+                <a href="/reference/kotlin/android/content/Context#startForegroundService(android.content.Intent)"> <code translate="no" dir="ltr">startForegroundService()</code></a>.
+              </li>
+              <li>Carefully review the changes made to the JobScheduler API, as documented on the Android 8.0 (API level 26) <a href="/about/versions/oreo/android-8.0#jobscheduler">Behavior Changes page</a>.</li>
+              <li>
+                <a href="https://firebase.google.com/docs/cloud-messaging/"> Firebase Cloud Messaging</a> requires
+                <a href="https://developers.google.com/android/guides/releases#march_2017_-_version_1021"> version 10.2.1</a>
+                of the <a href="https://developers.google.com/android/guides/overview"> Google Play services SDK</a>, or higher.
+              </li>
+              <li>
+                When using <a href="https://firebase.google.com/docs/cloud-messaging/"> Firebase Cloud Messaging</a>, message delivery is subject to background execution limits. When background work is necessary upon message receipt, such
+                as to perform background data sync, your app should schedule jobs using Firebase Job Dispatcher or JobIntentService instead. For more information, see the
+                <a href="https://firebase.google.com/docs/cloud-messaging/"> Firebase Cloud Messaging documentation</a>.
+              </li>
+            </ul>
+          </li>
+          <li>
+            Implicit broadcasts
+            <ul>
+              <li>
+                Implicit broadcasts are restricted. For information about handling background events, see the documentation for the <a href="/reference/kotlin/android/app/job/JobScheduler"> <code translate="no" dir="ltr">JobScheduler</code></a> API.
+              </li>
+            </ul>
+          </li>
+          <li>
+            Background Location Limits
+            <ul>
+              <li>
+                Apps running in the background have limited access to location data.
+                <ul>
+                  <li>
+                    On devices with Google Play services, use the <a href="https://developers.google.com/android/reference/com/google/android/gms/location/FusedLocationProviderClient"> fused location provider</a> to get periodic location
+                    updates.
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="/about/versions/oreo/android-8.0#notifications"> Notification Channels</a>
+        <ul>
+          <li>You should define <a href="/training/notify-user/channels#importance"> notification interruption properties</a> on a per-channel basis.</li>
+          <li>You must assign notifications to a channel for the notifications to appear.</li>
+          <li>
+            This version of the platform supports <a href="/reference/kotlin/androidx/core/app/NotificationCompat.Builder"> <code translate="no" dir="ltr">NotificationCompat.Builder</code></a>.
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="/about/versions/oreo/android-8.0-changes#privacy-all"> Privacy</a>
+        <ul>
+          <li><a href="/reference/kotlin/android/provider/Settings.Secure#ANDROID_ID"> ANDROID_ID</a> is scoped per app signing key.</li>
+        </ul>
+      </li>
+    </ul>
+    <p>
+      For an exhaustive list of changes introduced in Android 8.0 (API level 26), see the <a href="/about/versions/oreo/android-8.0-changes">Behavior Changes</a>
+      page for that version of the platform.
+    </p>
+    <h3 class="hide-from-toc" id="migrate-from-android-8-api-26-to-android-9-api-28" data-text="Migrate from Android 8 (API 26) to Android 9 (API 28)" tabindex="-1">Migrate from Android 8 (API 26) to Android 9 (API 28)</h3>
+    <ul>
+      <li>
+        <a href="/about/versions/pie/power">Power Management</a>
+        <ul>
+          <li><a href="/about/versions/pie/power#buckets">App Standby buckets</a> bring new
+            background restrictions based on app engagement, such as deferred jobs,
+            alarms and quotas on high-priority messages
+          </li>
+          <li><a href="/about/versions/pie/power#battery-saver">Battery saver improvements</a>
+            increase the limitations on app standby apps
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="/about/versions/pie/android-9.0-changes-28#fg-svc">Foreground service permission</a>
+        <ul>
+          <li>Need to request the normal permission
+            <a href="/reference/kotlin/android/Manifest.permission#FOREGROUND_SERVICE"><code translate="no" dir="ltr">FOREGROUND_SERVICE</code></a>
+            (not runtime permission)
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="/about/versions/pie/android-9.0-changes-all#privacy-changes-all">Privacy changes</a>
+        <ul>
+          <li><a href="/about/versions/pie/android-9.0-changes-all#bg-sensor-access">Limited access to background sensors</a></li>
+          <li>Restricted access to call logs, now in <a href="/reference/kotlin/android/Manifest.permission_group#CALL_LOG"><code translate="no" dir="ltr">CALL_LOG</code></a>
+            permission group
+          </li>
+          <li>Restricted access to phone numbers, requiring
+            <a href="/reference/kotlin/android/Manifest.permission#READ_CALL_LOG"><code translate="no" dir="ltr">READ_CALL_LOG</code></a> permission
+          </li>
+          <li>Restricted access to Wi-Fi information</li>
+        </ul>
+      </li>
+    </ul>
+    <p>
+      For an exhaustive list of changes introduced in Android 9.0 (API level
+      28), see <a href="/about/versions/pie/android-9.0-changes-28">behavior
+      changes</a>.
+    </p>
+    <h3 class="hide-from-toc" id="migrate-from-android-9-api-level-28-to-android-10-api-level-29" data-text="       Migrate from Android 9 (API level 28) to Android 10 (API level 29)     " tabindex="-1">
+      Migrate from Android 9 (API level 28) to Android 10 (API level 29)
+    </h3>
+    <ul>
+      <li>
+        <a href="/training/notify-user/build-notification#urgent-message">Notifications
+        with a full-screen intent</a>
+        <ul>
+          <li>
+            Need to request the normal permission
+            <a href="/reference/android/Manifest.permission#USE_FULL_SCREEN_INTENT"><code translate="no" dir="ltr">USE_FULL_SCREEN_INTENT</code></a>
+            (not runtime permission).
+          </li>
+        </ul>
+      </li>
+      <li>
+        Support for <a href="/guide/topics/ui/foldables">foldables</a> and large
+        screen devices
+        <ul>
+          <li>
+            Multiple activities can now be in the "resumed" state at the same time, but only one actually has focus.
+            <ul>
+              <li>
+                This change affects
+                <a href="/reference/android/app/Activity#onResume()"><code translate="no" dir="ltr">onResume()</code></a>
+                and <a href="/reference/android/app/Activity#onPause()"><code translate="no" dir="ltr">onPause()</code></a>
+                behavior.
+              </li>
+              <li>
+                New lifecycle concept of "topmost resumed" which can be detected
+                by subscribing to
+                <a href="/reference/android/app/Activity#onTopResumedActivityChanged(boolean)"><code translate="no" dir="ltr">onTopResumedActivityChanged()</code></a>.
+                <ul>
+                  <li>
+                    Only one activity can be "topmost resumed."
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>
+            When
+            <a href="/guide/topics/ui/multi-window#resizeableActivity"><code translate="no" dir="ltr">resizeableActivity</code></a>
+            is set to <code translate="no" dir="ltr">false</code>, apps can additionally specify a
+            <a href="/reference/android/R.attr#minAspectRatio"><code translate="no" dir="ltr">minAspectRatio</code></a>
+            which automatically letterboxes the app on narrower aspect ratios.
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="/about/versions/10/privacy/changes">Privacy changes</a>
+        <ul>
+          <li>
+            <a href="/training/data-storage#scoped-storage">Scoped storage</a>
+            <ul>
+              <li>
+                External storage access is limited only to an app-specific
+                directory and to specific types of media that the app has
+                created.
+              </li>
+            </ul>
+          </li>
+          <li>
+            Restricted access to location while the app is in the background,
+            requiring
+            <a href="/reference/android/Manifest.permission#ACCESS_BACKGROUND_LOCATION"><code translate="no" dir="ltr">ACCESS_BACKGROUND_LOCATION</code></a>
+            permission.
+          </li>
+          <li>
+            Restricted access to non-resettable identifiers such as IMEI and
+            serial number.
+          </li>
+          <li>
+            Restricted access to physical activity information such as the
+            user's step count, requiring
+            <a href="/reference/android/Manifest.permission#ACTIVITY_RECOGNITION"><code translate="no" dir="ltr">ACTIVITY_RECOGNITION</code></a>
+            permission.
+          </li>
+          <li>
+            Restricted access to
+            <a href="/about/versions/10/privacy/changes#location-telephony-bluetooth-wifi">some
+            telephony, Bluetooth, and Wi-Fi APIs</a>, requiring
+            <a href="/reference/android/Manifest.permission#ACCESS_FINE_LOCATION"><code translate="no" dir="ltr">ACCESS_FINE_LOCATION</code></a>
+            permission.
+          </li>
+          <li>
+            Restricted access to Wi-Fi settings
+            <ul>
+              <li>
+                Apps can no longer directly enable or disable Wi-Fi and need to
+                do it
+                <a href="/about/versions/10/features#settings-panels">using
+                settings panels</a>.
+              </li>
+              <li>
+                Restrictions on initiating a connection to a Wi-Fi network,
+                requiring the use of either
+                <a href="/reference/android/net/wifi/WifiNetworkSpecifier"><code translate="no" dir="ltr">WifiNetworkSpecifier</code></a>
+                or
+                <a href="/reference/android/net/wifi/WifiNetworkSuggestion"><code translate="no" dir="ltr">WifiNetworkSuggestion</code></a>.
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+    <h3 class="hide-from-toc" id="migrate-from-android-10-api-level-29-to-android-11-api-level-30" data-text="       Migrate from Android 10 (API level 29) to Android 11 (API level 30)     " tabindex="-1">
+      Migrate from Android 10 (API level 29) to Android 11 (API level 30)
+    </h3>
+    <ul>
+      <li>
+        Privacy
+        <ul>
+          <li>
+            <a href="/about/versions/11/privacy/storage">Scoped storage enforcement</a> : Apps should adopt the scoped storage model where app-specific, media, and other file types are saved and accessed using dedicated locations.
+          </li>
+          <li>
+            <a href="/about/versions/11/privacy/permissions#auto-reset">Permissions auto-reset</a>: If users
+            haven't interacted with an app for a few months, the system auto-resets the app's sensitive permissions.
+            This shouldn't affect most apps. If your app primarily works in the background without user interactions, you may
+            consider <a href="/guide/topics/permissions/overview#auto-reset-permissions-unused-apps">requesting users to disable
+            auto reset.</a>
+          </li>
+          <li>
+            <a href="/about/versions/11/privacy/location#background-location">Background location access</a>: Apps must
+            request foreground and background location permission separately. <a href="/training/location/permissions#request-background-location">
+            Granting access to background location permission can only be done in app settings</a> instead of runtime permission dialogs.
+          </li>
+          <li>
+            <a href="/training/basics/intents/package-visibility-use-cases">Package Visibility</a>: When an app queries
+            for the list of installed apps and services on the device, the returned list is filtered.
+            <ul>
+              <li>
+                If you use <a href="/about/versions/11/behavior-changes-11#tts-engines">Text-to-speech</a> or
+                <a href="/about/versions/11/behavior-changes-11#speech-recognition"> Speech Recognition</a> services,
+                you will need to add queries elements for services to the manifest file.
+              </li>
+            </ul>
+          </li>
+        </ul>
+      <li>
+        Security
+        <ul>
+          <li>
+            <a href="/about/versions/11/behavior-changes-11#compressed-resource-file">Compressed `resource.arsc` files
+            are no longer supported</a>
+          </li>
+          <li>
+            <a href="/about/versions/11/behavior-changes-11#minimum-signature-scheme">APK Signature Scheme v2 now required.</a>
+            For backward compatibility reasons, developers should also continue to sign with APK Signature Scheme v1.
+          </li>
+          <li>
+            Non-SDK interface restriction. Using non-SDK interfaces is not recommended for apps targeting API level 30,
+            as some of these non-SDK interfaces are now blocked. See <a href="/about/versions/11/non-sdk-11#new-blocked">Non-SDK interfaces that
+            are now blocked in Android 11</a> for a comprehensive list of blocked non-SDK interfaces.
+          </li>
+        </ul>
+      </li>
+      </li>
+    </ul>
+    <p> For an exhaustive list of changes introduced in Android 11 (API level 30), see
+      the <a href="/about/versions/11/behavior-changes-11">Behavior Changes</a> page.
+    </p>
+    <p>Continue to update to API 31 by following the instructions in <a href="#pre12">the previous section</a>.</p>
+  </devsite-expandable>
+</div>
+
+<h2 id="modernize" data-text="Modernize your apps" tabindex="-1">Modernize your apps</h2>
+
+<p>As you update the target API level for your apps, consider adopting recent
+platform features to modernize your apps and delight your users.</p>
+
+<ul>
+<li>Consider using <a href="/camerax">CameraX</a>, which is in Beta, to make the most of using
+the camera.</li>
+<li>Use <a href="/jetpack">Jetpack</a> components to help you follow best practices, free you
+from writing boilerplate code, and simplify complex tasks so that you can
+focus on the code you care about.</li>
+<li>Use <a href="/kotlin">Kotlin</a> to write better apps faster, and with less code.</li>
+<li>Ensure you are following <a href="/privacy">privacy</a> requirements and best practices.</li>
+<li>Add <a href="/guide/topics/ui/look-and-feel/darktheme">dark theme</a> support to your apps.</li>
+<li>Add <a href="/guide/navigation/gesturenav">gesture navigation</a> support to your apps.</li>
+<li><a href="https://developers.google.com/cloud-messaging/android/android-migrate-fcm">Migrate your app</a> from Google Cloud Messaging (GCM) to the latest
+version of Firebase Cloud Messaging.</li>
+<li>Take advantage of advanced window management.
+<ul>
+<li>Support larger aspect ratios (more than 16:9) to take advantage of
+recent advances in hardware. Ensure that your app resizes to fill the
+available screen space. Only declare a maximum aspect ratio as a last
+resort. For more information about maximum aspect ratios, see <a href="/guide/practices/screens-distribution#MaxAspectRatio">Declare
+Restricted Screen Support</a>.</li>
+<li>Add <a href="/guide/topics/ui/multi-window">multi-window support</a> to help your app increase productivity,
+and to manage <a href="/about/versions/oreo/android-8.0#mds">multiple displays</a>.</li>
+<li>If a great minimized app experience would improve the user experience,
+add support for <a href="/guide/topics/ui/picture-in-picture">Picture-in-Picture</a>.
+<ul>
+<li>Optimize for devices with display cutout.</li>
+<li>Don&#39;t assume status bar height. Instead, use <a href="/reference/kotlin/android/view/WindowInsets"><code translate="no" dir="ltr">WindowInsets</code></a>
+and <a href="/reference/kotlin/android/view/View.OnApplyWindowInsetsListener"><code translate="no" dir="ltr">View.OnApplyWindowInsetsListener</code></a>. To learn more, see
+the <a href="https://www.youtube.com/watch?v=_mGDMVRO3iE">droidcon NYC 2017</a> video.
+for an explanation.</li>
+<li>Don&#39;t assume that the app has the entire window. Instead, confirm
+its location by using <a href="/reference/kotlin/android/view/View#getLocationInWindow(int%5B%5D)"><code translate="no" dir="ltr">View.getLocationInWindow()</code></a>, not
+<a href="/reference/kotlin/android/view/View#getLocationOnScreen(int%5B%5D)"><code translate="no" dir="ltr">View.getLocationOnScreen()</code></a>.
+                    *   When handling <code translate="no" dir="ltr">MotionEvent</code>, use
+                        <a href="/reference/kotlin/android/view/MotionEvent#getX()"><code translate="no" dir="ltr">MotionEvent.getX()</code></a> and
+                        <a href="/reference/kotlin/android/view/MotionEvent#getY()"><code translate="no" dir="ltr">MotionEvent.getY()</code></a>, not
+                        <a href="/reference/kotlin/android/view/MotionEvent#getRawX()"><code translate="no" dir="ltr">MotionEvent.getRawX()</code></a>,
+                        <a href="/reference/kotlin/android/view/MotionEvent#getRawY()"><code translate="no" dir="ltr">MotionEvent.getRawY()</code></a>.</li>
+</ul></li>
+</ul></li>
+</ul>
+
+<h2 id="check_and_update_your_sdks_and_libraries" data-text="Check and update your SDKs and libraries" tabindex="-1">Check and update your SDKs and libraries</h2>
+
+<p>Make sure that your third-party SDK dependencies support API 31: Some SDK
+providers publish it in their manifest; others will require additional
+investigation. If you use an SDK that doesn&#39;t support API 31, make it a priority
+to work with the SDK provider to resolve the issue.</p>
+
+<p>Additionally, note that your app or game&#39;s <code translate="no" dir="ltr">targetSdkVersion</code> may restrict
+access to private Android platform libraries; see <a href="/about/versions/nougat/android-7.0-changes#ndk">NDK Apps Linking to Platform
+Libraries</a> for details.</p>
+
+<p>You should also verify any restrictions that may exist in the version of the
+Android Support Library that you&#39;re using. As always, you must ensure
+compatibility between the major version of Android Support Library and your
+app&#39;s <code translate="no" dir="ltr">compileSdkVersion</code>.</p>
+
+<p>We recommend that you choose a <code translate="no" dir="ltr">targetSdkVersion</code> smaller than or equal to the
+Support Library&#39;s major version. We encourage you to update to a recent
+compatible Support Library in order to take advantage of the latest
+compatibility features and bug fixes.</p>
+
+<h2 id="test_your_app" data-text="Test your app" tabindex="-1">Test your app</h2>
+
+<p>After you update your app&#39;s API level and features as appropriate, you should
+test some core use cases. The following suggestions are not exhaustive, but aim
+to guide your testing process. We suggest testing:</p>
+
+<ul>
+<li>That your app compiles to API 29 without errors or warnings.</li>
+<li><p>That your app has a strategy for cases where the user rejects permission
+requests, and prompts the user for permissions. To do so:</p>
+
+<ul>
+<li>Go to your app&#39;s App Info screen, and disable each permission.</li>
+<li>Open the app and ensure no crashes.
+<ul>
+<li>Perform core use case tests and ensure required permissions are
+re-prompted.</li>
+</ul></li>
+</ul></li>
+<li><p>Handles Doze with expected results and no errors.</p>
+
+<ul>
+<li>Using adb, place your test device into Doze while your app is running.
+<ul>
+<li>Test any use cases that trigger Firebase Cloud Messaging messages.</li>
+<li>Test any use cases that use Alarms or Jobs.</li>
+<li>Eliminate any dependencies on background services.</li>
+</ul></li>
+<li>Set your app into App Standby
+<ul>
+<li>Test any use cases that trigger Firebase Cloud Messaging messages.</li>
+<li>Test any use cases that use Alarms.</li>
+</ul></li>
+</ul></li>
+<li><p>Handles new photos / video being taken</p>
+
+<ul>
+<li>Check that your app <a href="/topic/performance/background-optimization#media-broadcasts">handles the restricted</a>
+<a href="/topic/performance/background-optimization#media-broadcasts"><code translate="no" dir="ltr">ACTION_NEW_PICTURE</code></a> <a href="/topic/performance/background-optimization#media-broadcasts">and</a> <a href="/topic/performance/background-optimization#media-broadcasts"><code translate="no" dir="ltr">ACTION_NEW_VIDEO</code></a> broadcasts
+correctly (that is, moved to JobScheduler jobs).</li>
+<li>Ensure that any critical use cases that depend on these events still
+work.</li>
+</ul></li>
+<li><p>Handles sharing files to other apps
+    -   Test any use case that shares file data with any other app (even
+        another app by the same developer)</p>
+
+<ul>
+<li>Test the content is visible in the other app and doesn&#39;t trigger
+crashes.</li>
+</ul></li>
+</ul>
+
+<h2 id="further_information" data-text="Further information" tabindex="-1">Further information</h2>
+
+<p><a href="http://g.co/play/monthlynews" class="external">Opt in to emails in the Google Play Console</a> so that we can
+send you important updates and announcements from Android and Google Play,
+including our monthly partner newsletter.</p>
+
+</div>
+
+      <devsite-recommendations display="in-page" hidden yield>
+      </devsite-recommendations>
+
+      <devsite-recommendations id="recommendations-link" yield></devsite-recommendations>
+
+  <div class="devsite-floating-action-buttons"></div></article>
+
+<devsite-content-footer class="nocontent" data-nosnippet>
+  <p>Content and code samples on this page are subject to the licenses described in the <a href="/license">Content License</a>. Java and OpenJDK are trademarks or registered trademarks of Oracle and/or its affiliates.</p>
+  <p>Last updated 2026-10-01 UTC.</p>
+</devsite-content-footer>
+
+<devsite-notification
+
+        link="https://google.qualtrics.com/jfe/form/SV_brOPtHjm8smSm4C?link=dac"
+        link-text="Take survey"
+        message="Help us improve the Android Developer experience by taking a survey."
+>
+</devsite-notification>
+
+<div class="devsite-content-data">
+
+</div>
+
+          </devsite-content>
+        </main>
+
+        <devsite-panel>
+
+        </devsite-panel>
+
+      </section>
+      </section>
+    <devsite-sitemask></devsite-sitemask>
+
+    <devsite-tooltip ></devsite-tooltip>
+    <devsite-heading-link></devsite-heading-link>
+    <devsite-analytics>
+
+    </devsite-analytics>
+
+      <devsite-badger></devsite-badger>
+
+<android-fully-clickable
+    target="
+        .android-case-study .devsite-landing-row-item,
+        .android-editorial-and-updates-cards .devsite-card-content-wrapper,
+        .android-editorial-and-updates-cards .devsite-landing-row-item,
+        .android-grouped-resources .devsite-landing-row-item,
+        .android-grouped-resources-contained--primary .devsite-landing-row-item,
+        .android-grouped-resources-contained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-contained--tertiary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--primary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--secondary .devsite-landing-row-item,
+        .android-grouped-resources-uncontained--tertiary .devsite-landing-row-item,
+        .android-guide-cards .devsite-landing-row-item,
+        .android-illustrated-resources-index .devsite-landing-row-item,
+        .android-illustrated-resources-primary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary .devsite-landing-row-item,
+        .android-illustrated-resources-secondary-small .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary .devsite-landing-row-item,
+        .android-illustrated-resources-tertiary-small .devsite-landing-row-item,
+        .android-promo .devsite-landing-row-item,
+        .android-quick-link,
+        .android-samples .devsite-card-wrapper,
+        .fully-clickable"
+    watch=".android-editorial-and-updates-cards, .android-samples, devsite-content"></android-fully-clickable>
+
+    <devsite-a11y-announce></devsite-a11y-announce>
+  </body>
+</html>

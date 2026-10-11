@@ -1,15 +1,33 @@
 import https from 'node:https';
+import tls from 'node:tls';
 import RssParser from 'rss-parser';
 import type { OSVersionInfo } from '../types.js';
+import { APPLE_ROOT_CA } from './apple-root-ca.js';
+
+const HTTPS_TIMEOUT_MS = 15_000;
+
+// gdmf.apple.com chains to "Apple Root CA", which isn't in Node's bundled
+// store. Trust the public roots plus that one Apple root; verification stays on.
+const TRUSTED_CA = [...tls.rootCertificates, APPLE_ROOT_CA];
 
 function httpsGet(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    https.get(url, { rejectUnauthorized: false }, (res) => {
+    const req = https.get(url, { ca: TRUSTED_CA }, (res) => {
+      const status = res.statusCode ?? 0;
+      if (status < 200 || status >= 300) {
+        res.resume();
+        reject(new Error(`HTTP ${status} from ${url}`));
+        return;
+      }
       const chunks: Buffer[] = [];
       res.on('data', (chunk) => chunks.push(chunk));
       res.on('end', () => resolve(Buffer.concat(chunks).toString()));
       res.on('error', reject);
-    }).on('error', reject);
+    });
+    req.setTimeout(HTTPS_TIMEOUT_MS, () => {
+      req.destroy(new Error(`Request to ${url} timed out after ${HTTPS_TIMEOUT_MS}ms`));
+    });
+    req.on('error', reject);
   });
 }
 

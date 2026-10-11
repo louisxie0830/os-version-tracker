@@ -1,0 +1,476 @@
+<!DOCTYPE html SYSTEM "about:legacy-compat">
+<html lang="en-US" data-preset="contrast" data-primary-color="#307FFF" data-external-links-in-new-tab="false"><head>
+
+<title>Configure a Gradle project | Kotlin Documentation</title></head><body data-id="gradle-configure-project" data-main-title="Configure a Gradle project" data-article-props="{&quot;seeAlsoStyle&quot;:&quot;links&quot;}" data-template="article" data-breadcrumbs="Build tools///Gradle" data-edit-url="https://github.com/JetBrains/kotlin-web-site/edit/master/docs/topics/gradle/gradle-configure-project.md"><div class="wrapper"><main class="panel _main"><section class="panel__content"><div class="container"><article class="article" data-shortcut-switcher="inactive"><h1 data-toc="gradle-configure-project" id="gradle-configure-project.md">Configure a Gradle project</h1><p id="-xbr60_2">To build a Kotlin project with <a href="https://docs.gradle.org/current/userguide/userguide.html" id="-xbr60_14" data-external="true" rel="noopener noreferrer">Gradle</a>, you need to <a href="#apply-the-plugin" id="-xbr60_15">add the Kotlin Gradle plugin</a> to your build script file <code class="code" id="-xbr60_16">build.gradle(.kts)</code> and <a href="#configure-dependencies" id="-xbr60_17">configure the project's dependencies</a> there.</p><aside class="prompt" data-type="note" data-title="" id="-xbr60_3"><p id="-xbr60_18">To learn more about the contents of a build script, visit the <a href="get-started-with-jvm-gradle-project.html#explore-the-build-script" id="-xbr60_19">Explore the build script</a> section.</p></aside><section class="chapter"><h2 id="apply-the-plugin" data-toc="apply-the-plugin">Apply the plugin</h2><p id="-xbr60_20">To apply the Kotlin Gradle plugin, use the <a href="https://docs.gradle.org/current/userguide/plugins.html#sec:plugins_block" id="-xbr60_31" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_32">plugins{}</code> block</a> from the Gradle plugins DSL:</p><div class="tabs" id="-xbr60_21" data-group="build-script" data-anchors="[-xbr60_33,-xbr60_34]"><div class="tabs__content" data-gtm="tab" id="-xbr60_33" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    // Replace `&lt;...&gt;` with the plugin name appropriate for your target environment
+    kotlin(&quot;&lt;...&gt;&quot;) version &quot;2.4.21&quot;
+    // For example, if your target environment is JVM:
+    // kotlin(&quot;jvm&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_34" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    // Replace `&lt;...&gt;` with the plugin name appropriate for your target environment
+    id 'org.jetbrains.kotlin.&lt;...&gt;' version '2.4.21'
+    // For example, if your target environment is JVM:
+    // id 'org.jetbrains.kotlin.jvm' version '2.4.21'
+}
+</div></div></div><aside class="prompt" data-type="note" data-title="" id="-xbr60_22"><p id="-xbr60_37">The Kotlin Gradle plugin (KGP) and Kotlin share the same version numbering.</p></aside><p id="-xbr60_23">When configuring your project, check the Kotlin Gradle plugin (KGP) compatibility with available Gradle versions. In the following table, there are the minimum and maximum <span class="control" id="-xbr60_38">fully supported</span> versions of Gradle and Android Gradle plugin (AGP):</p><div class="table-wrapper"><table class="wide" id="-xbr60_24"><thead><tr class="ijRowHead" id="-xbr60_39"><th id="-xbr60_52"><p>KGP version</p></th><th id="-xbr60_53"><p>Gradle min and max versions</p></th><th id="-xbr60_54"><p>AGP min and max versions</p></th></tr></thead><tbody><tr id="-xbr60_40"><td id="-xbr60_55"><p>2.4.20&ndash;2.4.21</p></td><td id="-xbr60_56"><p>7.6.3&ndash;9.7.0</p></td><td id="-xbr60_57"><p>8.5.2&ndash;9.3.1</p></td></tr><tr id="-xbr60_41"><td id="-xbr60_58"><p>2.4.0&ndash;2.4.10</p></td><td id="-xbr60_59"><p>7.6.3&ndash;9.5.0</p></td><td id="-xbr60_60"><p>8.5.2&ndash;9.1.0</p></td></tr><tr id="-xbr60_42"><td id="-xbr60_61"><p>2.3.20&ndash;2.3.21</p></td><td id="-xbr60_62"><p>7.6.3&ndash;9.3.0</p></td><td id="-xbr60_63"><p>8.2.2&ndash;9.0.0</p></td></tr><tr id="-xbr60_43"><td id="-xbr60_64"><p>2.3.10</p></td><td id="-xbr60_65"><p>7.6.3&ndash;9.0.0</p></td><td id="-xbr60_66"><p>8.2.2&ndash;9.0.0</p></td></tr><tr id="-xbr60_44"><td id="-xbr60_67"><p>2.3.0</p></td><td id="-xbr60_68"><p>7.6.3&ndash;9.0.0</p></td><td id="-xbr60_69"><p>8.2.2&ndash;8.13.0</p></td></tr><tr id="-xbr60_45"><td id="-xbr60_70"><p>2.2.20&ndash;2.2.21</p></td><td id="-xbr60_71"><p>7.6.3&ndash;8.14</p></td><td id="-xbr60_72"><p>7.3.1&ndash;8.11.1</p></td></tr><tr id="-xbr60_46"><td id="-xbr60_73"><p>2.2.0&ndash;2.2.10</p></td><td id="-xbr60_74"><p>7.6.3&ndash;8.14</p></td><td id="-xbr60_75"><p>7.3.1&ndash;8.10.0</p></td></tr><tr id="-xbr60_47"><td id="-xbr60_76"><p>2.1.20&ndash;2.1.21</p></td><td id="-xbr60_77"><p>7.6.3&ndash;8.12.1</p></td><td id="-xbr60_78"><p>7.3.1&ndash;8.7.2</p></td></tr><tr id="-xbr60_48"><td id="-xbr60_79"><p>2.1.0&ndash;2.1.10</p></td><td id="-xbr60_80"><p>7.6.3&ndash;8.10*</p></td><td id="-xbr60_81"><p>7.3.1&ndash;8.7.2</p></td></tr><tr id="-xbr60_49"><td id="-xbr60_82"><p>2.0.20&ndash;2.0.21</p></td><td id="-xbr60_83"><p>6.8.3&ndash;8.8*</p></td><td id="-xbr60_84"><p>7.1.3&ndash;8.5</p></td></tr><tr id="-xbr60_50"><td id="-xbr60_85"><p>2.0.0</p></td><td id="-xbr60_86"><p>6.8.3&ndash;8.5</p></td><td id="-xbr60_87"><p>7.1.3&ndash;8.3.1</p></td></tr><tr id="-xbr60_51"><td id="-xbr60_88"><p>1.9.20&ndash;1.9.25</p></td><td id="-xbr60_89"><p>6.8.3&ndash;8.1.1</p></td><td id="-xbr60_90"><p>4.2.2&ndash;8.1.0</p></td></tr></tbody></table></div><aside class="prompt" data-type="warning" data-title="" id="-xbr60_25"><p id="-xbr60_91">*Kotlin 2.0.20&ndash;2.0.21 and Kotlin 2.1.0&ndash;2.1.10 are fully compatible with Gradle up to 8.6. Gradle versions 8.7&ndash;8.10 are also supported, with only one exception: If you use the Kotlin Multiplatform Gradle plugin, you may see deprecation warnings in your multiplatform projects calling the <code class="code" id="-xbr60_92">withJava()</code> function in the JVM target. For more information, see <a href="/docs/multiplatform/multiplatform-compatibility-guide.html#java-source-sets-created-by-default" id="-xbr60_93" data-external="true" rel="noopener noreferrer">Java source sets created by default</a>.</p></aside><p id="-xbr60_26">You can also use Gradle and AGP versions up to the latest releases, but if you do, keep in mind that you might encounter deprecation warnings or some new features might not work.</p><p id="-xbr60_27">For example, the Kotlin Gradle plugin and the <code class="code" id="-xbr60_94">kotlin-multiplatform</code> plugin 2.4.21 require the minimum Gradle version of 7.6.3 for your project to compile.</p><p id="-xbr60_28">Similarly, the maximum fully supported version is 9.7.0. It doesn't have deprecated Gradle methods and properties, and supports all the current Gradle features.</p><section class="chapter"><div class="collapse"><div class="collapse__title"><h3 id="earlier-kgp-versions" data-toc="earlier-kgp-versions">Earlier KGP versions</h3></div><div class="collapse__content"><div class="table-wrapper"><table class="wide" id="-xbr60_95"><thead><tr class="ijRowHead" id="-xbr60_96"><th id="-xbr60_103"><p>KGP version</p></th><th id="-xbr60_104"><p>Gradle min and max versions</p></th><th id="-xbr60_105"><p>AGP min and max versions</p></th></tr></thead><tbody><tr id="-xbr60_97"><td id="-xbr60_106"><p>1.9.0&ndash;1.9.10</p></td><td id="-xbr60_107"><p>6.8.3&ndash;7.6.0</p></td><td id="-xbr60_108"><p>4.2.2&ndash;7.4.0</p></td></tr><tr id="-xbr60_98"><td id="-xbr60_109"><p>1.8.20&ndash;1.8.22</p></td><td id="-xbr60_110"><p>6.8.3&ndash;7.6.0</p></td><td id="-xbr60_111"><p>4.1.3&ndash;7.4.0</p></td></tr><tr id="-xbr60_99"><td id="-xbr60_112"><p>1.8.0&ndash;1.8.11</p></td><td id="-xbr60_113"><p>6.8.3&ndash;7.3.3</p></td><td id="-xbr60_114"><p>4.1.3&ndash;7.2.1</p></td></tr><tr id="-xbr60_100"><td id="-xbr60_115"><p>1.7.20&ndash;1.7.22</p></td><td id="-xbr60_116"><p>6.7.1&ndash;7.1.1</p></td><td id="-xbr60_117"><p>3.6.4&ndash;7.0.4</p></td></tr><tr id="-xbr60_101"><td id="-xbr60_118"><p>1.7.0&ndash;1.7.10</p></td><td id="-xbr60_119"><p>6.7.1&ndash;7.0.2</p></td><td id="-xbr60_120"><p>3.4.3&ndash;7.0.2</p></td></tr><tr id="-xbr60_102"><td id="-xbr60_121"><p>1.6.20&ndash;1.6.21</p></td><td id="-xbr60_122"><p>6.1.1&ndash;7.0.2</p></td><td id="-xbr60_123"><p>3.4.3&ndash;7.0.2</p></td></tr></tbody></table></div></div></div></section><section class="chapter"><h3 id="kotlin-gradle-plugin-data-in-a-project" data-toc="kotlin-gradle-plugin-data-in-a-project">Kotlin Gradle plugin data in a project</h3><p id="-xbr60_124">By default, the Kotlin Gradle plugin stores persistent project-specific data at the root of the project, in the <code class="code" id="-xbr60_128">.kotlin</code> directory.</p><aside class="prompt" data-type="warning" data-title="" id="-xbr60_125"><p id="-xbr60_129">Do not commit the <code class="code" id="-xbr60_130">.kotlin</code> directory to version control. For example, if you are using Git, add <code class="code" id="-xbr60_131">.kotlin</code> to your project's <code class="code" id="-xbr60_132">.gitignore</code> file.</p></aside><p id="-xbr60_126">There are properties you can add to the <code class="code" id="-xbr60_133">gradle.properties</code> file of your project to configure this behavior:</p><div class="table-wrapper"><table class="wide" id="-xbr60_127"><thead><tr class="ijRowHead" id="-xbr60_134"><th id="-xbr60_137"><p>Gradle property</p></th><th id="-xbr60_138"><p>Description</p></th></tr></thead><tbody><tr id="-xbr60_135"><td id="-xbr60_139"><p><code class="code" id="-xbr60_141">kotlin.project.persistent.dir</code></p></td><td id="-xbr60_140"><p>Configures the location where your project-level data is stored. Default: <code class="code" id="-xbr60_142">&lt;project-root-directory&gt;/.kotlin</code></p></td></tr><tr id="-xbr60_136"><td id="-xbr60_143"><p><code class="code" id="-xbr60_145">kotlin.project.persistent.dir.gradle.disableWrite</code></p></td><td id="-xbr60_144"><p>Controls whether writing Kotlin data to the <code class="code" id="-xbr60_146">.gradle</code> directory is disabled (for backward compatibility with older IDEA versions). Default: false</p></td></tr></tbody></table></div></section></section><section class="chapter"><h2 id="targeting-the-jvm" data-toc="targeting-the-jvm">Targeting the JVM</h2><p id="-xbr60_147">To target the JVM, apply the Kotlin JVM plugin.</p><div class="tabs" id="-xbr60_148" data-group="build-script" data-anchors="[-xbr60_157,-xbr60_158]"><div class="tabs__content" data-gtm="tab" id="-xbr60_157" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    kotlin(&quot;jvm&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_158" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    id &quot;org.jetbrains.kotlin.jvm&quot; version &quot;2.4.21&quot;
+}
+</div></div></div><p id="-xbr60_149">The <code class="code" id="-xbr60_161">version</code> should be literal in this block, and it cannot be applied from another build script.</p><section class="chapter"><h3 id="kotlin-and-java-sources" data-toc="kotlin-and-java-sources">Kotlin and Java sources</h3><p id="-xbr60_162">Kotlin sources and Java sources can be stored in the same directory, or they can be placed in different directories.</p><p id="-xbr60_163">The default convention is to use different directories:</p><div class="code-block" data-lang="none">
+project
+    - src
+        - main (root)
+            - kotlin
+            - java
+</div><aside class="prompt" data-type="warning" data-title="" id="-xbr60_165"><p id="-xbr60_168">Do not store Java <code class="code" id="-xbr60_170">.java</code> files in the <code class="code" id="-xbr60_171">src/*/kotlin</code> directory, as the <code class="code" id="-xbr60_172">.java</code> files will not be compiled.</p><p id="-xbr60_169">Instead, you can use <code class="code" id="-xbr60_173">src/main/java</code>.</p></aside><p id="-xbr60_166">The corresponding <code class="code" id="-xbr60_174">sourceSets</code> property should be updated if you are not using the default convention:</p><div class="tabs" id="-xbr60_167" data-group="build-script" data-anchors="[-xbr60_175,-xbr60_176]"><div class="tabs__content" data-gtm="tab" id="-xbr60_175" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+sourceSets.main {
+    java.srcDirs(&quot;src/main/myJava&quot;, &quot;src/main/myKotlin&quot;)
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_176" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+sourceSets {
+    main.kotlin.srcDirs += 'src/main/myKotlin'
+    main.java.srcDirs += 'src/main/myJava'
+}
+</div></div></div></section><section class="chapter"><h3 id="check-for-jvm-target-compatibility-of-related-compile-tasks" data-toc="check-for-jvm-target-compatibility-of-related-compile-tasks">Check for JVM target compatibility of related compile tasks</h3><p id="-xbr60_179">In the build module, you may have related compile tasks, for example:</p><ul class="list _bullet" id="-xbr60_180"><li class="list__item" id="-xbr60_189"><p id="-xbr60_191"><code class="code" id="-xbr60_192">compileKotlin</code> and <code class="code" id="-xbr60_193">compileJava</code></p></li><li class="list__item" id="-xbr60_190"><p id="-xbr60_194"><code class="code" id="-xbr60_195">compileTestKotlin</code> and <code class="code" id="-xbr60_196">compileTestJava</code></p></li></ul><aside class="prompt" data-type="note" data-title="" id="-xbr60_181"><p id="-xbr60_197"><code class="code" id="-xbr60_198">main</code> and <code class="code" id="-xbr60_199">test</code> source set compile tasks are not related.</p></aside><p id="-xbr60_182">For related tasks like these, the Kotlin Gradle plugin checks for JVM target compatibility. Different values of the <a href="gradle-compiler-options.html#attributes-specific-to-jvm" id="-xbr60_200"><code class="code" id="-xbr60_209">jvmTarget</code> attribute</a> in the <code class="code" id="-xbr60_201">kotlin</code> extension or task and <a href="https://docs.gradle.org/current/userguide/java_plugin.html#sec:java-extension" id="-xbr60_202" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_210">targetCompatibility</code></a> in the <code class="code" id="-xbr60_203">java</code> extension or task cause JVM target incompatibility. For example: the <code class="code" id="-xbr60_204">compileKotlin</code> task has <code class="code" id="-xbr60_205">jvmTarget=1.8</code>, and the <code class="code" id="-xbr60_206">compileJava</code> task has (or <a href="https://docs.gradle.org/current/userguide/java_plugin.html#sec:java-extension" id="-xbr60_207" data-external="true" rel="noopener noreferrer">inherits</a>) <code class="code" id="-xbr60_208">targetCompatibility=15</code>.</p><p id="-xbr60_183">Configure the behavior of this check for the whole project by setting the <code class="code" id="-xbr60_211">kotlin.jvm.target.validation.mode</code> property in the <code class="code" id="-xbr60_212">gradle.properties</code> file to:</p><ul class="list _bullet" id="-xbr60_184"><li class="list__item" id="-xbr60_213"><p id="-xbr60_216"><code class="code" id="-xbr60_217">error</code> &ndash; the plugin fails the build; the default value for projects on Gradle 8.0+.</p></li><li class="list__item" id="-xbr60_214"><p id="-xbr60_218"><code class="code" id="-xbr60_219">warning</code> &ndash; the plugin prints a warning message; the default value for projects on Gradle less than 8.0.</p></li><li class="list__item" id="-xbr60_215"><p id="-xbr60_220"><code class="code" id="-xbr60_221">ignore</code> &ndash; the plugin skips the check and doesn't produce any messages.</p></li></ul><p id="-xbr60_185">You can also configure it at task level in your <code class="code" id="-xbr60_222">build.gradle(.kts)</code> file:</p><div class="tabs" id="-xbr60_186" data-group="build-script" data-anchors="[-xbr60_223,-xbr60_224]"><div class="tabs__content" data-gtm="tab" id="-xbr60_223" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+tasks.withType&lt;org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile&gt;().configureEach {
+    jvmTargetValidationMode.set(org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode.WARNING)
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_224" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile.class).configureEach {
+    jvmTargetValidationMode = org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode.WARNING
+}
+</div></div></div><p id="-xbr60_187">To avoid JVM target incompatibility, <a href="#gradle-java-toolchains-support" id="-xbr60_227">configure a toolchain</a> or align JVM versions manually.</p><section class="chapter"><div class="collapse"><div class="collapse__title"><h4 id="what-can-go-wrong-if-targets-are-incompatible" data-toc="what-can-go-wrong-if-targets-are-incompatible">What can go wrong if targets are incompatible</h4></div><div class="collapse__content"><p id="-xbr60_228">There are two ways of manually setting JVM targets for Kotlin and Java source sets:</p><ul class="list _bullet" id="-xbr60_229"><li class="list__item" id="-xbr60_235"><p id="-xbr60_237">The implicit way via <a href="#gradle-java-toolchains-support" id="-xbr60_238">setting up a Java toolchain</a>.</p></li><li class="list__item" id="-xbr60_236"><p id="-xbr60_239">The explicit way via setting the <code class="code" id="-xbr60_240">jvmTarget</code> attribute in the <code class="code" id="-xbr60_241">kotlin</code> extension or task and <code class="code" id="-xbr60_242">targetCompatibility</code> in the <code class="code" id="-xbr60_243">java</code> extension or task.</p></li></ul><p id="-xbr60_230">JVM target incompatibility occurs if you:</p><ul class="list _bullet" id="-xbr60_231"><li class="list__item" id="-xbr60_244"><p id="-xbr60_246">Explicitly set different values of <code class="code" id="-xbr60_247">jvmTarget</code> and <code class="code" id="-xbr60_248">targetCompatibility</code>.</p></li><li class="list__item" id="-xbr60_245"><p id="-xbr60_249">Have a default configuration, and your JDK is not equal to <code class="code" id="-xbr60_250">1.8</code>.</p></li></ul><p id="-xbr60_232">Let's consider a default configuration of JVM targets when you have only the Kotlin JVM plugin in your build script and no additional settings for JVM targets:</p><div class="tabs" id="-xbr60_233" data-group="build-script" data-anchors="[-xbr60_251,-xbr60_252]"><div class="tabs__content" data-gtm="tab" id="-xbr60_251" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    kotlin(&quot;jvm&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_252" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    id &quot;org.jetbrains.kotlin.jvm&quot; version &quot;2.4.21&quot;
+}
+</div></div></div><p id="-xbr60_234">When there is no explicit information about the <code class="code" id="-xbr60_255">jvmTarget</code> value in the build script, its default value is <code class="code" id="-xbr60_256">null</code>, and the compiler translates it to the default value <code class="code" id="-xbr60_257">1.8</code>. The <code class="code" id="-xbr60_258">targetCompatibility</code> equals the current Gradle's JDK version, which is equal to your JDK version (unless you use a <a href="#gradle-java-toolchains-support" id="-xbr60_259">Java toolchain approach</a>). Assuming that your JDK version is <code class="code" id="-xbr60_260">17</code>, your published library artifact will <a href="https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html" id="-xbr60_261" data-external="true" rel="noopener noreferrer">declare itself compatible</a> with JDK 17+: <code class="code" id="-xbr60_262">org.gradle.jvm.version=17</code>, which is wrong. In this case, you have to use Java 17 in your main project to add this library, even though the bytecode's version is <code class="code" id="-xbr60_263">1.8</code>. <a href="#gradle-java-toolchains-support" id="-xbr60_264">Configure a toolchain</a> to solve this issue.</p></div></div></section></section><section class="chapter"><h3 id="gradle-java-toolchains-support" data-toc="gradle-java-toolchains-support">Gradle Java toolchains support</h3><aside class="prompt" data-type="warning" data-title="" id="-xbr60_265"><p id="-xbr60_282">A warning for Android users. To use Gradle toolchain support, use the Android Gradle plugin (AGP) version 8.1.0-alpha09 or higher.</p><p id="-xbr60_283">Gradle Java toolchain support <a href="https://issuetracker.google.com/issues/194113162" id="-xbr60_285" data-external="true" rel="noopener noreferrer">is available</a> only from AGP 7.4.0. Nevertheless, because of <a href="https://issuetracker.google.com/issues/260059413" id="-xbr60_286" data-external="true" rel="noopener noreferrer">this issue</a>, AGP did not set <code class="code" id="-xbr60_287">targetCompatibility</code> to be equal to the toolchain's JDK until the version 8.1.0-alpha09. If you use versions less than 8.1.0-alpha09, you need to configure <code class="code" id="-xbr60_288">targetCompatibility</code> manually via <code class="code" id="-xbr60_289">compileOptions</code>. Replace the placeholder <code class="code" id="-xbr60_290">&lt;MAJOR_JDK_VERSION&gt;</code> with the JDK version you would like to use:</p><div class="code-block" data-lang="kotlin">
+android {
+    compileOptions {
+        sourceCompatibility = &lt;MAJOR_JDK_VERSION&gt;
+        targetCompatibility = &lt;MAJOR_JDK_VERSION&gt;
+    }
+}
+</div></aside><p id="-xbr60_266">Gradle 6.7 introduced <a href="https://docs.gradle.org/current/userguide/toolchains.html" id="-xbr60_291" data-external="true" rel="noopener noreferrer">Java toolchains support</a>. Using this feature, you can:</p><ul class="list _bullet" id="-xbr60_267"><li class="list__item" id="-xbr60_292"><p id="-xbr60_294">Use a JDK and a JRE that are different from the ones in Gradle to run compilations, tests, and executables.</p></li><li class="list__item" id="-xbr60_293"><p id="-xbr60_295">Compile and test code with a not-yet-released language version.</p></li></ul><p id="-xbr60_268">With toolchains support, Gradle can autodetect local JDKs and install missing JDKs that Gradle requires for the build. Now Gradle itself can run on any JDK and still reuse the <a href="gradle-compilation-and-caches.html#gradle-build-cache-support" id="-xbr60_296">remote build cache feature</a> for tasks that depend on a major JDK version.</p><p id="-xbr60_269">The Kotlin Gradle plugin supports Java toolchains for Kotlin/JVM compilation tasks. JS and Native tasks don't use toolchains. The Kotlin compiler always runs on the JDK the Gradle daemon is running on. A Java toolchain:</p><ul class="list _bullet" id="-xbr60_270"><li class="list__item" id="-xbr60_297"><p id="-xbr60_301">Sets the <a href="compiler-reference.html#jdk-home-path" id="-xbr60_302"><code class="code" id="-xbr60_303">-jdk-home</code> option</a> available for JVM targets.</p></li><li class="list__item" id="-xbr60_298"><p id="-xbr60_304">Sets the <a href="gradle-compiler-options.html#attributes-specific-to-jvm" id="-xbr60_305"><code class="code" id="-xbr60_309">compilerOptions.jvmTarget</code></a> to the toolchain's JDK version if the user doesn't set the <code class="code" id="-xbr60_306">jvmTarget</code> option explicitly. If the user doesn't configure the toolchain, the <code class="code" id="-xbr60_307">jvmTarget</code> field uses the default value. Learn more about <a href="#check-for-jvm-target-compatibility-of-related-compile-tasks" id="-xbr60_308">JVM target compatibility</a>.</p></li><li class="list__item" id="-xbr60_299"><p id="-xbr60_310">Sets the toolchain to be used by any Java compile, test, and javadoc tasks.</p></li><li class="list__item" id="-xbr60_300"><p id="-xbr60_311">Affects which JDK <a href="kapt.html#run-kapt-tasks-in-parallel" id="-xbr60_312"><code class="code" id="-xbr60_313">kapt</code> workers</a> are running on.</p></li></ul><p id="-xbr60_271">Use the following code to set a toolchain. Replace the placeholder <code class="code" id="-xbr60_314">&lt;MAJOR_JDK_VERSION&gt;</code> with the JDK version you would like to use:</p><div class="tabs" id="-xbr60_272" data-group="build-script" data-anchors="[-xbr60_315,-xbr60_316]"><div class="tabs__content" data-gtm="tab" id="-xbr60_315" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(&lt;MAJOR_JDK_VERSION&gt;))
+    }
+    // Or shorter:
+    jvmToolchain(&lt;MAJOR_JDK_VERSION&gt;)
+    // For example:
+    jvmToolchain(17)
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_316" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    jvmToolchain {
+        languageVersion = JavaLanguageVersion.of(&lt;MAJOR_JDK_VERSION&gt;)
+    }
+    // Or shorter:
+    jvmToolchain(&lt;MAJOR_JDK_VERSION&gt;)
+    // For example:
+    jvmToolchain(17)
+}
+</div></div></div><p id="-xbr60_273">Note that setting a toolchain via the <code class="code" id="-xbr60_319">kotlin</code> extension updates the toolchain for Java compile tasks as well.</p><p id="-xbr60_274">You can set a toolchain via the <code class="code" id="-xbr60_320">java</code> extension, and Kotlin compilation tasks will use it:</p><div class="tabs" id="-xbr60_275" data-group="build-script" data-anchors="[-xbr60_321,-xbr60_322]"><div class="tabs__content" data-gtm="tab" id="-xbr60_321" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(&lt;MAJOR_JDK_VERSION&gt;))
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_322" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(&lt;MAJOR_JDK_VERSION&gt;)
+    }
+}
+</div></div></div><p id="-xbr60_276">If you use Gradle 8.0.2 or higher, you also need to add a <a href="https://docs.gradle.org/current/userguide/toolchains.html#sub:download_repositories" id="-xbr60_325" data-external="true" rel="noopener noreferrer">toolchain resolver plugin</a>. This type of plugin manages which repositories to download a toolchain from. As an example, add to your <code class="code" id="-xbr60_326">settings.gradle(.kts)</code> the following plugin:</p><div class="tabs" id="-xbr60_277" data-group="build-script" data-anchors="[-xbr60_327,-xbr60_328]"><div class="tabs__content" data-gtm="tab" id="-xbr60_327" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    id(&quot;org.gradle.toolchains.foojay-resolver-convention&quot;) version(&quot;1.0.0&quot;)
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_328" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+</div></div></div><p id="-xbr60_278">Check that the version of <code class="code" id="-xbr60_331">foojay-resolver-convention</code> corresponds to your Gradle version on the <a href="https://docs.gradle.org/current/userguide/toolchains.html#sub:download_repositories" id="-xbr60_332" data-external="true" rel="noopener noreferrer">Gradle site</a>.</p><aside class="prompt" data-type="note" data-title="" id="-xbr60_279"><p id="-xbr60_333">To understand which toolchain Gradle uses, run your Gradle build with the <a href="https://docs.gradle.org/current/userguide/logging.html#sec:choosing_a_log_level" id="-xbr60_334" data-external="true" rel="noopener noreferrer">log level <code class="code" id="-xbr60_336">--info</code></a> and find a string in the output starting with <code class="code" id="-xbr60_335">[KOTLIN] Kotlin compilation 'jdkHome' argument:</code>. The part after the colon will be the JDK version from the toolchain.</p></aside><p id="-xbr60_280">To set any JDK (even local) for a specific task, use the <a href="#set-jdk-version-with-the-task-dsl" id="-xbr60_337">Task DSL</a>.</p><p id="-xbr60_281">Learn more about <a href="https://blog.jetbrains.com/kotlin/2021/11/gradle-jvm-toolchain-support-in-the-kotlin-plugin/" id="-xbr60_338" data-external="true" rel="noopener noreferrer">Gradle JVM toolchain support in the Kotlin plugin</a>.</p></section><section class="chapter"><h3 id="set-jdk-version-with-the-task-dsl" data-toc="set-jdk-version-with-the-task-dsl">Set JDK version with the Task DSL</h3><p id="-xbr60_339">The Task DSL allows setting any JDK version for any task implementing the <code class="code" id="-xbr60_343">UsesKotlinJavaToolchain</code> interface. At the moment, these tasks are <code class="code" id="-xbr60_344">KotlinCompile</code> and <code class="code" id="-xbr60_345">KaptTask</code>. If you want Gradle to search for the major JDK version, replace the <code class="code" id="-xbr60_346">&lt;MAJOR_JDK_VERSION&gt;</code> placeholder in your build script:</p><div class="tabs" id="-xbr60_340" data-group="build-script" data-anchors="[-xbr60_347,-xbr60_348]"><div class="tabs__content" data-gtm="tab" id="-xbr60_347" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+val service = project.extensions.getByType&lt;JavaToolchainService&gt;()
+val customLauncher = service.launcherFor {
+    languageVersion.set(JavaLanguageVersion.of(&lt;MAJOR_JDK_VERSION&gt;))
+}
+project.tasks.withType&lt;UsesKotlinJavaToolchain&gt;().configureEach {
+    kotlinJavaToolchain.toolchain.use(customLauncher)
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_348" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+JavaToolchainService service = project.getExtensions().getByType(JavaToolchainService.class)
+Provider&lt;JavaLauncher&gt; customLauncher = service.launcherFor {
+    it.languageVersion = JavaLanguageVersion.of(&lt;MAJOR_JDK_VERSION&gt;)
+}
+tasks.withType(UsesKotlinJavaToolchain::class).configureEach { task -&gt;
+    task.kotlinJavaToolchain.toolchain.use(customLauncher)
+}
+</div></div></div><p id="-xbr60_341">Or you can specify the path to your local JDK and replace the placeholder <code class="code" id="-xbr60_351">&lt;LOCAL_JDK_VERSION&gt;</code> with this JDK version:</p><div class="code-block" data-lang="kotlin">
+tasks.withType&lt;UsesKotlinJavaToolchain&gt;().configureEach {
+    kotlinJavaToolchain.jdk.use(
+        &quot;/path/to/local/jdk&quot;, // Put a path to your JDK
+        JavaVersion.&lt;LOCAL_JDK_VERSION&gt; // For example, JavaVersion.17
+    )
+}
+</div></section><section class="chapter"><h3 id="associate-compiler-tasks" data-toc="associate-compiler-tasks">Associate compiler tasks</h3><p id="-xbr60_352">You can <span class="emphasis" id="-xbr60_357">associate</span> compilations by setting up such a relationship between them that one compilation uses the compiled outputs of the other. Associating compilations establishes <code class="code" id="-xbr60_358">internal</code> visibility between them.</p><p id="-xbr60_353">The Kotlin compiler associates some compilations by default, such as the <code class="code" id="-xbr60_359">test</code> and <code class="code" id="-xbr60_360">main</code> compilations of each target. If you need to express that one of your custom compilations is connected to another, create your own associated compilation.</p><p id="-xbr60_354">To make the IDE support associated compilations for inferring visibility between source sets, add the following code to your <code class="code" id="-xbr60_361">build.gradle(.kts)</code>:</p><div class="tabs" id="-xbr60_355" data-group="build-script" data-anchors="[-xbr60_362,-xbr60_363]"><div class="tabs__content" data-gtm="tab" id="-xbr60_362" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+val integrationTestCompilation = kotlin.target.compilations.create(&quot;integrationTest&quot;) {
+    associateWith(kotlin.target.compilations.getByName(&quot;main&quot;))
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_363" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+integrationTestCompilation {
+    kotlin.target.compilations.create(&quot;integrationTest&quot;) {
+        associateWith(kotlin.target.compilations.getByName(&quot;main&quot;))
+    }
+}
+</div></div></div><p id="-xbr60_356">Here, the <code class="code" id="-xbr60_366">integrationTest</code> compilation is associated with the <code class="code" id="-xbr60_367">main</code> compilation that gives access to <code class="code" id="-xbr60_368">internal</code> objects from functional tests.</p></section><section class="chapter"><h3 id="configure-with-java-modules-jpms-enabled" data-toc="configure-with-java-modules-jpms-enabled">Configure with Java Modules (JPMS) enabled</h3><p id="-xbr60_369">To make the Kotlin Gradle plugin work with <a href="https://dev.java/learn/modules/" id="-xbr60_374" data-external="true" rel="noopener noreferrer">Java Modules</a>, add the following lines to your build script and replace <code class="code" id="-xbr60_375">YOUR_MODULE_NAME</code> with a reference to your JPMS module, for example, <code class="code" id="-xbr60_376">org.company.module</code>:</p><div class="tabs" id="-xbr60_370" data-group="build-script" data-anchors="[-xbr60_377,-xbr60_378]"><div class="tabs__content" data-gtm="tab" id="-xbr60_377" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+tasks.named(&quot;compileJava&quot;, JavaCompile::class.java) {
+    // Provide compiled Kotlin classes to javac – needed for Java/Kotlin mixed sources to work
+    val mainOutput: FileCollection = sourceSets[&quot;main&quot;].output
+    options.compilerArgumentProviders.add(CommandLineArgumentProvider {
+        listOf(&quot;--patch-module&quot;, &quot;YOUR_MODULE_NAME=${mainOutput.asPath}&quot;)
+    })
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_378" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+tasks.named(&quot;compileJava&quot;, JavaCompile.class) {
+    // Provide compiled Kotlin classes to javac – needed for Java/Kotlin mixed sources to work
+    FileCollection mainOutput = sourceSets[&quot;main&quot;].output
+    options.compilerArgumentProviders.add(new CommandLineArgumentProvider() {
+        @Override
+        Iterable&lt;String&gt; asArguments() {
+            return [&quot;--patch-module&quot;, &quot;YOUR_MODULE_NAME=${mainOutput.asPath}&quot;]
+        }
+    })
+}
+</div></div></div><aside class="prompt" data-type="note" data-title="" id="-xbr60_371"><p id="-xbr60_381">Put <code class="code" id="-xbr60_383">module-info.java</code> into the <code class="code" id="-xbr60_384">src/main/java</code> directory as usual.</p><p id="-xbr60_382">For a module, a package name in Kotlin files should be equal to the package name from <code class="code" id="-xbr60_385">module-info.java</code> to avoid a &quot;package is empty or does not exist&quot; build failure.</p></aside><p id="-xbr60_372">Learn more about:</p><ul class="list _bullet" id="-xbr60_373"><li class="list__item" id="-xbr60_386"><p id="-xbr60_389"><a href="https://docs.gradle.org/current/userguide/java_library_plugin.html#sec:java_library_modular" id="-xbr60_390" data-external="true" rel="noopener noreferrer">Building modules for the Java Module System</a></p></li><li class="list__item" id="-xbr60_387"><p id="-xbr60_391"><a href="https://docs.gradle.org/current/userguide/application_plugin.html#sec:application_modular" id="-xbr60_392" data-external="true" rel="noopener noreferrer">Building applications using the Java Module System</a></p></li><li class="list__item" id="-xbr60_388"><p id="-xbr60_393"><a href="visibility-modifiers.html#modules" id="-xbr60_394">What &quot;module&quot; means in Kotlin</a></p></li></ul></section><section class="chapter"><h3 id="other-details" data-toc="other-details">Other details</h3><section class="chapter"><h4 id="disable-use-of-artifact-in-compilation-task" data-toc="disable-use-of-artifact-in-compilation-task">Disable use of artifact in compilation task</h4><p id="-xbr60_398">In some rare scenarios, you can experience a build failure caused by a circular dependency error. For example, when you have multiple compilations where one compilation can see all internal declarations of another, and the generated artifact relies on the output of both compilation tasks:</p><div class="code-block" data-lang="none">
+FAILURE: Build failed with an exception.
+
+What went wrong:
+Circular dependency between the following tasks:
+:lib:compileKotlinJvm
+--- :lib:jvmJar
+     \--- :lib:compileKotlinJvm (*)
+(*) - details omitted (listed previously)
+</div><p id="-xbr60_400">To fix this circular dependency error, we've added a Gradle property: <code class="code" id="-xbr60_404">archivesTaskOutputAsFriendModule</code>. This property controls the use of artifact inputs in the compilation task and determines if a task dependency is created as a result.</p><p id="-xbr60_401">By default, this property is set to <code class="code" id="-xbr60_405">true</code> to track the task dependency. If you encounter a circular dependency error, you can disable the use of the artifact in the compilation task to remove the task dependency and avoid the circular dependency error.</p><p id="-xbr60_402">To disable the use of the artifact in the compilation task, add the following to your <code class="code" id="-xbr60_406">gradle.properties</code> file:</p><div class="code-block" data-lang="kotlin">
+kotlin.build.archivesTaskOutputAsFriendModule=false
+</div></section><section class="chapter"><h4 id="lazy-kotlin-jvm-task-creation" data-toc="lazy-kotlin-jvm-task-creation">Lazy Kotlin/JVM task creation</h4><p id="-xbr60_407">Starting from Kotlin 1.8.20, the Kotlin Gradle plugin registers all tasks and doesn't configure them on a dry run.</p></section><section class="chapter"><h4 id="non-default-location-of-compile-tasks-destinationdirectory" data-toc="non-default-location-of-compile-tasks-destinationdirectory">Non-default location of compile tasks' destinationDirectory</h4><p id="-xbr60_408">If you override the Kotlin/JVM <code class="code" id="-xbr60_410">KotlinJvmCompile</code>/<code class="code" id="-xbr60_411">KotlinCompile</code> task's <code class="code" id="-xbr60_412">destinationDirectory</code> location, update your build script. You need to explicitly add <code class="code" id="-xbr60_413">sourceSets.main.kotlin.classesDirectories</code> to <code class="code" id="-xbr60_414">sourceSets.main.outputs</code> in your JAR file:</p><div class="code-block" data-lang="kotlin">
+tasks.jar(type: Jar) {
+    from sourceSets.main.outputs
+    from sourceSets.main.kotlin.classesDirectories
+}
+</div></section></section></section><section class="chapter"><h2 id="targeting-multiple-platforms" data-toc="targeting-multiple-platforms">Targeting multiple platforms</h2><p id="-xbr60_415">Projects targeting <a href="/docs/multiplatform/multiplatform-dsl-reference.html#targets" id="-xbr60_419" data-external="true" rel="noopener noreferrer">multiple platforms</a>, called <a href="/docs/multiplatform/get-started.html" id="-xbr60_420" data-external="true" rel="noopener noreferrer">multiplatform projects</a>, require the <code class="code" id="-xbr60_421">kotlin-multiplatform</code> plugin.</p><aside class="prompt" data-type="note" data-title="" id="-xbr60_416"><p id="-xbr60_422">The <code class="code" id="-xbr60_423">kotlin-multiplatform</code> plugin works with Gradle 7.6.3 or later.</p></aside><div class="tabs" id="-xbr60_417" data-group="build-script" data-anchors="[-xbr60_424,-xbr60_425]"><div class="tabs__content" data-gtm="tab" id="-xbr60_424" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    kotlin(&quot;multiplatform&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_425" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'
+}
+</div></div></div><p id="-xbr60_418">Learn more about <a href="/docs/multiplatform/get-started.html" id="-xbr60_428" data-external="true" rel="noopener noreferrer">Kotlin Multiplatform for different platforms</a> and <a href="/docs/multiplatform/multiplatform-getting-started.html" id="-xbr60_429" data-external="true" rel="noopener noreferrer">Kotlin Multiplatform for iOS and Android</a>.</p></section><section class="chapter"><h2 id="targeting-android" data-toc="targeting-android">Targeting Android</h2><p id="-xbr60_430">It's recommended to use Android Studio for creating Android applications. <a href="https://developer.android.com/studio/releases/gradle-plugin" id="-xbr60_431" data-external="true" rel="noopener noreferrer">Learn how to use the Android Gradle plugin</a>.</p></section><section class="chapter"><h2 id="targeting-the-web" data-toc="targeting-the-web">Targeting the web</h2><p id="-xbr60_432">Kotlin, through Kotlin Multiplatform, offers two approaches for web development:</p><ul class="list _bullet" id="-xbr60_433"><li class="list__item" id="-xbr60_438"><p id="-xbr60_440">JavaScript-based (using the Kotlin/JS compiler)</p></li><li class="list__item" id="-xbr60_439"><p id="-xbr60_441">WebAssembly-based (using the Kotlin/Wasm compiler)</p></li></ul><p id="-xbr60_434">Both approaches use the Kotlin Multiplatform plugin but support different use cases. The sections below explain how to configure each target in your Gradle build and when to use them.</p><section class="chapter"><h3 id="targeting-javascript" data-toc="targeting-javascript">Targeting JavaScript</h3><p id="-xbr60_442">Use Kotlin/JS if your goal is to:</p><ul class="list _bullet" id="-xbr60_443"><li class="list__item" id="-xbr60_450"><p id="-xbr60_452">Share business logic with a JavaScript/TypeScript codebase</p></li><li class="list__item" id="-xbr60_451"><p id="-xbr60_453">Build non-shareable web apps with Kotlin</p></li></ul><p id="-xbr60_444">For more information, see <a href="web-overview.html#kotlin-js" id="-xbr60_454">Web development</a>.</p><p id="-xbr60_445">When targeting JavaScript, use the <code class="code" id="-xbr60_455">kotlin-multiplatform</code> plugin:</p><div class="tabs" id="-xbr60_446" data-group="build-script" data-anchors="[-xbr60_456,-xbr60_457]"><div class="tabs__content" data-gtm="tab" id="-xbr60_456" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    kotlin(&quot;multiplatform&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_457" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'
+}
+</div></div></div><p id="-xbr60_447">Configure the JavaScript target by specifying whether it should run in the browser or the Node.js environment:</p><div class="code-block" data-lang="kotlin">
+kotlin {
+    js().browser {  // or js().nodejs
+        /* ... */
+    }
+}
+</div><aside class="prompt" data-type="note" data-title="" id="-xbr60_449"><p id="-xbr60_460">See <a href="/docs/multiplatform/multiplatform-dsl-reference.html#web-targets" id="-xbr60_461" data-external="true" rel="noopener noreferrer">further details about the Gradle configuration for JavaScript</a> and learn more about <a href="js-project-setup.html" id="-xbr60_462">setting up a Kotlin/JS project</a>.</p></aside></section><section class="chapter"><h3 id="targeting-webassembly" data-toc="targeting-webassembly">Targeting WebAssembly</h3><p id="-xbr60_463">Use Kotlin/Wasm if you want to share both logic and UI across multiple platforms. For more information, see <a href="web-overview.html#kotlin-wasm" id="-xbr60_473">Web development</a>.</p><p id="-xbr60_464">As with JavaScript, use the <code class="code" id="-xbr60_474">kotlin-multiplatform</code> plugin when targeting WebAssembly (Wasm):</p><div class="tabs" id="-xbr60_465" data-group="build-script" data-anchors="[-xbr60_475,-xbr60_476]"><div class="tabs__content" data-gtm="tab" id="-xbr60_475" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    kotlin(&quot;multiplatform&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_476" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform' version '2.4.21'
+}
+</div></div></div><p id="-xbr60_466">Depending on your requirements, you can target:</p><ul class="list _bullet" id="-xbr60_467"><li class="list__item" id="-xbr60_479"><p id="-xbr60_481"><span class="control" id="-xbr60_482"><code class="code" id="-xbr60_483">wasmJs</code></span>: for running in browsers or Node.js</p></li><li class="list__item" id="-xbr60_480"><p id="-xbr60_484"><span class="control" id="-xbr60_485"><code class="code" id="-xbr60_487">wasmWasi</code></span>: for running in Wasm environments supporting <a href="https://wasi.dev/" id="-xbr60_486" data-external="true" rel="noopener noreferrer">WASI (WebAssembly System Interface)</a>, such as Wasmtime, WasmEdge, and so on.</p></li></ul><p id="-xbr60_468">Configure the <code class="code" id="-xbr60_488">wasmJs</code> target for web browsers or Node.js:</p><div class="code-block" data-lang="kotlin">
+kotlin {
+    wasmJs {
+        browser { // or nodejs
+            /* ... */
+        }
+    }
+}
+</div><p id="-xbr60_470">For WASI environments, configure the <code class="code" id="-xbr60_489">wasmWasi</code> target with Node.js or Wasmtime:</p><div class="code-block" data-lang="kotlin">
+kotlin {
+    wasmWasi {
+        nodejs { // or wasmtime
+            /* ... */
+        }
+    }
+}
+</div><aside class="prompt" data-type="note" data-title="" id="-xbr60_472"><p id="-xbr60_490"><a href="/docs/multiplatform/multiplatform-dsl-reference.html#web-targets" id="-xbr60_491" data-external="true" rel="noopener noreferrer">See further details about the Gradle configuration for Wasm</a>.</p></aside></section><section class="chapter"><h3 id="kotlin-and-java-sources-for-the-web-target" data-toc="kotlin-and-java-sources-for-the-web-target">Kotlin and Java sources for the web target</h3><p id="-xbr60_492">The KGP only works for Kotlin files, so it is recommended that you keep Kotlin and Java files separate (if the project contains Java files). If you don't store them separately, specify the source folder in the <code class="code" id="-xbr60_494">sourceSets{}</code> block:</p><div class="tabs" id="-xbr60_493" data-group="build-script" data-anchors="[-xbr60_495,-xbr60_496]"><div class="tabs__content" data-gtm="tab" id="-xbr60_495" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    sourceSets[&quot;main&quot;].apply {
+        kotlin.srcDir(&quot;src/main/myKotlin&quot;)
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_496" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    sourceSets {
+        main.kotlin.srcDirs += 'src/main/myKotlin'
+    }
+}
+</div></div></div></section></section><section class="chapter"><h2 id="triggering-configuration-actions-with-the-kotlinbaseplugin-interface" data-toc="triggering-configuration-actions-with-the-kotlinbaseplugin-interface">Triggering configuration actions with the KotlinBasePlugin interface</h2><p id="-xbr60_499">To trigger some configuration action whenever any Kotlin Gradle plugin (JVM, JS, Multiplatform, Native, and others) is applied, use the <code class="code" id="-xbr60_501">KotlinBasePlugin</code> interface that all Kotlin plugins inherit from:</p><div class="tabs" id="-xbr60_500" data-group="build-script" data-anchors="[-xbr60_502,-xbr60_503]"><div class="tabs__content" data-gtm="tab" id="-xbr60_502" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+import org.jetbrains.kotlin.gradle.plugin.KotlinBasePlugin
+
+// ...
+
+project.plugins.withType&lt;KotlinBasePlugin&gt;() {
+    // Configure your action here
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_503" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+import org.jetbrains.kotlin.gradle.plugin.KotlinBasePlugin
+
+// ...
+
+project.plugins.withType(KotlinBasePlugin.class) {
+    // Configure your action here
+}
+</div></div></div></section><section class="chapter"><h2 id="configure-dependencies" data-toc="configure-dependencies">Configure dependencies</h2><p id="-xbr60_506">To add a dependency on a library, set the dependency of the required <a href="#dependency-types" id="-xbr60_513">type</a> (for example, <code class="code" id="-xbr60_514">implementation</code>) in the <code class="code" id="-xbr60_515">dependencies{}</code> block of the source sets DSL.</p><div class="tabs" id="-xbr60_507" data-group="build-script" data-anchors="[-xbr60_516,-xbr60_517]"><div class="tabs__content" data-gtm="tab" id="-xbr60_516" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(&quot;com.example:my-library:1.0&quot;)
+        }
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_517" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation 'com.example:my-library:1.0'
+            }
+        }
+    }
+}
+</div></div></div><section class="chapter"><h3 id="configure-dependencies-at-the-top-level" data-toc="configure-dependencies-at-the-top-level" data-label-id="experimental-opt-in">Configure dependencies at the top level</h3><p id="-xbr60_521">You can configure common dependencies in multiplatform projects using a top-level <code class="code" id="-xbr60_526">dependencies {}</code> block. Dependencies declared here behave as if they were added to the <code class="code" id="-xbr60_527">commonMain</code> or <code class="code" id="-xbr60_528">commonTest</code> source sets.</p><p id="-xbr60_522">To use the top-level <code class="code" id="-xbr60_529">dependencies {}</code> block, opt in by adding the <code class="code" id="-xbr60_530">@OptIn(ExperimentalKotlinGradlePluginApi::class)</code> annotation before the block:</p><div class="tabs" id="-xbr60_523" data-group="build-script" data-anchors="[-xbr60_531,-xbr60_532]"><div class="tabs__content" data-gtm="tab" id="-xbr60_531" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    dependencies {
+        implementation(&quot;org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0&quot;)
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_532" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    dependencies {
+        implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'
+    }
+}
+</div></div></div><p id="-xbr60_524">Add platform-specific dependencies inside the <code class="code" id="-xbr60_535">sourceSets {}</code> block of the corresponding target.</p><p id="-xbr60_525">You can share your feedback on this feature in <a href="https://youtrack.jetbrains.com/issue/KT-76446" id="-xbr60_536" data-external="true" rel="noopener noreferrer">YouTrack</a>.</p></section><section class="chapter"><h3 id="dependency-types" data-toc="dependency-types">Dependency types</h3><p id="-xbr60_537">Choose the dependency type based on your requirements.</p><div class="table-wrapper"><table class="wide" id="-xbr60_538"><thead><tr class="ijRowHead" id="-xbr60_539"><th id="-xbr60_544"><p>Type</p></th><th id="-xbr60_545"><p>Description</p></th><th id="-xbr60_546"><p>When to use</p></th></tr></thead><tbody><tr id="-xbr60_540"><td id="-xbr60_547"><p><code class="code" id="-xbr60_550">api</code></p></td><td id="-xbr60_548"><p>Used both during compilation and at runtime and is exported to library consumers.</p></td><td id="-xbr60_549"><p>If any type from a dependency is used in the public API of the current module, use an <code class="code" id="-xbr60_551">api</code> dependency.</p></td></tr><tr id="-xbr60_541"><td id="-xbr60_552"><p><code class="code" id="-xbr60_555">implementation</code></p></td><td id="-xbr60_553"><p>Used during compilation and at runtime for the current module, but is not exposed for compilation of other modules depending on the one with the `implementation` dependency.</p></td><td id="-xbr60_554"><p id="-xbr60_556">Use for dependencies needed for the internal logic of a module.</p><p id="-xbr60_557">If a module is an endpoint application which is not published, use <code class="code" id="-xbr60_558">implementation</code> dependencies instead of <code class="code" id="-xbr60_559">api</code> dependencies.</p></td></tr><tr id="-xbr60_542"><td id="-xbr60_560"><p><code class="code" id="-xbr60_563">compileOnly</code></p></td><td id="-xbr60_561"><p>Used for compilation of the current module and is not available at runtime nor during compilation of other modules.</p></td><td id="-xbr60_562"><p>Use for APIs which have a third-party implementation available at runtime.</p></td></tr><tr id="-xbr60_543"><td id="-xbr60_564"><p><code class="code" id="-xbr60_567">runtimeOnly</code></p></td><td id="-xbr60_565"><p>Available at runtime but is not visible during compilation of any module.</p></td><td id="-xbr60_566"></td></tr></tbody></table></div></section><section class="chapter"><h3 id="dependency-on-the-standard-library" data-toc="dependency-on-the-standard-library">Dependency on the standard library</h3><p id="-xbr60_568">A dependency on the standard library (<code class="code" id="-xbr60_574">stdlib</code>) is added automatically to each source set. The version of the standard library used is the same as the version of the Kotlin Gradle plugin.</p><p id="-xbr60_569">For platform-specific source sets, the corresponding platform-specific variant of the library is used, while a common standard library is added to the rest. The Kotlin Gradle plugin selects the appropriate JVM standard library depending on the <code class="code" id="-xbr60_575">compilerOptions.jvmTarget</code> <a href="gradle-compiler-options.html" id="-xbr60_576">compiler option</a> of your Gradle build script.</p><p id="-xbr60_570">If you declare a standard library dependency explicitly (for example, if you need a different version), the Kotlin Gradle plugin won't override it or add a second standard library.</p><p id="-xbr60_571">If you don't need a standard library at all, you can add the following Gradle property to your <code class="code" id="-xbr60_577">gradle.properties</code> file:</p><div class="code-block" data-lang="none">
+kotlin.stdlib.default.dependency=false
+</div><section class="chapter"><h4 id="versions-alignment-of-transitive-dependencies" data-toc="versions-alignment-of-transitive-dependencies">Versions alignment of transitive dependencies</h4><p id="-xbr60_578">From Kotlin standard library version 1.9.20, Gradle uses metadata included in the standard library to automatically align transitive <code class="code" id="-xbr60_582">kotlin-stdlib-jdk7</code> and <code class="code" id="-xbr60_583">kotlin-stdlib-jdk8</code> dependencies.</p><p id="-xbr60_579">If you add a dependency for any Kotlin standard library version between 1.8.0 &ndash; 1.9.10, for example: <code class="code" id="-xbr60_584">implementation(&quot;org.jetbrains.kotlin:kotlin-stdlib:1.8.0&quot;)</code>, then the Kotlin Gradle Plugin uses this Kotlin version for transitive <code class="code" id="-xbr60_585">kotlin-stdlib-jdk7</code> and <code class="code" id="-xbr60_586">kotlin-stdlib-jdk8</code> dependencies. This avoids class duplication from different standard library versions. <a href="whatsnew18.html#updated-jvm-compilation-target" id="-xbr60_587">Learn more about merging <code class="code" id="-xbr60_590">kotlin-stdlib-jdk7</code> and <code class="code" id="-xbr60_591">kotlin-stdlib-jdk8</code> into <code class="code" id="-xbr60_592">kotlin-stdlib</code></a>. You can disable this behavior with the <code class="code" id="-xbr60_588">kotlin.stdlib.jdk.variants.version.alignment</code> Gradle property in your <code class="code" id="-xbr60_589">gradle.properties</code> file:</p><div class="code-block" data-lang="none">
+kotlin.stdlib.jdk.variants.version.alignment=false
+</div><section class="chapter"><div class="collapse"><div class="collapse__title"><h5 id="other-ways-to-align-versions" data-toc="other-ways-to-align-versions">Other ways to align versions</h5></div><div class="collapse__content"><ul class="list _bullet" id="-xbr60_593"><li class="list__item" id="-xbr60_594"><p id="-xbr60_598">If you have issues with version alignment, you can align all versions via the Kotlin <a href="https://docs.gradle.org/current/userguide/platforms.html#sub:bom_import" id="-xbr60_600" data-external="true" rel="noopener noreferrer">BOM</a>. Declare a platform dependency on <code class="code" id="-xbr60_601">kotlin-bom</code> in your build script:</p><div class="tabs" id="-xbr60_599" data-group="build-script" data-anchors="[-xbr60_602,-xbr60_603]"><div class="tabs__content" data-gtm="tab" id="-xbr60_602" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+implementation(platform(&quot;org.jetbrains.kotlin:kotlin-bom:2.4.21&quot;))
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_603" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+implementation platform('org.jetbrains.kotlin:kotlin-bom:2.4.21')
+</div></div></div></li><li class="list__item" id="-xbr60_595"><p id="-xbr60_606">If you don't add a dependency for a standard library version, but you have two different dependencies that transitively bring different old versions of the Kotlin standard library, then you can explicitly require <code class="code" id="-xbr60_608">2.4.21</code> versions of these transitive libraries:</p><div class="tabs" id="-xbr60_607" data-group="build-script" data-anchors="[-xbr60_609,-xbr60_610]"><div class="tabs__content" data-gtm="tab" id="-xbr60_609" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+dependencies {
+    constraints {
+        add(&quot;implementation&quot;, &quot;org.jetbrains.kotlin:kotlin-stdlib-jdk7&quot;) {
+            version {
+                require(&quot;2.4.21&quot;)
+            }
+        }
+        add(&quot;implementation&quot;, &quot;org.jetbrains.kotlin:kotlin-stdlib-jdk8&quot;) {
+            version {
+                require(&quot;2.4.21&quot;)
+            }
+        }
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_610" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+dependencies {
+    constraints {
+        add(&quot;implementation&quot;, &quot;org.jetbrains.kotlin:kotlin-stdlib-jdk7&quot;) {
+            version {
+                require(&quot;2.4.21&quot;)
+            }
+        }
+        add(&quot;implementation&quot;, &quot;org.jetbrains.kotlin:kotlin-stdlib-jdk8&quot;) {
+            version {
+                require(&quot;2.4.21&quot;)
+            }
+        }
+    }
+}
+</div></div></div></li><li class="list__item" id="-xbr60_596"><p id="-xbr60_613">If you add a dependency for Kotlin standard library version <code class="code" id="-xbr60_615">2.4.21</code>: <code class="code" id="-xbr60_616">implementation(&quot;org.jetbrains.kotlin:kotlin-stdlib:2.4.21&quot;)</code>, and an old version (earlier than <code class="code" id="-xbr60_617">1.8.0</code>) of the Kotlin Gradle plugin, update the Kotlin Gradle plugin to match the standard library version:</p><div class="tabs" id="-xbr60_614" data-group="build-script" data-anchors="[-xbr60_618,-xbr60_619]"><div class="tabs__content" data-gtm="tab" id="-xbr60_618" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+plugins {
+    // replace `&lt;...&gt;` with the plugin name
+    kotlin(&quot;&lt;...&gt;&quot;) version &quot;2.4.21&quot;
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_619" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+plugins {
+    // replace `&lt;...&gt;` with the plugin name
+    id &quot;org.jetbrains.kotlin.&lt;...&gt;&quot; version &quot;2.4.21&quot;
+}
+</div></div></div></li><li class="list__item" id="-xbr60_597"><p id="-xbr60_622">If you use versions prior to <code class="code" id="-xbr60_624">1.8.0</code> of <code class="code" id="-xbr60_625">kotlin-stdlib-jdk7</code>/<code class="code" id="-xbr60_626">kotlin-stdlib-jdk8</code>, for example, <code class="code" id="-xbr60_627">implementation(&quot;org.jetbrains.kotlin:kotlin-stdlib-jdk7:SOME_OLD_KOTLIN_VERSION&quot;)</code>, and a dependency that transitively brings <code class="code" id="-xbr60_628">kotlin-stdlib:1.8+</code>, <a href="whatsnew18.html#updated-jvm-compilation-target" id="-xbr60_629">replace your <code class="code" id="-xbr60_632">kotlin-stdlib-jdk&lt;7/8&gt;:SOME_OLD_KOTLIN_VERSION</code> with <code class="code" id="-xbr60_633">kotlin-stdlib-jdk*:2.4.21</code></a> or <a href="https://docs.gradle.org/current/userguide/dependency_downgrade_and_exclude.html#sec:excluding-transitive-deps" id="-xbr60_630" data-external="true" rel="noopener noreferrer">exclude</a> the transitive <code class="code" id="-xbr60_631">kotlin-stdlib:1.8+</code> from the library that brings it:</p><div class="tabs" id="-xbr60_623" data-group="build-script" data-anchors="[-xbr60_634,-xbr60_635]"><div class="tabs__content" data-gtm="tab" id="-xbr60_634" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+dependencies {
+    implementation(&quot;com.example:lib:1.0&quot;) {
+        exclude(group = &quot;org.jetbrains.kotlin&quot;, module = &quot;kotlin-stdlib&quot;)
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_635" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+dependencies {
+    implementation(&quot;com.example:lib:1.0&quot;) {
+        exclude group: &quot;org.jetbrains.kotlin&quot;, module: &quot;kotlin-stdlib&quot;
+    }
+}
+</div></div></div></li></ul></div></div></section></section></section><section class="chapter"><h3 id="set-dependencies-on-test-libraries" data-toc="set-dependencies-on-test-libraries">Set dependencies on test libraries</h3><p id="-xbr60_638">The <a href="https://kotlinlang.org/api/latest/kotlin.test/" id="-xbr60_644" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_647">kotlin.test</code></a> API is available for testing Kotlin projects on all supported platforms. Add the <code class="code" id="-xbr60_645">kotlin-test</code> dependency to the <code class="code" id="-xbr60_646">commonTest</code> source set, so that the Gradle plugin can infer the corresponding test dependencies for each test source set.</p><p id="-xbr60_639">Kotlin/Native targets do not require additional test dependencies, and the <code class="code" id="-xbr60_648">kotlin.test</code> API implementations are built-in.</p><div class="tabs" id="-xbr60_640" data-group="build-script" data-anchors="[-xbr60_649,-xbr60_650]"><div class="tabs__content" data-gtm="tab" id="-xbr60_649" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    sourceSets {
+        commonTest.dependencies {
+            implementation(kotlin(&quot;test&quot;)) // This brings all the platform dependencies automatically
+        }
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_650" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    sourceSets {
+        commonTest {
+            dependencies {
+                implementation kotlin(&quot;test&quot;) // This brings all the platform dependencies automatically
+            }
+        }
+    }
+}
+</div></div></div><aside class="prompt" data-type="note" data-title="" id="-xbr60_641"><p id="-xbr60_653">You can use shorthand for a dependency on a Kotlin module, for example, kotlin(&quot;test&quot;) for &quot;org.jetbrains.kotlin:kotlin-test&quot;.</p></aside><p id="-xbr60_642">You can use the <code class="code" id="-xbr60_654">kotlin-test</code> dependency in any shared or platform-specific source set as well.</p><section class="chapter"><h4 id="jvm-variants-of-kotlin-test" data-toc="jvm-variants-of-kotlin-test">JVM variants of kotlin-test</h4><p id="-xbr60_655">For Kotlin/JVM, Gradle uses JUnit 4 by default. Therefore, the <code class="code" id="-xbr60_664">kotlin(&quot;test&quot;)</code> dependency resolves to the variant for JUnit 4, namely <code class="code" id="-xbr60_665">kotlin-test-junit</code>.</p><p id="-xbr60_656">You can choose JUnit 5 or TestNG by calling <a href="https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/testing/Test.html#useJUnitPlatform" id="-xbr60_666" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_668">useJUnitPlatform()</code></a> or <a href="https://docs.gradle.org/current/javadoc/org/gradle/api/tasks/testing/Test.html#useTestNG" id="-xbr60_667" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_669">useTestNG()</code></a> in the test task of your build script. The following example is for a Kotlin Multiplatform project:</p><div class="tabs" id="-xbr60_657" data-group="build-script" data-anchors="[-xbr60_670,-xbr60_671]"><div class="tabs__content" data-gtm="tab" id="-xbr60_670" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    jvm {
+        testRuns[&quot;test&quot;].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    sourceSets {
+        commonTest.dependencies {
+            implementation(kotlin(&quot;test&quot;))
+        }
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_671" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    jvm {
+        testRuns[&quot;test&quot;].executionTask.configure {
+            useJUnitPlatform()
+        }
+    }
+    sourceSets {
+        commonTest {
+            dependencies {
+                implementation kotlin(&quot;test&quot;)
+            }
+        }
+    }
+}
+</div></div></div><p id="-xbr60_658">The following example is for a JVM project:</p><div class="tabs" id="-xbr60_659" data-group="build-script" data-anchors="[-xbr60_674,-xbr60_675]"><div class="tabs__content" data-gtm="tab" id="-xbr60_674" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+dependencies {
+    testImplementation(kotlin(&quot;test&quot;))
+}
+
+tasks {
+    test {
+        useTestNG()
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_675" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+dependencies {
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+}
+
+test {
+    useTestNG()
+}
+</div></div></div><p id="-xbr60_660"><a href="jvm-test-using-junit.html" id="-xbr60_678">Learn how to test code using JUnit on the JVM</a>.</p><p id="-xbr60_661">Automatic JVM variant resolution can sometimes cause problems for your configuration. In that case, you can specify the necessary framework explicitly and disable the automatic resolution by adding this line to the project <code class="code" id="-xbr60_679">gradle.properties</code> file:</p><div class="code-block" data-lang="none">
+kotlin.test.infer.jvm.variant=false
+</div><p id="-xbr60_663">If you have used a variant of <code class="code" id="-xbr60_680">kotlin(&quot;test&quot;)</code> in your build script explicitly and your project build stopped working with a compatibility conflict, see <a href="compatibility-guide-15.html#do-not-mix-several-jvm-variants-of-kotlin-test-in-a-single-project" id="-xbr60_681">this issue in the Compatibility guide</a>.</p></section></section><section class="chapter"><h3 id="set-a-dependency-on-a-kotlinx-library" data-toc="set-a-dependency-on-a-kotlinx-library">Set a dependency on a kotlinx library</h3><p id="-xbr60_682">If you use a multiplatform library and need to depend on the shared code, set the dependency only once in the shared source set. Use the library's base artifact name, such as <code class="code" id="-xbr60_686">kotlinx-coroutines-core</code> or <code class="code" id="-xbr60_687">ktor-client-core</code>:</p><div class="tabs" id="-xbr60_683" data-group="build-script" data-anchors="[-xbr60_688,-xbr60_689]"><div class="tabs__content" data-gtm="tab" id="-xbr60_688" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(&quot;org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0&quot;)
+        }
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_689" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'
+            }
+        }
+    }
+}
+</div></div></div><p id="-xbr60_684">If you need a kotlinx library for a platform-specific dependency, you can still use the library's base artifact name in the corresponding platform source set:</p><div class="tabs" id="-xbr60_685" data-group="build-script" data-anchors="[-xbr60_692,-xbr60_693]"><div class="tabs__content" data-gtm="tab" id="-xbr60_692" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+kotlin {
+    sourceSets {
+        jvmMain.dependencies {
+            implementation(&quot;org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0&quot;)
+        }
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_693" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+kotlin {
+    sourceSets {
+        jvmMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'
+            }
+        }
+    }
+}
+</div></div></div></section></section><section class="chapter"><h2 id="declare-repositories" data-toc="declare-repositories">Declare repositories</h2><p id="-xbr60_696">You can declare a publicly-available repository to use its open source dependencies. In the <code class="code" id="-xbr60_703">repositories{}</code> block, set the name of the repository:</p><div class="tabs" id="-xbr60_697" data-group="build-script" data-anchors="[-xbr60_704,-xbr60_705]"><div class="tabs__content" data-gtm="tab" id="-xbr60_704" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+repositories {
+    mavenCentral()
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_705" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="groovy" data-title="Groovy">
+repositories {
+    mavenCentral()
+}
+</div></div></div><p id="-xbr60_698">Popular repositories are <a href="https://central.sonatype.com/" id="-xbr60_708" data-external="true" rel="noopener noreferrer">Maven Central</a> and <a href="https://maven.google.com/web/index.html" id="-xbr60_709" data-external="true" rel="noopener noreferrer">Google's Maven repository</a>.</p><aside class="prompt" data-type="warning" data-title="" id="-xbr60_699"><p id="-xbr60_710">If you also work with Maven projects, we recommend avoiding adding <code class="code" id="-xbr60_711">mavenLocal()</code> as a repository because you may experience problems when switching between Gradle and Maven projects. If you must add the <code class="code" id="-xbr60_712">mavenLocal()</code> repository, add it as the last repository in your <code class="code" id="-xbr60_713">repositories{}</code> block. For more information, see <a href="https://docs.gradle.org/current/userguide/declaring_repositories.html#sec:case-for-maven-local" id="-xbr60_714" data-external="true" rel="noopener noreferrer">The case for mavenLocal()</a>.</p></aside><p id="-xbr60_700">If you need to declare the same repositories in more than one subproject, declare the repositories centrally in the <code class="code" id="-xbr60_715">dependencyResolutionManagement{}</code> block in your <code class="code" id="-xbr60_716">settings.gradle(.kts)</code> file:</p><div class="tabs" id="-xbr60_701" data-group="build-script" data-anchors="[-xbr60_717,-xbr60_718]"><div class="tabs__content" data-gtm="tab" id="-xbr60_717" data-sync-tabs="kotlin" data-title="Kotlin"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
+}
+</div></div><div class="tabs__content" data-gtm="tab" id="-xbr60_718" data-sync-tabs="groovy" data-title="Groovy"><div class="code-block" data-lang="kotlin" data-title="Kotlin">
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
+}
+</div></div></div><p id="-xbr60_702">Any declared repositories in subprojects override repositories declared centrally. For more information on how to control this behavior and what options are available, see <a href="https://docs.gradle.org/current/userguide/declaring_repositories.html#sub:centralized-repository-declaration" id="-xbr60_721" data-external="true" rel="noopener noreferrer">Gradle's documentation</a>.</p></section><section class="chapter"><h2 id="register-generated-sources" data-toc="register-generated-sources" data-label-id="experimental-general">Register generated sources</h2><p id="-xbr60_723">Register generated sources to help IDEs, third-party plugins, and other tools distinguish between generated code and regular source files. This helps tools like IDEs highlight generated code differently in the UI and trigger generation tasks when importing the project. Use the <a href="https://kotlinlang.org/api/kotlin-gradle-plugin/kotlin-gradle-plugin-api/org.jetbrains.kotlin.gradle.plugin/-kotlin-source-set/" id="-xbr60_728" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_729">KotlinSourceSet</code></a> interface to register generated sources.</p><p id="-xbr60_724">To register a directory that contains Kotlin files, use the <a href="https://kotlinlang.org/api/kotlin-gradle-plugin/kotlin-gradle-plugin-api/org.jetbrains.kotlin.gradle.plugin/-kotlin-source-set/generated-kotlin.html" id="-xbr60_730" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_733">generatedKotlin</code></a> property with the <a href="https://docs.gradle.org/current/kotlin-dsl/gradle/org.gradle.api.file/-source-directory-set/index.html" id="-xbr60_731" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_734">SourceDirectorySet</code></a> type in your <code class="code" id="-xbr60_732">build.gradle.kts</code> file. For example:</p><div class="code-block" data-lang="kotlin">
+val generatorTask = project.tasks.register(&quot;generator&quot;) {
+    val outputDirectory = project.layout.projectDirectory.dir(&quot;src/main/kotlinGen&quot;)
+    outputs.dir(outputDirectory)
+    doLast {
+        outputDirectory.file(&quot;generated.kt&quot;).asFile.writeText(
+            // language=kotlin
+            &quot;&quot;&quot;
+            fun printHello() {
+                println(&quot;hello&quot;)
+            }
+            &quot;&quot;&quot;.trimIndent()
+        )
+    }
+}
+
+kotlin.sourceSets.getByName(&quot;main&quot;).generatedKotlin.srcDir(generatorTask)
+</div><p id="-xbr60_726">This example creates a new task <code class="code" id="-xbr60_735">generator</code> with an output directory of <code class="code" id="-xbr60_736">&quot;src/main/kotlinGen&quot;</code>. When the task runs, the <code class="code" id="-xbr60_737">doLast {}</code> task action creates a <code class="code" id="-xbr60_738">generated.kt</code> file in the output directory. Finally, the example registers the task's output as a generated source.</p><p id="-xbr60_727">If you're developing a Gradle plugin, you can use the <a href="https://kotlinlang.org/api/kotlin-gradle-plugin/kotlin-gradle-plugin-api/org.jetbrains.kotlin.gradle.plugin/-kotlin-source-set/all-kotlin-sources.html" id="-xbr60_739" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_742">allKotlinSources</code></a> property to access all sources registered in the <a href="https://kotlinlang.org/api/kotlin-gradle-plugin/kotlin-gradle-plugin-api/org.jetbrains.kotlin.gradle.plugin/-kotlin-source-set/kotlin.html" id="-xbr60_740" data-external="true" rel="noopener noreferrer"><code class="code" id="-xbr60_743">KotlinSourceSet.kotlin</code></a> and <code class="code" id="-xbr60_741">KotlinSourceSet.generatedKotlin</code> properties.</p></section><section class="chapter"><h2 id="what-s-next" data-toc="what-s-next">What's next?</h2><p id="-xbr60_744">Learn more about:</p><ul class="list _bullet" id="-xbr60_745"><li class="list__item" id="-xbr60_746"><p id="-xbr60_750"><a href="gradle-compiler-options.html" id="-xbr60_751">Compiler options and how to pass them</a>.</p></li><li class="list__item" id="-xbr60_747"><p id="-xbr60_752"><a href="gradle-compilation-and-caches.html" id="-xbr60_753">Incremental compilation, caches support, build reports, and the Kotlin daemon</a>.</p></li><li class="list__item" id="-xbr60_748"><p id="-xbr60_754"><a href="https://docs.gradle.org/current/userguide/userguide.html" id="-xbr60_755" data-external="true" rel="noopener noreferrer">Gradle basics and specifics</a>.</p></li><li class="list__item" id="-xbr60_749"><p id="-xbr60_756"><a href="gradle-plugin-variants.html" id="-xbr60_757">Support for Gradle plugin variants</a>.</p></li></ul></section><div class="last-modified">06 October 2026</div><div data-feedback-placeholder="true"></div><div class="navigation-links _bottom"><a href="get-started-with-jvm-gradle-project.html" class="navigation-links__prev">Get started with Gradle and Kotlin/JVM</a><a href="gradle-best-practices.html" class="navigation-links__next">Gradle best practices</a></div></article><div id="disqus_thread"></div></div></section></main></div></body></html>

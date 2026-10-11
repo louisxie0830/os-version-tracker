@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+<atom:link href="https://developer.apple.com/news/rss/news.rss" rel="self" type="application/rss+xml" />
+<title>Latest News - Apple Developer</title>
+<link>https://developer.apple.com/news/</link>
+<description></description>
+<language>en</language>
+<lastBuildDate>Tue, 06 Oct 2026 08:00:23 PDT</lastBuildDate>
+<generator>Custom</generator>
+<copyright>Copyright 2026, Apple Inc.</copyright>
+
+<item>
+<title>Hello Developer: October 2026</title>
+<link>https://developer.apple.com/news/?id=gv788oj6</link>
+<guid>https://developer.apple.com/news/?id=gv788oj6</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/9BD5744A-C297-4581-98EC-3078A03BC6A0/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/9BD5744A-C297-4581-98EC-3078A03BC6A0/2048.jpeg" data-hires="false" alt=" Foldable smartphone shown in three postures: tent mode displaying a clock and calendar, book mode displaying a split-screen notes and messaging interface, and clamshell mode playing a workout video."&gt;&lt;/div&gt;&lt;p&gt;In this edition: &lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Get tips on submitting your iPhone Duo app.&lt;/li&gt;
+&lt;li&gt;Sign up for new iPhone Duo Group Labs. &lt;/li&gt;
+&lt;li&gt;Join us for a new developer event on speed and efficiency.&lt;/li&gt;
+&lt;li&gt;Explore localized documentation.&lt;/li&gt;
+&lt;li&gt;Browse new App Store creative assets.&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;a class="icon icon-after icon-chevronright" href="https://developer.apple.com/hello/october26"&gt;Read now&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Tue, 06 Oct 2026 08:00:23 PDT</pubDate>
+</item>
+<item>
+<title>Prepare and submit your apps for iPhone Duo</title>
+<link>https://developer.apple.com/news/?id=kkphp5qo</link>
+<guid>https://developer.apple.com/news/?id=kkphp5qo</guid>
+<description>&lt;p&gt;iPhone Duo will be available to customers starting October 23, 2026. To get your apps and games ready today, you can:&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Build or recompile with Xcode&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Recompile existing apps with Xcode 27.1, which adds development support for iPhone Duo. Use Device Hub to visualize how your apps behave on iPhone Duo across all poses and orientations.&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/xcode/"&gt;Get the latest version of Xcode&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/iphone-duo/prepare/"&gt;Three steps to make your app shine on iPhone Duo&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/iphone-duo/"&gt;Learn more about iPhone Duo&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;strong&gt;Prepare your App Store product page assets&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Updated screenshot and app preview specifications are now available for the latest Apple devices, including iPhone Duo, so you can showcase your app at its best across orientations. Explore design guidance and get downloadable templates to help you build your App Store assets, including new product page headers and search result assets, as well as your app previews, screenshots, and In-App Events. Visualize how your screenshots, product page headers, and other metadata look on your product page on iPhone Duo with the new preview tool in App Store Connect.&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/app-store/asset-best-practices/"&gt;Get design guidance and templates&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/manage-app-information/manage-your-app-store-assets"&gt;Manage your App Store assets&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/reference/app-information/app-preview-specifications"&gt;View app preview specifications&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications"&gt;View screenshot specifications&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;strong&gt;Submit your app&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;You can submit your iPhone Duo optimized apps and games in App Store Connect today. Starting April 2027, any apps or games submitted will need to include screenshots for iPhone Duo.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/app-store/submitting/"&gt;Learn &lt;span class="icon icon-after icon-chevronright nowrap"&gt;about submitting&lt;/span&gt;&lt;/a&gt; &lt;/p&gt;</description>
+<pubDate>Mon, 05 Oct 2026 17:05:33 PDT</pubDate>
+</item>
+<item>
+<title>Showcase your apps with new assets on the App Store</title>
+<link>https://developer.apple.com/news/?id=ljpl7kyn</link>
+<guid>https://developer.apple.com/news/?id=ljpl7kyn</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/E79334BA-EE3D-4655-9217-251929306509/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/E79334BA-EE3D-4655-9217-251929306509/2048.jpeg" data-hires="false" alt="Two iPhone screens showing the App Store. On the left is the product page for The Coast, with an illustrated header of a lighthouse and a cargo ship, the app icon, a Get button, and a 4.7-star rating. On the right are search results for “hiking,” where Ridge Explorer appears with an Editors’ Choice badge and a screenshot that reads “Plan your hiking expedition” next to a map of nearby trails."&gt;&lt;/div&gt;&lt;p&gt;Make your apps and games stand out with new creative assets on the App Store and asset management tools in App Store Connect.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Market your app or game in new ways&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Use new creative assets on your product page headers and in search result assets to highlight your brand, promote seasonal offerings, showcase new content, and more. These new image and video assets complement your existing app previews and screenshots to give your app additional visibility across the App Store. Take advantage of design guidance and downloadable templates to help you build captivating visuals.&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="http://developer.apple.com/app-store/asset-best-practices/"&gt;Get templates and best practices for creating your App Store assets&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications"&gt;View creative assets specifications&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/reference/app-information/app-preview-specifications"&gt;View app preview specifications&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications"&gt;View screenshot specifications&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;strong&gt;Visualize your assets across the App Store&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Use the new preview tool in App Store Connect to see how your creative assets, screenshots, and other metadata will appear on your product page and in search results before you submit them. With support for Dark Mode, as well as different devices and orientations, the preview tool helps ensure your app makes a great impression across the App Store.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Manage your assets in App Store Connect&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Streamline your asset management with the new Asset Library in App Store Connect. Upload and organize your creative assets, screenshots, and app previews in one central place — even ahead of when you’d like to use them. For example, you can submit creative assets for approval today to use in a future seasonal campaign, then immediately use them once you’re ready.&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-review/guideline-reference/2-3-3-screenshots"&gt;Explore new App Review guidance on how to avoid common screenshot issues&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/manage-app-information/manage-your-app-store-assets"&gt;Learn how to manage your App Store assets&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</description>
+<pubDate>Mon, 05 Oct 2026 13:00:27 PDT</pubDate>
+</item>
+<item>
+<title>Updates to Full Disk Access in macOS</title>
+<link>https://developer.apple.com/news/?id=p6zjojqw</link>
+<guid>https://developer.apple.com/news/?id=p6zjojqw</guid>
+<description>&lt;p&gt;We give developers powerful APIs to build incredible capabilities into their apps for Apple products, backed by a set of controls designed to protect users’ private data. Full Disk Access largely sidesteps these controls in order to allow backup apps to function properly on the Mac. Some developers are using Full Disk Access in ways that could put users at risk, exposing everything on their systems—including files, mail, messages, and even browsing history—without users’ full knowledge and understanding. For communication apps, this can also compromise the privacy of the people users are communicating with.&lt;/p&gt;&lt;p&gt;Going forward, we will introduce additional controls to ensure that users who genuinely wish to grant an app this extraordinary level of access can only do so with very explicit user action. Addressing this is critical. As AI agents become increasingly capable and autonomous, the risks associated with this level of access will grow substantially. We are committed to ensuring users clearly understand these risks before granting such access, so they can make informed decisions about their own data and privacy.&lt;/p&gt;</description>
+<pubDate>Fri, 02 Oct 2026 09:00:19 PDT</pubDate>
+</item>
+<item>
+<title>Upcoming expiration of Developer ID Certification Authority (Sub-CA)</title>
+<link>https://developer.apple.com/news/?id=w4atic4c</link>
+<guid>https://developer.apple.com/news/?id=w4atic4c</guid>
+<description>&lt;p&gt;The original Developer ID Certification Authority (Sub-CA) expires on February 1, 2027. Certificates issued by this authority will stop working on that date.&lt;/p&gt;&lt;p&gt;What to do:&lt;/p&gt;&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;Check if you’re affected.&lt;/strong&gt; In &lt;a href="https://developer.apple.com/account/resources"&gt;Certificates, Identifiers &amp;amp; Profiles&lt;/a&gt;, look for certificates expiring on or before February 1, 2027. See &lt;a href="https://developer.apple.com/help/account/certificates/replace-developer-id-certificates"&gt;Replacing Developer ID certificates issued from the previous Sub-CA&lt;/a&gt; for help identifying your certificate’s authority.&lt;/li&gt;
+&lt;/ol&gt;&lt;ol start="2"&gt;
+&lt;li&gt;&lt;strong&gt;Create a new certificate.&lt;/strong&gt; Generate a replacement from the current authority, Developer ID Certification Authority (G2). Note: This certificate authority is valid until 2031, but the certificates issued by the certificate authority expire annually and must be renewed each year.&lt;/li&gt;
+&lt;/ol&gt;&lt;ul&gt;
+&lt;li&gt;If you’re using Xcode 11.4 or earlier, update before creating your new certificate.&lt;/li&gt;
+&lt;li&gt;When prompted for a Developer ID Certificate Intermediary, select G2 Sub-CA. Choosing another option may issue a certificate that also expires in 2027.&lt;/li&gt;
+&lt;/ul&gt;&lt;ol start="3"&gt;
+&lt;li&gt;&lt;strong&gt;Re-sign based on what you distribute.&lt;/strong&gt;&lt;/li&gt;
+&lt;/ol&gt;&lt;ul&gt;
+&lt;li&gt;Installer packages (.pkg): Starting February 1, 2027, .pkg files signed with an affected certificate will no longer install. Re-sign all packages with your new certificate before this date.&lt;/li&gt;
+&lt;li&gt;Mac apps: Previously signed and notarized Mac software (with a secure timestamp) will keep working—no action needed. For future updates, sign with your new certificate and include a secure timestamp for notarization.&lt;/li&gt;
+&lt;/ul&gt;</description>
+<pubDate>Thu, 01 Oct 2026 10:00:11 PDT</pubDate>
+</item>
+<item>
+<title>Build for iPhone Duo with new resources</title>
+<link>https://developer.apple.com/news/?id=nyuppv9r</link>
+<guid>https://developer.apple.com/news/?id=nyuppv9r</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/DF24E0B0-3564-444A-B15A-344E3FDC834F/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/DF24E0B0-3564-444A-B15A-344E3FDC834F/2048.jpeg" data-hires="false" alt="Front and rear views of iPhone Duo shown side by side in Star White and Night Sky, displaying desert landscape wallpapers in both light and dark mode."&gt;&lt;/div&gt;&lt;p&gt;Get Xcode 27.1 beta.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/news/releases/"&gt;View downloads &lt;span class="icon icon-after icon-chevronright nowrap"&gt;and release notes&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Get Figma and Sketch design kits for iPhone Duo from the Apple Design Resources.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/design/resources/"&gt;Download design kits from &lt;span class="icon icon-after icon-chevronright nowrap"&gt;the Apple Design Resources&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Sign up for workshops around the world to learn how to optimize your app and build customized experiences for all screen sizes.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/events/view/upcoming-events?search=workshop"&gt;&lt;span class="icon icon-after icon-chevronright nowrap"&gt;Explore workshops&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Find out more about preparing your app for iPhone Duo.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/iphone-duo/"&gt;Learn more about &lt;span class="icon icon-after icon-chevronright nowrap"&gt;iPhone Duo&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Fri, 18 Sep 2026 10:00:57 PDT</pubDate>
+</item>
+<item>
+<title>Get ready with the latest beta releases</title>
+<link>https://developer.apple.com/news/?id=rfb1rooi</link>
+<guid>https://developer.apple.com/news/?id=rfb1rooi</guid>
+<description>&lt;p&gt;The beta versions of iOS 27.2, iPadOS 27.2, macOS 27.2, tvOS 27.2, visionOS 27.2, and watchOS 27.2 are now available. Get your apps ready by confirming they work as expected on these releases. And make sure to build and test with Xcode 27.2 to take advantage of the advancements in the latest SDKs.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Note about iOS 27.1 and iPhone Duo&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;When iPhone Duo becomes available on October 23, it will run iOS 27.1. This version builds on the foundation of iOS 27 and introduces features that were purpose-built for the new foldable design.&lt;/p&gt;&lt;p&gt;Xcode 27.1 will add development support for iPhone Duo. This includes updated SDKs and a simulator that supports the all-new poses and orientations of iPhone Duo. A beta version will be available later this month.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/news/releases/"&gt;View downloads and &lt;span class="icon icon-after icon-chevronright nowrap"&gt;release notes&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/documentation/xcode/testing-a-beta-os"&gt;Learn about testing a &lt;span class="icon icon-after icon-chevronright nowrap"&gt;beta OS&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/bug-reporting/"&gt;Learn about &lt;span class="icon icon-after icon-chevronright nowrap"&gt;sending feedback&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Wed, 16 Sep 2026 10:03:39 PDT</pubDate>
+</item>
+<item>
+<title>Get your subscriptions ready for iOS 27</title>
+<link>https://developer.apple.com/news/?id=likeohx4</link>
+<guid>https://developer.apple.com/news/?id=likeohx4</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/022EB77D-3E86-4604-B38E-39F1B024E868/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/022EB77D-3E86-4604-B38E-39F1B024E868/2048.jpeg" data-hires="false" alt="Two iPhone screens demonstrating an App Store subscription bundle: an in-app promotional sheet in the Forest Explorer app on the left, and the App Store subscription purchase sheet showing monthly and annual bundle options on the right."&gt;&lt;/div&gt;&lt;p&gt;Discover how you can expand the reach of your subscriptions with new features in iOS 27. You can start preparing today by making sure your apps use StoreKit 2 to handle your Apple In-App Purchases. &lt;/p&gt;&lt;h3&gt;Request access to Bundles and Suites&lt;/h3&gt;&lt;p&gt;Offer multiple subscriptions as a single Apple In-App Purchase in your apps with new Bundles and Suites capabilities. With Bundles, people can access multiple subscriptions in one purchase — across a single app, multiple apps from the same developer, or even spanning multiple developers’ apps. With Suites, people get access to a single subscription that seamlessly works across a set of apps from a single developer.&lt;/p&gt;&lt;p&gt;The App Store provides the purchase experience, which displays all apps included in your Bundle or Suite, so it’s easy for people to download and access their subscription content right away.&lt;/p&gt;&lt;p&gt;To get started, review our &lt;a href="https://developer.apple.com/app-store/subscriptions/bundles-and-suites/"&gt;Bundles and Suites page&lt;/a&gt;, which includes eligible configurations, technical requirements, and how to submit a request form. Bundles and Suites will be available later this year in iOS 27, iPadOS 27, macOS 27, tvOS 27, or later.&lt;/p&gt;&lt;p&gt;&lt;a href="http://developer.apple.com/app-store/subscriptions/bundles-and-suites/"&gt;&lt;span class="icon icon-after icon-chevronright nowrap"&gt;Offer Bundles and Suites&lt;/span&gt;&lt;/a&gt; &lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/videos/play/wwdc2026/210/?time=530"&gt;&lt;span class="icon icon-after icon-chevronright nowrap"&gt;Bundles and Suites video&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;h3&gt;Multiseat purchasing enabled in App Store Connect&lt;/h3&gt;&lt;p&gt;Multiseat purchases make it easy for organizations and groups to buy your subscriptions in bulk through Volume Purchasing and Group Purchases. This presents you with an opportunity to expand your subscription beyond single users, as small businesses and specific work groups or departments can access your subscription without having to go through additional administrative workflows.&lt;/p&gt;&lt;p&gt;With Volume Purchasing, organizations that use Apple Business and Apple School Manager can buy your subscriptions through a single Apple In-App Purchase and assign seats using a device management provider. &lt;/p&gt;&lt;p&gt;With Group Purchases, a subscriber can buy multiple seats in a single Apple In-App Purchase and invite others to join. Apple handles any seat assignment and the invitation flow, to let groups — like small businesses, individual departments, or teams — easily access your subscriptions.&lt;/p&gt;&lt;p&gt;This opens your subscription to users who don't fit the traditional single-subscriber model: a work team splitting the cost of a productivity app, a small business outfitting a handful of employees, a department within a larger company, or a group of collaborators sharing access to a creative tool. Any of these groups can become paying subscribers today, without going through IT or procurement.&lt;/p&gt;&lt;p&gt;Starting today, multiseat purchases are enabled by default for subscriptions in App Store Connect. You have full control over availability and can disable multiseat purchases entirely, or selectively manage availability across the App Store, Apple Business, and Apple School Manager.&lt;/p&gt;&lt;p&gt;Volume Purchasing launches on October 22, 2026, and Group Purchases will launch this winter.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/help/app-store-connect/manage-subscriptions/manage-purchase-options-for-auto-renewable-subscriptions"&gt;Manage purchase options for an &lt;span class="icon icon-after icon-chevronright nowrap"&gt;auto-renewable subscription&lt;/span&gt;&lt;/a&gt; &lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/videos/play/wwdc2026/391/"&gt;Offer subscriptions to &lt;span class="icon icon-after icon-chevronright nowrap"&gt;groups and organizations&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Wed, 16 Sep 2026 10:02:58 PDT</pubDate>
+</item>
+<item>
+<title>Updates to App Tracking Transparency in the European Union</title>
+<link>https://developer.apple.com/news/?id=idsft9ai</link>
+<guid>https://developer.apple.com/news/?id=idsft9ai</guid>
+<description>&lt;p&gt;As part of agreements with select European competition authorities, Apple is introducing changes to its App Tracking Transparency framework in the European Union. Beginning with iOS 27.2 and iPadOS 27.2, developers will have the option to use an alternative version of the App Tracking Transparency system prompt in the EU. The requirements for when you must seek permission to track users will remain the same. Due to legal requirements, only the alternative version of the system prompt is available for apps distributed in Germany, France, Italy, Poland, and Romania.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/app-store/user-privacy-and-data-use/"&gt;&lt;span class="icon icon-after icon-chevronright nowrap"&gt;Learn more&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Wed, 16 Sep 2026 10:00:11 PDT</pubDate>
+</item>
+<item>
+<title>Get ready for iPhone Duo</title>
+<link>https://developer.apple.com/news/?id=vn8abkxx</link>
+<guid>https://developer.apple.com/news/?id=vn8abkxx</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/1E836BD5-C933-4BC4-98D2-0ABF4777C9BA/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/1E836BD5-C933-4BC4-98D2-0ABF4777C9BA/2048.jpeg" data-hires="false" alt="iPhone Duo partially folded showing the Home Screen and widgets across both displays."&gt;&lt;/div&gt;&lt;p&gt;Start getting ready for iPhone Duo today. Watch new videos, sign up for Group Labs, and take part in Q&amp;amp;As on the Apple Developer Forums.&lt;/p&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/iphone-duo/"&gt;&lt;span class="icon icon-after icon-chevronright nowrap"&gt;Explore now&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Wed, 09 Sep 2026 16:05:23 PDT</pubDate>
+</item>
+<item>
+<title>App Store submissions now open for the latest OS releases</title>
+<link>https://developer.apple.com/news/?id=k1mtkt1k</link>
+<guid>https://developer.apple.com/news/?id=k1mtkt1k</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/C4D6D5E8-CA9E-47A5-8551-6384D0760DA3/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/C4D6D5E8-CA9E-47A5-8551-6384D0760DA3/2048.jpeg" data-hires="false" alt=""&gt;&lt;/div&gt;&lt;p&gt;iOS 27, iPadOS 27, macOS 27, tvOS 27, visionOS 27, and watchOS 27 will soon be available to customers worldwide, which means you can now submit apps and games that take advantage of the latest Apple technologies and innovations like Apple Intelligence, the Foundation Models framework, design updates, new App Store features, and more. &lt;/p&gt;&lt;p&gt;&lt;strong&gt;Download the Xcode 27 Release Candidate.&lt;/strong&gt; Build your apps and games using the latest SDKs, test with TestFlight, and submit for review to the App Store.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Optimize your app for macOS 27.&lt;/strong&gt; macOS 26 is the final release supporting Intel Mac computers and Rosetta — macOS 27 will be Apple silicon only. To limit your app to Macs with Apple silicon, set your Xcode build architecture to arm64 only, then rebuild and resubmit. Removing support for Intel-based apps lets you further simplify your development and &lt;a href="https://developer.apple.com/documentation/apple-silicon"&gt;optimize your app for Apple silicon&lt;/a&gt;.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Answer age rating questions.&lt;/strong&gt; New &lt;a href="https://developer.apple.com/news/?id=tlur8uvi"&gt;Time Allowances&lt;/a&gt; give parents more flexible ways to manage the time their kids spend in apps across categories, including Entertainment, Games, and Social Media. If your app or game includes social media capabilities, you’ll need to indicate them in App Store Connect. &lt;/p&gt;&lt;p&gt;&lt;strong&gt;Prepare your App Store assets.&lt;/strong&gt; Make a strong impression using new product page headers and search result assets on the App Store. Explore &lt;a href="https://developer.apple.com/app-store/asset-best-practices/"&gt;design guidance and templates&lt;/a&gt; to create captivating product page headers, search results, screenshots, app previews, and In-App Events. Before you publish, use the new product page preview tool in App Store Connect to see exactly how your page will look on the App Store. Coming soon.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;Starting April 2027&lt;/strong&gt;, apps and games uploaded to App Store Connect need to meet the following minimum requirements: &lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;iOS and iPadOS apps must be built with the iOS 27 &amp;amp; iPadOS 27 SDK or later&lt;/li&gt;
+&lt;li&gt;tvOS apps must be built with the tvOS 27 SDK or later&lt;/li&gt;
+&lt;li&gt;visionOS apps must be built with the visionOS 27 SDK or later&lt;/li&gt;
+&lt;li&gt;watchOS apps must be built with the watchOS 27 SDK or later&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/app-store/submitting/"&gt;Learn more &lt;span class="icon icon-after icon-chevronright nowrap"&gt;about submitting&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Wed, 09 Sep 2026 16:00:38 PDT</pubDate>
+</item>
+<item>
+<title>Hello Developer: September 2026</title>
+<link>https://developer.apple.com/news/?id=ote61lrx</link>
+<guid>https://developer.apple.com/news/?id=ote61lrx</guid>
+<description>&lt;div class="inline-article-image"&gt;&lt;img src="https://devimages-cdn.apple.com/wwdc-services/articles/images/118D6B92-8A93-4879-BBB4-EE5F98F8B216/2048.jpeg" data-img-dark="https://devimages-cdn.apple.com/wwdc-services/articles/images/118D6B92-8A93-4879-BBB4-EE5F98F8B216/2048.jpeg" data-hires="false" alt="App Store Connect analytics on a MacBook alongside an app&amp;#039;s App Store product page on iPhone."&gt;&lt;/div&gt;&lt;p&gt;In this edition: Get ready for a special Apple Event, take advantage of Analytics in App Store Connect, and sign up for new developer events in Cupertino.&lt;/p&gt;&lt;p&gt;&lt;a class="icon icon-after icon-chevronright" href="https://developer.apple.com/hello/september26"&gt;Read now&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Wed, 02 Sep 2026 08:00:02 PDT</pubDate>
+</item>
+<item>
+<title>Upcoming SDK minimum requirements</title>
+<link>https://developer.apple.com/news/?id=ueeok6yw</link>
+<guid>https://developer.apple.com/news/?id=ueeok6yw</guid>
+<description>&lt;p&gt;Starting April 28, 2026, apps and games uploaded to App Store Connect need to meet the following minimum requirements:&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;iOS and iPadOS apps must be built with the iOS 26 &amp;amp; iPadOS 26 SDK or later&lt;/li&gt;
+&lt;li&gt;tvOS apps must be built with the tvOS 26 SDK or later&lt;/li&gt;
+&lt;li&gt;visionOS apps must be built with the visionOS 26 SDK or later&lt;/li&gt;
+&lt;li&gt;watchOS apps must be built with the watchOS 26 SDK or later&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/app-store/submitting/"&gt;Learn more &lt;span class="icon icon-after icon-chevronright nowrap"&gt;about submitting&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Tue, 03 Feb 2026 06:00:30 PST</pubDate>
+</item>
+
+</channel>
+</rss>
