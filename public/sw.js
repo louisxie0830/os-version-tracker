@@ -1,6 +1,9 @@
 // Bump when the precached shell or caching strategy changes, so old caches are dropped
-const CACHE = 'os-tracker-v1';
-const PRECACHE = ['/', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png'];
+const CACHE = 'os-tracker-v2';
+// Paths are relative to the worker's scope, so the site works at a domain root or under /<repo>/ on GitHub Pages
+const SCOPE = self.registration.scope;
+const PRECACHE = ['./', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png']
+  .map(path => new URL(path, SCOPE).href);
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -14,20 +17,21 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Pages and the API are network-first so data stays fresh, falling back to the last copy when offline;
+// Pages, data and scripts are network-first so they stay fresh, falling back to the last copy when offline;
 // icons and the manifest rarely change, so they're served cache-first.
 self.addEventListener('fetch', event => {
   const { request } = event;
-  const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (request.method !== 'GET' || !request.url.startsWith(SCOPE)) return;
+  const path = new URL(request.url).pathname.slice(new URL(SCOPE).pathname.length);
 
-  if (url.pathname.startsWith('/icons/') || url.pathname === '/manifest.webmanifest') {
+  if (path.startsWith('icons/') || path === 'manifest.webmanifest') {
     event.respondWith(caches.match(request).then(hit => hit ?? fetchAndCache(request)));
     return;
   }
 
-  if (request.mode === 'navigate' || url.pathname === '/' || url.pathname === '/api') {
-    const key = request.mode === 'navigate' ? '/' : request;
+  if (request.mode === 'navigate' || path === '' || path === 'api' || path === 'api.json' || path.startsWith('js/')) {
+    // Every navigation (whatever its query string) shares the cached page
+    const key = request.mode === 'navigate' ? SCOPE : request;
     event.respondWith(
       fetchAndCache(request, key).catch(() => caches.match(key).then(hit => hit ?? Response.error())),
     );

@@ -75,7 +75,7 @@ export interface AllVersions {
 
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-export const SITE_URL = (process.env.SITE_URL ?? 'https://os-version-tracker.onrender.com').replace(/\/$/, '');
+export const SITE_URL = (process.env.SITE_URL ?? 'https://louisxie0830.github.io/os-version-tracker').replace(/\/$/, '');
 
 const SOURCES = {
   ios: { label: 'Apple 軟體更新目錄 / Developer Releases', url: 'https://developer.apple.com/news/releases/' },

@@ -23,6 +23,24 @@ export function resetAlertState(): void {
   states.clear();
 }
 
+/** Snapshot of every source's state, so a one-shot build (the static site) can carry it to the next run */
+export function exportAlertState(): Record<string, SourceState> {
+  return Object.fromEntries(states);
+}
+
+export function importAlertState(saved: Record<string, SourceState>): void {
+  for (const [key, state] of Object.entries(saved)) {
+    if (typeof state?.ok === 'boolean') states.set(key, state);
+  }
+}
+
+const inFlight = new Set<Promise<void>>();
+
+/** Resolves once every report started so far (including webhook calls) has finished */
+export async function flushAlerts(): Promise<void> {
+  await Promise.all([...inFlight]);
+}
+
 async function postWebhook(url: string, text: string): Promise<boolean> {
   try {
     const res = await fetch(url, {
@@ -46,7 +64,13 @@ async function postWebhook(url: string, text: string): Promise<boolean> {
  * Records a source's outcome. Never throws. Resolves once any webhook call has finished,
  * so callers can fire-and-forget it.
  */
-export async function reportSourceStatus(key: string, ok: boolean, detail?: string): Promise<void> {
+export function reportSourceStatus(key: string, ok: boolean, detail?: string): Promise<void> {
+  const task = report(key, ok, detail).finally(() => inFlight.delete(task));
+  inFlight.add(task);
+  return task;
+}
+
+async function report(key: string, ok: boolean, detail?: string): Promise<void> {
   try {
     const now = new Date().toISOString();
     const prev = states.get(key);

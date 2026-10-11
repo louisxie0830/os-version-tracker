@@ -20,7 +20,7 @@ export interface CrashItem {
 const TIMEOUT_MS = 15_000;
 
 // Word boundaries matter: "hang" must not match "change"
-export const CRASH_PATTERN = /\b(crash(?:es|ed|ing)?|quits? unexpectedly|hangs?|hung|freez(?:e|es|ing)|unresponsive|deadlocks?|ANRs?|EXC_[A-Z_]+|SIGABRT|SIGSEGV|terminat(?:e|es|ed|ion) unexpectedly|reboots?)\b/i;
+export const CRASH_PATTERN = /\b(crash(?:es|ed|ing)?|quits? unexpectedly|hangs?|hung|freez(?:e|es|ing)|unresponsive|deadlocks?|ANRs?|EXC_[A-Z_]+|SIGABRT|SIGSEGV|terminat(?:e|es|ed|ion) unexpectedly|(?:unexpected(?:ly)?|spontaneous(?:ly)?) reboot(?:s|ing)?)\b/i;
 
 // ---------- Apple (DocC JSON) ----------
 

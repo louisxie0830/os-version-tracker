@@ -12,7 +12,8 @@ test('CRASH_PATTERN matches crash wording but not words that merely contain it',
   for (const text of ['Photos might quit unexpectedly', 'App crashes on launch', 'Device hangs', 'ANR when launched', 'deadlock for @Query']) {
     assert.ok(CRASH_PATTERN.test(text), text);
   }
-  for (const text of ['Change X to Y', 'Exchange rates', 'Voice Editing commands might not work']) {
+  assert.ok(CRASH_PATTERN.test('devices unexpectedly reboot when scrolling'));
+  for (const text of ['Change X to Y', 'Exchange rates', 'Voice Editing commands might not work', 'runtimes re-appear after a reboot', 'without needing to reboot']) {
     assert.ok(!CRASH_PATTERN.test(text), text);
   }
 });
