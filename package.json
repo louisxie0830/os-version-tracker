@@ -10,9 +10,9 @@
     "build:static": "tsc && node dist/build-static.js"
   },
   "devDependencies": {
-    "@types/node": "^25.3.3",
-    "tsx": "^4.7.0",
-    "typescript": "^5.4.0"
+    "@types/node": "^26.6.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   },
   "dependencies": {
     "rss-parser": "^3.13.0"
