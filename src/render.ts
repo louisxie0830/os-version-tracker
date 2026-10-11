@@ -168,6 +168,12 @@ function renderVersionBars(platform: 'ios' | 'android', rows: BarRow[]): string 
   return `<div class="adoption">${bars}</div><div class="bar-legend">${legend}</div>`;
 }
 
+/** Percentage with a bar behind it, so the full-width table reads at a glance */
+function coverageCell(pct: number | undefined): string {
+  if (pct === undefined) return '—';
+  return `<div class="cov"><span class="cov-bar" style="width:${Math.max(0, Math.min(100, pct))}%"></span><span class="cov-num">${pct}%</span></div>`;
+}
+
 function renderVersionDistribution(platform: 'ios' | 'android', data: AllVersions): string {
   const share = data.osShare;
   const tw = share?.[platform].TW;
@@ -193,8 +199,8 @@ function renderVersionDistribution(platform: 'ios' | 'android', data: AllVersion
   for (const c of base.coverage) {
     const w = ww?.coverage.find(x => x.min === c.min);
     coverageRows.push(`<tr><td class="row-title" data-label="最低支援版本"><strong>${name} ${esc(c.min)}</strong>${c.api ? ` <span class="tl-source">API ${c.api}</span>` : ''} 以上</td>
-      <td data-label="台灣">${tw ? `${tw.coverage.find(x => x.min === c.min)?.covered ?? '—'}%` : '—'}</td>
-      <td data-label="全球">${w ? `${w.covered}%` : '—'}</td></tr>`);
+      <td data-label="台灣">${coverageCell(tw?.coverage.find(x => x.min === c.min)?.covered)}</td>
+      <td data-label="全球">${coverageCell(w?.covered)}</td></tr>`);
     if (c.covered >= 99.5 || coverageRows.length >= 8) break;
   }
   const top = (tw ?? ww)!.topVersions.map(v => `<span>${esc(platform === 'ios' ? v.version : `Android ${v.version}`)} <strong>${v.share}%</strong></span>`).join('');
@@ -1314,14 +1320,18 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .toast-close { flex: none; border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; }
 
     /* Version distribution */
-    .share-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; margin-top: 14px; align-items: start; }
+    .share-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 14px; }
     .share-top { background: #fff; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px 16px; display: grid; gap: 8px; }
     .share-chips { display: flex; flex-wrap: wrap; gap: 6px; }
     .share-chips span { font-size: 13px; background: var(--bg); border: 1px solid rgba(13, 150, 212, 0.14); border-radius: 999px; padding: 2px 10px; }
     .share-chips strong { color: var(--accent-deep); }
     .share-top a { color: var(--accent-deep); }
     .share-table .compat-table { white-space: normal; }
-    .share-table td:not(:first-child), .share-table th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+    .share-table th:first-child, .share-table td:first-child { width: 28%; white-space: nowrap; }
+    .share-table td:not(:first-child) { width: 36%; }
+    .cov { position: relative; height: 22px; border-radius: 6px; background: var(--bg); overflow: hidden; }
+    .cov-bar { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, rgba(13, 150, 212, 0.35), rgba(18, 179, 164, 0.45)); border-radius: 6px; }
+    .cov-num { position: relative; display: block; padding: 0 8px; line-height: 22px; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
 
     /* Taiwan banks */
     .bank-summary { display: grid; gap: 10px; margin-bottom: 14px; }
