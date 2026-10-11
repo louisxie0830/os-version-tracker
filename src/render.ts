@@ -1,6 +1,6 @@
 import { SITE_URL, type AllVersions, type SourceKey } from './fetch-all.js';
 import { deadlineId } from './calendar.js';
-import type { TrackedItem } from './changes.js';
+import { buildNotificationsJson, type TrackedItem } from './changes.js';
 import { checkProject, type ProjectConfig } from './checker.js';
 import type { CrashItem } from './fetchers/crashes.js';
 import { compareVersions } from './fetchers/ios-toolchain.js';
@@ -1065,6 +1065,87 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .privacy-links li a:hover { text-decoration: underline; }
     .privacy-links li span { font-size: 12.5px; color: var(--muted); }
 
+    /* Notification center */
+    .notif { position: relative; }
+    .notif-bell {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--accent-deep);
+      cursor: pointer;
+    }
+    .notif-bell:hover { background: var(--accent-soft); }
+    .notif-bell svg { width: 20px; height: 20px; }
+    .notif-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: var(--fail);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 20px;
+      text-align: center;
+      border: 2px solid #fff;
+    }
+    .notif-badge[hidden], .notif-panel[hidden] { display: none; }
+    .notif-panel {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      width: min(400px, calc(100vw - 24px));
+      max-height: min(70vh, 560px);
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      z-index: 40;
+    }
+    .notif-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: linear-gradient(115deg, var(--accent-soft), var(--teal-soft)); border-bottom: 1px solid var(--line); }
+    .notif-link { border: 0; background: none; color: var(--accent-deep); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .notif-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+    .notif-item a { display: grid; gap: 4px; padding: 11px 16px; color: var(--ink); text-decoration: none; border-bottom: 1px solid rgba(13, 150, 212, 0.1); }
+    .notif-item a:hover { background: var(--bg); }
+    .notif-item.unread a { background: rgba(13, 150, 212, 0.06); }
+    .notif-item.unread .notif-title::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-right: 8px; vertical-align: 2px; }
+    .notif-meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+    .notif-title { font-size: 13.5px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+    .notif-empty { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+    .notif-foot { display: grid; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+    .notif-foot .btn { cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; justify-self: start; }
+    .notif-foot .btn[hidden] { display: none; }
+
+    /* Toasts */
+    .toasts { position: fixed; right: 20px; bottom: 20px; z-index: 50; display: grid; gap: 10px; width: min(360px, calc(100vw - 32px)); }
+    .toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--r-sm);
+      box-shadow: var(--shadow);
+      font-size: 13.5px;
+      animation: fadeUp .3s ease both;
+    }
+    .toast-body { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+    .toast-action { flex: none; cursor: pointer; font: inherit; font-size: 12.5px; padding: 4px 12px; }
+    .toast-close { flex: none; border: 0; background: none; font-size: 18px; line-height: 1; color: var(--muted); cursor: pointer; }
+
     /* Deadlines */
     .deadline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
     .deadline-date { font-size: 17px; font-weight: 700; color: var(--accent-deep); }
@@ -1091,6 +1172,8 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .spacer { order: 2; flex-basis: 100%; height: 0; }
       .summary { order: 3; }
       .header-actions .btn:not(.primary) { display: none; }
+      .header-actions .btn.primary { display: none; }
+      .notif-panel { position: fixed; top: 70px; right: 12px; left: 12px; width: auto; max-height: calc(100vh - 90px); }
       .wrap { padding: 20px 14px 56px; }
       .panel { padding: 22px 18px; border-radius: var(--r-md); }
       .action { flex-direction: column; gap: 6px; padding: 14px 16px; }
@@ -1148,8 +1231,28 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       <a class="btn" href="#deadlines">上架期限</a>
       <a class="btn" href="#privacy">隱私</a>
       <a class="btn primary" href="api.json">JSON API</a>
+      <div class="notif">
+        <button class="notif-bell" id="notif-bell" type="button" aria-label="通知" aria-expanded="false" aria-controls="notif-panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-badge" id="notif-badge" hidden>0</span>
+        </button>
+        <div class="notif-panel" id="notif-panel" role="dialog" aria-label="通知中心" hidden>
+          <div class="notif-head">
+            <strong>通知中心</strong>
+            <button class="notif-link" id="notif-mark-read" type="button">全部標為已讀</button>
+          </div>
+          <ul class="notif-list" id="notif-list"></ul>
+          <div class="notif-foot">
+            <button class="btn" id="notif-permission" type="button" hidden>開啟系統通知</button>
+            <span>網頁開著時每 5 分鐘檢查一次；想在關閉時也收到，可訂閱行事曆或 RSS。</span>
+          </div>
+        </div>
+      </div>
     </nav>
   </header>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script type="application/json" id="notif-data">${buildNotificationsJson(data.tracked, data.cachedAt).replace(/</g, '\\u003c')}</script>
+  <script src="notifications.js" defer></script>
 
   <main class="wrap">
     <p class="intro">iOS 與 Android 最新版本，以及隨之而來的 Xcode、SDK 與商店上架需求。</p>

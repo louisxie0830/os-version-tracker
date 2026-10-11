@@ -255,3 +255,19 @@ ${entries}
 </feed>
 `;
 }
+
+/**
+ * Compact feed for the in-page notification center, which polls it while the site is open
+ * (api.json is much larger). Newest first by when the item first appeared.
+ */
+export function buildNotificationsJson(items: TrackedItem[], cachedAt: string, limit = 40): string {
+  // Newest first by first-seen time; then news by publish date; deadlines (whose date is when they take
+  // effect, not when they were announced) last, soonest first
+  const rank = (item: TrackedItem) => item.firstSeen ? 2 : item.kind === 'deadline' ? 0 : 1;
+  const sorted = [...items]
+    .sort((a, b) => rank(b) - rank(a)
+      || (rank(a) === 0 ? a.date.localeCompare(b.date) : (b.firstSeen ?? b.date).localeCompare(a.firstSeen ?? a.date)))
+    .slice(0, limit)
+    .map(({ id, kind, platform, title, detail, url, date, firstSeen }) => ({ id, kind, platform, title, detail, url, date, firstSeen }));
+  return JSON.stringify({ cachedAt, items: sorted });
+}

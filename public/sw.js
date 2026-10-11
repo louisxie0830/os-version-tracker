@@ -1,5 +1,5 @@
 // Bump when the precached shell or caching strategy changes, so old caches are dropped
-const CACHE = 'os-tracker-v2';
+const CACHE = 'os-tracker-v3';
 // Paths are relative to the worker's scope, so the site works at a domain root or under /<repo>/ on GitHub Pages
 const SCOPE = self.registration.scope;
 const PRECACHE = ['./', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png']
@@ -29,13 +29,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (request.mode === 'navigate' || path === '' || path === 'api' || path === 'api.json' || path.startsWith('js/')) {
+  if (request.mode === 'navigate' || path === '' || path === 'api' || path === 'api.json' || path.startsWith('js/') || path.startsWith('notifications.')) {
     // Every navigation (whatever its query string) shares the cached page
     const key = request.mode === 'navigate' ? SCOPE : request;
     event.respondWith(
       fetchAndCache(request, key).catch(() => caches.match(key).then(hit => hit ?? Response.error())),
     );
   }
+});
+
+// Clicking a notification focuses an open tab of the site (or opens one) at the notification's link
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url || SCOPE;
+  event.waitUntil((async () => {
+    const tabs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const sameSite = url.startsWith(SCOPE);
+    const tab = tabs.find(c => c.url.startsWith(SCOPE));
+    if (sameSite && tab) {
+      await tab.focus();
+      return tab.navigate(url);
+    }
+    return self.clients.openWindow(url);
+  })());
 });
 
 async function fetchAndCache(request, key = request) {

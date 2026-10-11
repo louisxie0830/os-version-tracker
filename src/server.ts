@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchAllVersions, SITE_URL } from './fetch-all.js';
 import { buildCalendar } from './calendar.js';
-import { buildAtomFeed } from './changes.js';
+import { buildAtomFeed, buildNotificationsJson } from './changes.js';
 import { parseConfig } from './checker.js';
 import { renderHTML } from './render.js';
 
@@ -21,7 +21,7 @@ const STATIC_TYPES: Record<string, string> = {
 };
 
 async function serveStatic(pathname: string, res: http.ServerResponse): Promise<boolean> {
-  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/og-image.png' || /^\/icons\/[\w.-]+$/.test(pathname);
+  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/og-image.png' || pathname === '/notifications.js' || /^\/icons\/[\w.-]+$/.test(pathname);
   if (!allowed) return false;
   try {
     const body = await readFile(path.join(PUBLIC_DIR, pathname));
@@ -74,6 +74,18 @@ const server = http.createServer(async (req, res) => {
     } catch {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Failed to build calendar' }));
+    }
+    return;
+  }
+
+  if (req.method === 'GET' && pathname === '/notifications.json') {
+    try {
+      const data = await fetchAllVersions();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(buildNotificationsJson(data.tracked, data.cachedAt));
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Failed to build notifications' }));
     }
     return;
   }

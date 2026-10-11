@@ -97,7 +97,7 @@ async function main(): Promise<void> {
   const { fetchAllVersions } = await import('./fetch-all.js');
   const { renderHTML } = await import('./render.js');
   const { buildCalendar } = await import('./calendar.js');
-  const { buildAtomFeed, flushNotifications } = await import('./changes.js');
+  const { buildAtomFeed, buildNotificationsJson, flushNotifications } = await import('./changes.js');
 
   // 2. Fetch everything (this also sends change notifications and source alerts)
   const data = await fetchAllVersions();
@@ -122,6 +122,7 @@ async function main(): Promise<void> {
   await writeFile(path.join(OUT, 'api.json'), JSON.stringify(data));
   await writeFile(path.join(OUT, 'calendar.ics'), buildCalendar(data.timeline, SITE_URL));
   await writeFile(path.join(OUT, 'feed.xml'), buildAtomFeed(data.tracked, SITE_URL, data.cachedAt));
+  await writeFile(path.join(OUT, 'notifications.json'), buildNotificationsJson(data.tracked, data.cachedAt));
   await writeFile(path.join(OUT, 'health.json'), JSON.stringify({ status: 'ok', builtAt: data.cachedAt, sources: `${healthy}/${sources.length}` }));
   await writeFile(path.join(OUT, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
