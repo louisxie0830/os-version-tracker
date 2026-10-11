@@ -27,7 +27,8 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是個人維�
 |---|---|
 | Apple 官方 | developer.apple.com（Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 使用率、release notes、隱私清單文件）、gdmf.apple.com、www.apple.com、support.apple.com、itunes.apple.com、apps.apple.com |
 | Google 官方 | developer.android.com、android-developers.googleblog.com、support.google.com（Play 政策）、play.google.com、dl.google.com（Google Maven、Android SDK repository） |
-| 開發工具 | services.gradle.org、gradle.org、kotlinlang.org、repo1.maven.org、jb.gg（Android Studio 版本清單） |
+| 開發工具 | services.gradle.org、gradle.org、kotlinlang.org、repo1.maven.org、jb.gg（Android Studio 版本清單）、androidstudio.googleblog.com、developer.android.com/feeds（AndroidX 版本說明） |
+| 開發者新聞 | Swift.org（www.swift.org）、Kotlin Blog（blog.jetbrains.com）、Firebase Blog（firebase.blog），以及上列 Apple 與 Google 的官方 feed；新聞標題維持原文並連回原始文章 |
 | 第三方彙整 | xcodereleases.com、endoflife.date |
 | 版本占比 | StatCounter Global Stats（gs.statcounter.com） |
 | 社群 | GitHub（api.github.com、raw.githubusercontent.com、github.com）、Stack Exchange API（api.stackexchange.com） |

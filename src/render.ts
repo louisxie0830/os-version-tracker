@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { markdownToHtml } from './markdown.js';
-import type { ActionStatus, Deadline, iOSAdoption, NewsItem, OSVersionInfo, SubmissionDeadline, ToolVersion } from './types.js';
+import type { ActionStatus, Deadline, iOSAdoption, OSVersionInfo, SubmissionDeadline, ToolVersion } from './types.js';
 
 export interface RenderOptions {
   /** Pre-rendered for static hosting: the project checker runs in the browser instead of on the server */
@@ -126,20 +126,6 @@ function androidTiles(toolchain: AllVersions['androidToolchain']): Tile[] {
 
 
 
-function renderNews(title: string, items: NewsItem[], moreUrl: string): string {
-  if (!items.length) return '';
-  return `<div class="case" style="margin-top:18px">
-    <div class="case-head">
-      <span class="case-no">${title}</span>
-      ${externalLink(moreUrl, `查看全部 →`, 'case-count')}
-    </div>
-    <ul class="news">${items.map(n => `<li data-key="news:${esc(n.url)}">
-      <span class="news-date">${esc(n.date)}</span>
-      ${n.important ? '<span class="status status-urgent news-flag">重要</span>' : ''}
-      ${externalLink(n.url, `${esc(n.title)}`)}
-    </li>`).join('')}</ul>
-  </div>`;
-}
 
 
 /** Stacked bar of the 4 newest majors (plus "更早") */
@@ -424,6 +410,7 @@ const KIND_LABEL: Record<TrackedItem['kind'], string> = {
   deadline: '期限',
   'apple-news': 'Apple 公告',
   'android-news': 'Android 公告',
+  'dev-news': '開發者新聞',
   device: '新機型',
   crash: 'SDK 閃退',
 };
@@ -672,6 +659,38 @@ function renderLegalSection(): string {
     <p class="legal-lead">This is an unofficial project, not affiliated with Apple, Google or any company or bank mentioned. Trademarks and quoted content belong to their owners. Data is collected automatically, for reference only, and is not professional advice. No cookies, tracking or personal data collection.</p>
     ${zh ? `<details class="legal-doc"><summary>閱讀完整中文版</summary><div class="legal-body">${body(zh)}</div></details>` : ''}
     ${en ? `<details class="legal-doc" lang="en"><summary>Read the full English version</summary><div class="legal-body">${body(en)}</div></details>` : ''}
+  </section>`;
+}
+
+const NEWS_CATEGORY: Record<string, string> = { announcement: '公告', release: '版本發布', blog: '部落格' };
+
+function renderNewsSection(data: AllVersions): string {
+  const items = data.devNews ?? [];
+  if (!items.length) return '';
+  const sources = [...new Set(items.map(i => i.source))];
+  const rows = items.map((n, i) => `<li class="news-item${i >= 25 ? ' news-more' : ''}" data-platform="${esc(n.platform)}" data-important="${n.important ? '1' : '0'}" data-key="news:${esc(n.url)}">
+      <span class="news-date">${esc(n.date)}</span>
+      <span class="tl-platform ${platformClass(n.platform)}">${esc(n.platform)}</span>
+      <span class="news-cat">${NEWS_CATEGORY[n.category] ?? ''}</span>
+      ${n.important ? '<span class="status status-urgent news-flag">重要</span>' : ''}
+      ${externalLink(n.url, esc(n.title), 'news-title')}
+      <span class="news-source">${esc(n.source)}</span>
+    </li>`).join('');
+  return `<section class="panel" id="news">
+    <h2>開發者新聞</h2>
+    <p class="table-note">彙整 ${sources.length} 個官方來源近 60 天的公告、版本發布與部落格文章，標題維持原文。「重要」為規定、期限、棄用、重大版本或服務異常等需要留意的項目。</p>
+    <div class="news-filters" role="group" aria-label="篩選新聞">
+      <button type="button" class="chip is-active" data-filter="all">全部</button>
+      <button type="button" class="chip" data-filter="iOS">iOS</button>
+      <button type="button" class="chip" data-filter="Android">Android</button>
+      <button type="button" class="chip" data-filter="跨平台">跨平台</button>
+      <button type="button" class="chip" data-filter="important">只看重要</button>
+    </div>
+    <div class="case" style="margin-top:12px">
+      <ul class="news news-feed" id="news-list">${rows}</ul>
+      ${items.length > 25 ? `<button type="button" class="news-show-more" id="news-show-more">顯示更多（共 ${items.length} 則）</button>` : ''}
+    </div>
+    ${renderSources(data, ['devNews'])}
   </section>`;
 }
 
@@ -1370,6 +1389,22 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
     .upgrade-plan li.plan-urgent { border-color: rgba(207, 63, 88, 0.4); background: var(--fail-soft); }
     .upgrade-plan li span { color: var(--muted); }
 
+    /* Developer news */
+    .news-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { font: inherit; font-size: 13px; font-weight: 600; color: var(--accent-deep); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+    .chip:hover { background: var(--accent-soft); }
+    .chip.is-active { color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; }
+    .news-feed .news-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
+    .news-feed .news-item[hidden], .news-feed.collapsed .news-more { display: none; }
+    .news-cat { font-size: 12px; color: var(--muted); }
+    .news-title { flex: 1 1 320px; min-width: 0; color: var(--ink); font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+    a.news-title:hover { color: var(--accent-deep); text-decoration: underline; }
+    .news-source { font-size: 12px; color: var(--muted); margin-left: auto; }
+    .news-show-more { display: block; width: 100%; padding: 10px; font: inherit; font-size: 13px; font-weight: 600; color: var(--accent-deep); background: var(--bg); border: 0; border-top: 1px solid var(--line); cursor: pointer; }
+    .news-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 14px; }
+    .news-jump { margin: 14px 0 0; font-size: 13.5px; }
+    .news-jump a { color: var(--accent-deep); font-weight: 600; text-decoration: none; }
+
     /* Deadlines */
     .deadline-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 16px; }
     .deadline-date { font-size: 17px; font-weight: 700; color: var(--accent-deep); }
@@ -1405,7 +1440,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .adoption-row { grid-template-columns: 1fr; gap: 4px; }
       .news li { flex-wrap: wrap; padding: 10px 16px; }
       .tl-item { flex-direction: column; gap: 4px; padding: 14px 16px; }
-      .check-form, .check-results, .crash-grid, .privacy-links, .share-grid { grid-template-columns: 1fr; }
+      .check-form, .check-results, .crash-grid, .privacy-links, .share-grid { grid-template-columns: minmax(0, 1fr); }
       /* Tables become one card per row, each value labelled, instead of clipping columns */
       .table-wrap { border: 0; background: transparent; overflow: visible; }
       .stack-on-mobile, .stack-on-mobile tbody, .stack-on-mobile tr, .stack-on-mobile td { display: block; width: 100%; }
@@ -1419,7 +1454,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       .stack-on-mobile td.row-title { border-top: 0; justify-content: flex-start; text-align: left; font-size: 15px; padding-top: 0; }
       .stack-on-mobile td.row-title::before { content: none; }
       .wrap-cell { min-width: 0; }
-      .table-wrap.share-table { border: 1px solid var(--line); background: #fff; }
+      .table-wrap.share-table { border: 1px solid var(--line); background: #fff; overflow-x: auto; }
       .share-table td, .share-table th { padding: 8px 10px; }
       .bank-table .bank-updated { display: none; }
       .bank-table tr { padding: 8px 14px; margin-bottom: 8px; }
@@ -1471,6 +1506,7 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       <a href="#recent">最新</a>
       <a href="#checker">專案檢查</a>
       <a href="#crashes">閃退</a>
+      <a href="#news">新聞</a>
       <a href="#ios">iOS</a>
       <a href="#android">Android</a>
       <a href="#compat">相容性</a>
@@ -1494,14 +1530,16 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
 
     ${renderCrashesSection(data)}
 
+    ${renderNewsSection(data)}
+
     ${renderPlatformSection('ios', 'Apple iOS', ios,
       renderActions(data.iosActions) + renderVersionDistribution('ios', data) + renderTiles(iOSTiles(data.iosToolchain, data.announcedDevices))
-      + renderNews('Apple 開發者公告', data.appleNews, 'https://developer.apple.com/news/')
+      + '<p class="news-jump"><a href="#news">查看 iOS 開發者新聞 →</a></p>'
       + renderSources(data, ['ios', 'appleDeadline', 'appleRequirements', 'iosToolchain', 'xcodeSupport', 'adoption', 'osShare', 'appleNews']))}
 
     ${renderPlatformSection('android', 'Android', android,
       renderActions(data.androidActions) + renderVersionDistribution('android', data) + renderTiles(androidTiles(data.androidToolchain))
-      + renderNews('Android 開發者部落格', data.androidNews, 'https://android-developers.googleblog.com/')
+      + '<p class="news-jump"><a href="#news">查看 Android 開發者新聞 →</a></p>'
       + renderSources(data, ['android', 'googleDeadline', 'androidToolchain', 'androidCompat', 'playBilling', 'playPolicy', 'pageSize', 'osShare', 'androidNews']))}
 
     ${renderCompatSection(data)}
@@ -1539,6 +1577,36 @@ export function renderHTML(data: AllVersions, config: ProjectConfig | null = nul
       }
       for (const el of items) seen.add(el.dataset.key);
       localStorage.setItem(KEY, JSON.stringify([...seen].slice(-1000)));
+    } catch {}
+
+    // Developer news: platform / importance filter and "show more"
+    try {
+      const list = document.getElementById('news-list');
+      const more = document.getElementById('news-show-more');
+      if (list) {
+        if (more) list.classList.add('collapsed');
+        let filter = 'all';
+        const apply = () => {
+          let shown = 0;
+          for (const li of list.children) {
+            const match = filter === 'all' || (filter === 'important' ? li.dataset.important === '1' : li.dataset.platform === filter);
+            li.hidden = !match;
+            if (match) shown++;
+          }
+          // With a filter on, show every match; the "show more" cap only applies to the full list
+          list.classList.toggle('collapsed', filter === 'all' && !!more && !more.dataset.expanded);
+          if (more) more.hidden = filter !== 'all' || !!more.dataset.expanded;
+          let empty = list.parentElement.querySelector('.news-empty');
+          if (!shown && !empty) list.insertAdjacentHTML('afterend', '<div class="news-empty">沒有符合的新聞</div>');
+          if (shown && empty) empty.remove();
+        };
+        document.querySelectorAll('.news-filters .chip').forEach(chip => chip.addEventListener('click', () => {
+          filter = chip.dataset.filter;
+          document.querySelectorAll('.news-filters .chip').forEach(c => c.classList.toggle('is-active', c === chip));
+          apply();
+        }));
+        more?.addEventListener('click', () => { more.dataset.expanded = '1'; apply(); });
+      }
     } catch {}
 
     // Remember the project checker inputs in this browser

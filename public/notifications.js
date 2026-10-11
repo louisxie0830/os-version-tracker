@@ -7,7 +7,7 @@
   const RECENT_MS = 7 * 24 * 60 * 60 * 1000;
   const KNOWN_KEY = 'notif-known';
   const READ_KEY = 'notif-read';
-  const KIND = { deadline: '期限', 'apple-news': 'Apple 公告', 'android-news': 'Android 公告', device: '新機型', crash: 'SDK 閃退' };
+  const KIND = { deadline: '期限', 'apple-news': 'Apple 公告', 'android-news': 'Android 公告', 'dev-news': '開發者新聞', device: '新機型', crash: 'SDK 閃退' };
 
   const bell = document.getElementById('notif-bell');
   const panel = document.getElementById('notif-panel');

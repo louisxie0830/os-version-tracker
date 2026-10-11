@@ -17,7 +17,11 @@ before(async () => {
   await new Promise<void>(r => server.listen(0, '127.0.0.1', r));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 });
-after(() => new Promise(r => server.close(r)));
+after(() => new Promise(r => {
+  // Keep-alive sockets from the test requests would otherwise keep the process alive
+  server.closeAllConnections();
+  server.close(r);
+}));
 
 /** Raw request, so paths like "/icons/../x" reach the server un-normalized */
 function get(path: string): Promise<{ status: number; type: string; body: string }> {

@@ -2,12 +2,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { deadlineId } from './calendar.js';
 import type { AnnouncedDevice, Deadline, NewsItem } from './types.js';
 import type { CrashItem } from './fetchers/crashes.js';
+import type { DevNewsItem } from './fetchers/dev-news.js';
 import { safeUrl } from './safe-url.js';
 import { WEBHOOK_TIMEOUT_MS } from './net.js';
 
 export interface TrackedItem {
   id: string;
-  kind: 'deadline' | 'apple-news' | 'android-news' | 'device' | 'crash';
+  kind: 'deadline' | 'apple-news' | 'android-news' | 'dev-news' | 'device' | 'crash';
   platform: 'iOS' | 'Android' | '跨平台';
   title: string;
   detail: string;
@@ -72,6 +73,7 @@ export function toTrackedItems(input: {
   androidNews: NewsItem[];
   devices: AnnouncedDevice[];
   crashes?: CrashItem[];
+  devNews?: DevNewsItem[];
 }): TrackedItem[] {
   return [
     ...input.deadlines.map(d => ({
@@ -110,6 +112,18 @@ export function toTrackedItems(input: {
       url: d.url,
       date: d.date,
     })),
+    // Important items from the other news feeds (Apple News / Android blog are tracked above)
+    ...(input.devNews ?? [])
+      .filter(n => n.important && !n.id.startsWith('apple-news:') && !n.id.startsWith('android-blog:'))
+      .map(n => ({
+        id: `dev-news:${n.url}`,
+        kind: 'dev-news' as const,
+        platform: n.platform,
+        title: n.title,
+        detail: n.source,
+        url: n.url,
+        date: n.date,
+      })),
     // Only crash reports that many developers hit, or that mention the newest OS
     ...(input.crashes ?? []).filter(c => c.source === 'GitHub' && (c.newOs || (c.reactions ?? 0) >= 10)).map(c => ({
       id: `crash:${c.url}`,

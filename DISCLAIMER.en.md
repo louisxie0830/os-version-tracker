@@ -29,7 +29,8 @@ The data shown on the Site is collected automatically from the public sources be
 |---|---|
 | Apple (official) | developer.apple.com (Developer News / Releases, Upcoming Requirements, Xcode support table, App Store usage, release notes, privacy manifest documentation), gdmf.apple.com, www.apple.com, support.apple.com, itunes.apple.com, apps.apple.com |
 | Google (official) | developer.android.com, android-developers.googleblog.com, support.google.com (Play policies), play.google.com, dl.google.com (Google Maven, Android SDK repository) |
-| Developer tools | services.gradle.org, gradle.org, kotlinlang.org, repo1.maven.org, jb.gg (Android Studio release list) |
+| Developer tools | services.gradle.org, gradle.org, kotlinlang.org, repo1.maven.org, jb.gg (Android Studio release list), androidstudio.googleblog.com, developer.android.com/feeds (AndroidX release notes) |
+| Developer news | Swift.org (www.swift.org), the Kotlin Blog (blog.jetbrains.com), the Firebase Blog (firebase.blog), and the Apple and Google feeds listed above; news titles are shown in their original wording and link to the original articles |
 | Third-party aggregators | xcodereleases.com, endoflife.date |
 | Version market share | StatCounter Global Stats (gs.statcounter.com) |
 | Community | GitHub (api.github.com, raw.githubusercontent.com, github.com), Stack Exchange API (api.stackexchange.com) |

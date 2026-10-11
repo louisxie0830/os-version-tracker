@@ -28,6 +28,7 @@ import { AGP_PAST_RELEASES_URL, fetchAgpJdk, type AgpJdkRequirement } from './fe
 import { fetchPrivacyCompliance, THIRD_PARTY_SDK_URL, type PrivacyCompliance } from './fetchers/privacy.js';
 import { fetchCrashReport, type CrashReport } from './fetchers/crashes.js';
 import { fetchOsShare, STATCOUNTER_URL, type OsShare } from './fetchers/os-share.js';
+import { fetchDevNews, type DevNewsItem } from './fetchers/dev-news.js';
 import { fetchTaiwanBankApps, type TaiwanBankApp } from './fetchers/tw-banks.js';
 import { anonymizeAppStoreUrl, maskName } from './mask.js';
 import { createRefreshCache } from './refresh-cache.js';
@@ -76,6 +77,7 @@ export interface AllVersions {
   crashes: CrashReport | null;
   osShare: OsShare | null;
   twBanks: TaiwanBankApp[];
+  devNews: DevNewsItem[];
   sources: Record<SourceKey, SourceInfo>;
   cachedAt: string;
 }
@@ -109,6 +111,7 @@ const SOURCES = {
   privacy: { label: 'Apple 隱私清單與第三方 SDK 規定', url: THIRD_PARTY_SDK_URL },
   osShare: { label: 'StatCounter Global Stats（台灣、全球）', url: STATCOUNTER_URL },
   twBanks: { label: 'App Store / Google Play（台灣區）', url: 'https://apps.apple.com/tw/' },
+  devNews: { label: 'Apple / Android / Swift / Kotlin / Firebase 官方 feed', url: 'https://developer.apple.com/news/' },
   crashes: { label: 'Apple / Android release notes · GitHub SDK issues', url: 'https://developer.apple.com/documentation/ios-ipados-release-notes' },
 } as const;
 
@@ -162,7 +165,7 @@ async function refreshAllVersions(): Promise<AllVersions> {
   const [
     ios, android, appleDeadline, googleDeadline, iosToolchain, androidToolchain, iosAdoption,
     appleNews, androidNews, androidCompat, xcodeSupport, appleRequirements, playPolicy, playBilling, pageSize,
-    ciImages, agpJdk, privacy, osShare, twBanks,
+    ciImages, agpJdk, privacy, osShare, twBanks, devNews,
   ] = await Promise.all([
     track('ios', fetchiOSVersions(), []),
     track('android', fetchAndroidVersions(), []),
@@ -184,6 +187,7 @@ async function refreshAllVersions(): Promise<AllVersions> {
     track('privacy', fetchPrivacyCompliance(), null),
     track('osShare', fetchOsShare(), null),
     track('twBanks', fetchTaiwanBankApps(), []),
+    track('devNews', fetchDevNews(), []),
   ]);
 
   // Crash notes depend on which OS / Xcode versions are current
@@ -218,7 +222,7 @@ async function refreshAllVersions(): Promise<AllVersions> {
   }
 
   const timeline = buildDeadlineTimeline(allDeadlines);
-  const { items: tracked, added } = recordItems(toTrackedItems({ deadlines: timeline, appleNews, androidNews, devices: announcedDevices, crashes: crashes?.sdks }));
+  const { items: tracked, added } = recordItems(toTrackedItems({ deadlines: timeline, appleNews, androidNews, devices: announcedDevices, crashes: crashes?.sdks, devNews }));
   void notifyWebhook(added, SITE_URL);
 
   return {
@@ -262,6 +266,7 @@ async function refreshAllVersions(): Promise<AllVersions> {
     crashes,
     osShare,
     // Bank and app names are partially masked everywhere they're published (page and api.json)
+    devNews,
     twBanks: twBanks.map(b => ({
       ...b,
       bank: maskName(b.bank),
