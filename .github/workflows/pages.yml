@@ -1,0 +1,130 @@
+# Rebuilds the static site from the latest official sources and publishes it to GitHub Pages.
+# One-time setup: repo Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Optional repository secrets: NOTIFY_WEBHOOK_URL (new requirements), ALERT_WEBHOOK_URL (source failures).
+# Source failures and incomplete data also open a GitHub issue (closed again on recovery), so GitHub emails the
+# repo's watchers. External links are checked weekly by links.yml.
+# Optional repository variable: SITE_URL (defaults to https://<owner>.github.io/<repo>).
+name: Build and deploy site
+
+on:
+  schedule:
+    # Twice a day, 05:43 and 17:43 Taipei (21:43 / 09:43 UTC), off the hour and away from 00:00 UTC: runs set
+    # for 08:17 Taipei (00:17 UTC, GitHub's busiest time) started 4–6 hours late. Each run's summary shows when
+    # the data was fetched. 12 hours apart, matching REFRESH_MINUTES in src/build-static.ts
+    - cron: '43 21 * * *'
+    - cron: '43 9 * * *'
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Least privilege: read the repo, and only the deploy job may publish Pages
+permissions:
+  contents: read
+
+# Never run two builds at once (the state handed between runs would race); don't cancel a deploy midway
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  # Code changes (a push, a manual run) are verified first by the same workflow pull requests use: Node 24 with
+  # the coverage floor, and Node 26. Scheduled refreshes rebuild the already-verified code with new data, so
+  # they skip it (the page check below still runs on the new data)
+  verify:
+    if: github.event_name != 'schedule'
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  build:
+    needs: verify
+    # Only after verification passed; a scheduled refresh (verification skipped on purpose) goes straight on
+    if: always() && (needs.verify.result == 'success' || (needs.verify.result == 'skipped' && github.event_name == 'schedule'))
+    runs-on: ubuntu-24.04
+    # issues: write lets a failing source open (and later close) an alert issue
+    permissions:
+      contents: read
+      issues: write
+    timeout-minutes: 15
+    steps:
+      # Actions are pinned to full commit SHAs (tag in the comment) so a moved tag can't change what runs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      # --ignore-scripts: dependencies' install scripts never run on the runner
+      - run: npm ci --ignore-scripts
+
+      # State handed between runs ("first seen" times, undelivered notifications, alert streaks).
+      # Each run saves a new entry; restore-keys picks the most recent one.
+      - name: Restore state
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .state
+          key: pages-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: pages-state-
+
+      - name: Build static site
+        run: |
+          export SITE_URL="${SITE_URL_OVERRIDE:-https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}}"
+          npm run build:static
+        env:
+          SITE_URL_OVERRIDE: ${{ vars.SITE_URL }}
+          NOTIFY_WEBHOOK_URL: ${{ secrets.NOTIFY_WEBHOOK_URL }}
+          ALERT_WEBHOOK_URL: ${{ secrets.ALERT_WEBHOOK_URL }}
+          # Raises the GitHub API rate limits (crash reports, advisories) and opens source alert issues
+          GITHUB_TOKEN: ${{ github.token }}
+          ALERT_GITHUB_ISSUES: '1'
+
+      # Headless Chrome at 390 / 1100 / 1440px, light and dark: layout, clicks, script errors, filters and search,
+      # contrast, broken anchors and files. A code change that fails isn't deployed; on scheduled runs (only new
+      # data) it warns instead of blocking
+      - name: Check the page at phone, tablet and desktop widths
+        continue-on-error: ${{ github.event_name == 'schedule' }}
+        run: npm run check:page
+
+      # Saved even when the build fails, so the next run knows which failures were already alerted
+      - name: Save state
+        if: always() && hashFiles('.state/*.json') != ''
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .state
+          key: pages-state-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  # GitHub disables scheduled workflows in public repos after 60 days without a commit (this repo keeps a
+  # single amended commit, so that can happen quietly). Re-enabling the workflow through the API resets the
+  # timer without a commit.
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Keep the schedule enabled
+        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pages.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -1,0 +1,773 @@
+{
+ "primaryContentSections": [
+  {
+   "kind": "content",
+   "content": [
+    {
+     "type": "paragraph",
+     "inlineContent": [
+      {
+       "type": "text",
+       "text": "Unrelated section."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "possibleValues",
+   "values": [
+    {
+     "name": "NSPrivacyAccessedAPICategoryFileTimestamp",
+     "content": [
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "APIs in this category:"
+        }
+       ]
+      },
+      {
+       "type": "unorderedList",
+       "items": [
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/a/creationDate",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/a/modificationDate",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "codeVoice",
+             "code": "getattrlist(_:_:_:_:_:)"
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/kernel/stat",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "codeVoice",
+             "code": "fstat(_:_:)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "Reason codes:"
+        }
+       ]
+      },
+      {
+       "type": "termList",
+       "items": [
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "DDA9.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason DDA9.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "C617.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason C617.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "3B52.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 3B52.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "0A2A.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 0A2A.1."
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "NSPrivacyAccessedAPICategorySystemBootTime",
+     "content": [
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "APIs in this category:"
+        }
+       ]
+      },
+      {
+       "type": "unorderedList",
+       "items": [
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/a/systemUptime",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "codeVoice",
+             "code": "mach_absolute_time()"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "Reason codes:"
+        }
+       ]
+      },
+      {
+       "type": "termList",
+       "items": [
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "35F9.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 35F9.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "8FFB.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 8FFB.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "3D61.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 3D61.1."
+             }
+            ]
+           },
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Second paragraph, ignored."
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "NSPrivacyAccessedAPICategoryDiskSpace",
+     "content": [
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "APIs in this category:"
+        }
+       ]
+      },
+      {
+       "type": "unorderedList",
+       "items": [
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/a/volumeAvailableCapacityKey",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "codeVoice",
+             "code": "statfs(_:_:)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "Reason codes:"
+        }
+       ]
+      },
+      {
+       "type": "termList",
+       "items": [
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "85F4.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 85F4.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "E174.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason E174.1."
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "NSPrivacyAccessedAPICategoryActiveKeyboards",
+     "content": [
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "APIs in this category:"
+        }
+       ]
+      },
+      {
+       "type": "unorderedList",
+       "items": [
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/a/activeInputModes",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "Reason codes:"
+        }
+       ]
+      },
+      {
+       "type": "termList",
+       "items": [
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "3EC4.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 3EC4.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "54BD.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 54BD.1."
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "NSPrivacyAccessedAPICategoryUserDefaults",
+     "content": [
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "APIs in this category:"
+        }
+       ]
+      },
+      {
+       "type": "unorderedList",
+       "items": [
+        {
+         "content": [
+          {
+           "type": "paragraph",
+           "inlineContent": [
+            {
+             "type": "reference",
+             "identifier": "doc://example/documentation/a/UserDefaults",
+             "isActive": true
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "Reason codes:"
+        }
+       ]
+      },
+      {
+       "type": "termList",
+       "items": [
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "CA92.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason: read and write values that only this app can see via "
+             },
+             {
+              "type": "reference",
+              "identifier": "doc://example/documentation/a/UserDefaults",
+              "isActive": true
+             },
+             {
+              "type": "text",
+              "text": "."
+             }
+            ]
+           },
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Second paragraph, ignored."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "1C8F.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason 1C8F.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "C56D.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason C56D.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "AC6B.1"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Test reason AC6B.1."
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "term": {
+          "inlineContent": [
+           {
+            "type": "codeVoice",
+            "code": "not-a-code"
+           }
+          ]
+         },
+         "definition": {
+          "content": [
+           {
+            "type": "paragraph",
+            "inlineContent": [
+             {
+              "type": "text",
+              "text": "Entries whose term is not a reason code are skipped."
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "name": "SomethingElse",
+     "content": [
+      {
+       "type": "paragraph",
+       "inlineContent": [
+        {
+         "type": "text",
+         "text": "Not an API category; skipped."
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "references": {
+  "doc://example/documentation/a/creationDate": {
+   "title": "creationDate",
+   "type": "topic"
+  },
+  "doc://example/documentation/a/modificationDate": {
+   "title": "modificationDate",
+   "type": "topic"
+  },
+  "doc://example/documentation/a/systemUptime": {
+   "title": "systemUptime",
+   "type": "topic"
+  },
+  "doc://example/documentation/a/volumeAvailableCapacityKey": {
+   "title": "volumeAvailableCapacityKey",
+   "type": "topic"
+  },
+  "doc://example/documentation/a/activeInputModes": {
+   "title": "activeInputModes",
+   "type": "topic"
+  },
+  "doc://example/documentation/a/UserDefaults": {
+   "title": "UserDefaults",
+   "type": "topic"
+  }
+ }
+}

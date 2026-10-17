@@ -1,0 +1,29 @@
+{
+  "resultCount": 3,
+  "results": [
+    {
+      "trackId": 373500505,
+      "trackName": "國泰世華網路銀行CUBE",
+      "minimumOsVersion": "15.0",
+      "version": "7.10.1701",
+      "currentVersionReleaseDate": "2026-10-06T02:38:46Z",
+      "trackViewUrl": "https://apps.apple.com/tw/app/sample-app-a/id373500505?uo=4"
+    },
+    {
+      "trackId": 417698185,
+      "trackName": "Sample App B",
+      "minimumOsVersion": "14",
+      "version": "5.2.26",
+      "currentVersionReleaseDate": "2026-08-21T16:32:29Z",
+      "trackViewUrl": "https://apps.apple.com/tw/app/sample-app-b/id417698185?uo=4"
+    },
+    {
+      "trackId": 6479990131,
+      "trackName": "Sample App C",
+      "minimumOsVersion": "13.0",
+      "version": "1.3.3",
+      "currentVersionReleaseDate": "2026-10-01T09:54:58Z",
+      "trackViewUrl": "https://apps.apple.com/tw/app/sample-app-c/id6479990131?uo=4"
+    }
+  ]
+}

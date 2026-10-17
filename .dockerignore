@@ -1,0 +1,20 @@
+node_modules
+dist
+.git
+.gitignore
+.claude
+.vscode
+.idea
+.DS_Store
+*.log
+npm-debug.log*
+.env
+.env.*
+*.md
+# The legal documents are served at /legal/
+!DISCLAIMER.md
+!DISCLAIMER.en.md
+!SOURCES.md
+Dockerfile
+.dockerignore
+render.yaml

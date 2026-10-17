@@ -1,0 +1,24 @@
+{
+  "name": "OS Version Tracker",
+  "short_name": "OS Tracker",
+  "description": "iOS 與 Android 上架規定與期限、已遭利用的漏洞、新系統閃退與 Xcode / AGP 相容性，官方來源每天自動更新。",
+  "lang": "zh-Hant",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#fbfaf7",
+  "categories": ["developer", "productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "待處理", "url": "./#now", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "資安", "url": "./#security", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "上架規定", "url": "./#deadlines", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "相容性對照表", "url": "./#compat", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

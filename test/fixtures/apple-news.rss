@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic test fixture: structure only, written for this project; not a copy of any third-party page. -->
+<rss version="2.0">
+<channel>
+<title>Test news feed</title>
+<link>https://developer.apple.com/news/</link>
+<description></description>
+
+<item>
+<title>Hello Developer: October 2026</title>
+<link>https://developer.apple.com/news/?id=test0001</link>
+<description>&lt;p&gt;Monthly newsletter (test item).&lt;/p&gt;</description>
+<pubDate>Tue, 06 Oct 2026 08:00:23 PDT</pubDate>
+</item>
+<item>
+<title>Prepare and submit your apps for iPhone Duo</title>
+<link>https://developer.apple.com/news/?id=kkphp5qo</link>
+<description>&lt;p&gt;Test item with a non-breaking space in the title.&lt;/p&gt;</description>
+<pubDate>Mon, 05 Oct 2026 17:05:33 PDT</pubDate>
+</item>
+<item>
+<title>New product page templates</title>
+<link>https://developer.apple.com/news/?id=test0003</link>
+<description>&lt;p&gt;Test item.&lt;/p&gt;</description>
+<pubDate>Mon, 05 Oct 2026 13:00:27 PDT</pubDate>
+</item>
+<item>
+<title>Xcode SDK betas are available</title>
+<link>https://developer.apple.com/news/?id=test0004</link>
+<description>&lt;p&gt;Mentions SDK but is not a requirements post.&lt;/p&gt;</description>
+<pubDate>Fri, 02 Oct 2026 09:00:19 PDT</pubDate>
+</item>
+<item>
+<title>Intermediate certificate expiring soon</title>
+<link>https://developer.apple.com/news/?id=test0005</link>
+<description>&lt;p&gt;Test item.&lt;/p&gt;</description>
+<pubDate>Thu, 01 Oct 2026 10:00:11 PDT</pubDate>
+</item>
+<item>
+<title>Resources for iPhone Duo</title>
+<link>https://developer.apple.com/news/?id=test0006</link>
+<description>&lt;p&gt;Second mention of the same device (deduped).&lt;/p&gt;</description>
+<pubDate>Fri, 18 Sep 2026 10:00:57 PDT</pubDate>
+</item>
+<item>
+<title>Build for iPhone 17 Pro Max and iPhone Air</title>
+<link>https://developer.apple.com/news/?id=test0007</link>
+<description>&lt;p&gt;Known models only.&lt;/p&gt;</description>
+<pubDate>Wed, 09 Sep 2026 16:05:23 PDT</pubDate>
+</item>
+<item>
+<title>Upcoming SDK minimum requirements</title>
+<link>https://developer.apple.com/news/?id=test0008</link>
+<description>&lt;p&gt;Starting April 28, 2026, uploads to App Store Connect need:&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;iOS and iPadOS apps must be built with the iOS 26 &amp;amp; iPadOS 26 SDK or later&lt;/li&gt;
+&lt;li&gt;tvOS apps must be built with the tvOS 26 SDK or later&lt;/li&gt;
+&lt;li&gt;visionOS apps must be built with the visionOS 26 SDK or later&lt;/li&gt;
+&lt;li&gt;watchOS apps must be built with the watchOS 26 SDK or later&lt;/li&gt;
+&lt;/ul&gt;&lt;p&gt;&lt;a href="https://developer.apple.com/app-store/submitting/"&gt;More info&lt;/a&gt;&lt;/p&gt;</description>
+<pubDate>Tue, 03 Feb 2026 06:00:30 PST</pubDate>
+</item>
+</channel>
+</rss>

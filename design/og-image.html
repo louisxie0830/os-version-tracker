@@ -1,0 +1,55 @@
+<!doctype html>
+<!--
+  Source of public/og-image.png, the 1200×630 link preview (Slack, LINE, Facebook…).
+  Kept out of public/ so it isn't deployed. No live numbers on purpose: the image would go stale.
+  Uses system fonts (PingFang TC on macOS); render on a Mac so the output matches. See README「更新分享預覽圖」.
+-->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .og { width: 1200px; height: 630px; background: #f7f6f2; color: #1b2a33; font-family: "PingFang TC", "Noto Sans TC", sans-serif; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 48px; padding: 64px 72px; }
+  .left { display: flex; flex-direction: column; min-width: 0; }
+  .brand { display: flex; align-items: center; gap: 18px; }
+  .mark { width: 72px; height: 72px; border-radius: 20px; background: #1b2a33; display: grid; place-items: center; }
+  .mark svg { width: 46px; height: 46px; }
+  .name { font-size: 34px; font-weight: 600; letter-spacing: .01em; }
+  h1 { margin: 52px 0 0; font-size: 56px; white-space: nowrap; line-height: 1.22; font-weight: 600; letter-spacing: .01em; }
+  h1 span { color: #0a5f8c; }
+  .sub { margin: 22px 0 0; font-size: 25px; line-height: 1.5; color: #5c6a72; }
+  .foot { margin-top: auto; display: flex; align-items: center; gap: 14px; font-size: 22px; color: #5c6a72; }
+  .dot { width: 6px; height: 6px; border-radius: 3px; background: #b7b2a6; }
+  .panel { background: #1b2a33; border-radius: 28px; padding: 34px 34px 30px; display: flex; flex-direction: column; gap: 18px; align-self: center; }
+  .panel-label { font-size: 18px; font-weight: 600; letter-spacing: .1em; color: #b9c6cd; margin-bottom: 4px; }
+  .row { display: flex; align-items: center; gap: 16px; padding-top: 18px; border-top: 1px solid #33444e; }
+  .tag { flex: none; min-width: 72px; text-align: center; padding: 4px 12px; border-radius: 14px; font-size: 19px; font-weight: 600; }
+  .t-sec { background: #3d1c24; color: #f5a3b2; }
+  .t-crash { background: #2a2547; color: #c0b5f4; }
+  .t-dl { background: #3a2a14; color: #f0b56b; }
+  .t-news { background: #1d3442; color: #9cceea; }
+  .row-text { font-size: 21px; color: #fbfaf7; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="og">
+  <div class="left">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2.2" fill="#fff" stroke="none"/><path d="M8.46 15.54a5 5 0 0 1 0-7.08"/><path d="M15.54 8.46a5 5 0 0 1 0 7.08"/><path d="M5.64 18.36a9 9 0 0 1 0-12.72"/><path d="M18.36 5.64a9 9 0 0 1 0 12.72"/></svg></div>
+      <div class="name">OS Version Tracker</div>
+    </div>
+    <h1>iOS 與 Android<br><span>上架規定、資安與閃退</span></h1>
+    <p class="sub">把會擋上架的規定、已遭利用的漏洞與<br>新系統的閃退回報，整理在同一頁。</p>
+    <div class="foot">官方來源自動彙整<span class="dot"></span>每天更新<span class="dot"></span>可訂閱行事曆與 RSS</div>
+  </div>
+  <div class="panel">
+    <div class="panel-label">待處理</div>
+    <div class="row"><span class="tag t-dl">期限</span><span class="row-text">targetSdk 與 Play 政策</span></div>
+    <div class="row"><span class="tag t-sec">資安</span><span class="row-text">已遭利用的漏洞</span></div>
+    <div class="row"><span class="tag t-crash">閃退</span><span class="row-text">新系統與 SDK 閃退</span></div>
+    <div class="row"><span class="tag t-news">相容</span><span class="row-text">Xcode、AGP 對照表</span></div>
+  </div>
+</div>
+</body>
+</html>

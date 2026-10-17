@@ -1,0 +1,30 @@
+/**
+ * The page's Content-Security-Policy. GitHub Pages can't send custom headers, so the static site
+ * carries it in a <meta> tag; the Node server also sends it (plus the header-only directives) as headers.
+ * Styles and scripts must both be same-origin files: no <style> blocks, style attributes or inline scripts.
+ */
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "connect-src 'self'",
+  "font-src 'self'",
+  "manifest-src 'self'",
+  "worker-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'self'",
+].join('; ');
+
+/** Headers for every response of the Node server (frame-ancestors only works as a header, not in <meta>) */
+export const SECURITY_HEADERS: Record<string, string> = {
+  'Content-Security-Policy': `${CONTENT_SECURITY_POLICY}; frame-ancestors 'none'`,
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  // Keep every response (page, JSON, feed, calendar) out of search engines and AI crawlers
+  'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet, noai, noimageai',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+};

@@ -1,0 +1,23 @@
+Copyright (c) 2026 OS Version Tracker author. All rights reserved.
+
+No license is granted to use, copy, modify or distribute this project's source code, text, page design or
+icons, except as permitted by applicable law (such as fair use) and by the GitHub Terms of Service (viewing
+and forking on GitHub).
+
+This notice does not cover third-party material, which keeps its own license:
+
+- Data and text from the sources listed in SOURCES.md: see DATA_LICENSE.md.
+- npm packages the project depends on: see THIRD_PARTY_NOTICES.md.
+- Trademarks: see DISCLAIMER.md, section 2.
+
+Where parts of this project are not protected by copyright (for example material produced by generative AI
+without human creative contribution), no exclusive rights are claimed in them; see DISCLAIMER.md, section 5.
+
+---
+
+著作權所有 (c) 2026 OS Version Tracker 作者。保留所有權利。
+
+除法律允許的合理使用，以及 GitHub 服務條款允許的瀏覽與 fork 外，未授權任何人使用、重製、改作或散布本專案的原始碼、
+文字、頁面設計與圖示。本聲明不涵蓋第三方素材：資料與引用內容見 DATA_LICENSE.md，相依套件見 THIRD_PARTY_NOTICES.md，
+商標見 DISCLAIMER.md 第 2 節。依法不受著作權保護的部分（例如缺乏人類創作貢獻的 AI 產出），作者不主張專屬權利，
+見 DISCLAIMER.md 第 5 節。

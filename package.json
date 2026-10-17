@@ -1,0 +1,27 @@
+{
+  "name": "os-version-tracker",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "start:server": "node dist/server.js",
+    "test": "node --import tsx --test test/*.test.ts",
+    "build:static": "tsc && node dist/build-static.js",
+    "check:page": "node dist/check-page.js site",
+    "sources:doc": "tsc && node dist/sources-doc.js",
+    "check:robots": "node dist/check-robots.js robots-check",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90 --test-coverage-branches=84 --test-coverage-functions=86 test/*.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "rss-parser": "^3.13.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,33 @@
+node_modules
+dist
+site
+# A static build's staging / backup directories (removed by the build; left only by a crash)
+.site.staging-*
+.site.backup-*
+.state
+
+# Secrets and credentials: never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.p8
+*.mobileprovision
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+.npmrc
+.netrc
+credentials*.json
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+
+# OS / editor
+.DS_Store
+*.log
+robots-check

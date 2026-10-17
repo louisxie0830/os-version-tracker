@@ -1,0 +1,76 @@
+# Weekly check of every outside link on the published page and its legal documents. Broken links (gone,
+# unreachable, or redirected to a login page) are listed in one issue, "[外部連結失效] 網站", updated each week and
+# closed once none are left. Also checks every data source endpoint against robots.txt (see check-robots.ts).
+# Sites that refuse automated requests (e.g. Stack Overflow) are skipped, not reported.
+name: Check external links
+
+on:
+  schedule:
+    # Mondays 09:41 Taipei, away from the site builds
+    - cron: '41 1 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - run: npm run build
+
+      - name: Check the links on the live site
+        run: |
+          export SITE_URL="${SITE_URL_OVERRIDE:-https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}}"
+          node dist/check-links.js "$SITE_URL"
+        env:
+          SITE_URL_OVERRIDE: ${{ vars.SITE_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ALERT_GITHUB_ISSUES: '1'
+
+      # Every endpoint in the source register against its site's robots.txt; runs even if the link check failed.
+      # Endpoints newly disallowed (or with an unreadable robots.txt) go to the "[robots.txt]" issue
+      - name: Check robots.txt for every data source
+        if: always()
+        run: npm run check:robots
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ALERT_GITHUB_ISSUES: '1'
+
+      # The dated record: results and a snapshot of each robots.txt, kept for 90 days
+      - name: Keep the robots.txt record
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: robots-check
+          path: robots-check
+          retention-days: 90
+          if-no-files-found: ignore
+
+  # Like the site build: re-enabling the workflow keeps GitHub from turning the schedule off after 60 days
+  keepalive:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - name: Keep the schedule enabled
+        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/links.yml/enable"
+        env:
+          GH_TOKEN: ${{ github.token }}
