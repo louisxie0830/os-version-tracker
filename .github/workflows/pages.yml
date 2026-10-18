@@ -117,6 +117,9 @@ jobs:
 
   deploy:
     needs: build
+    # Scheduled runs intentionally skip verify. Explicitly evaluate the direct build result so that the skipped
+    # verify job does not propagate through the dependency chain and suppress deployment of freshly fetched data.
+    if: always() && needs.build.result == 'success'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
