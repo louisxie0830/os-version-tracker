@@ -205,4 +205,4 @@ Slack、LINE、Facebook 會快取預覽圖，已分享過的連結要等它們�
 
 所有資料皆來自公開頁面，以官方公告為準；GitHub 上的閃退回報為社群回報，未必已確認。
 
-<!-- Trigger GitHub Actions site refresh: 2026-10-19 (Asia/Taipei). -->
+<!-- Trigger GitHub Actions site refresh: 2026-10-19 (Asia/Taipei), requested run 2. -->
