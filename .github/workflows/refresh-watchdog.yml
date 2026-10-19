@@ -1,0 +1,63 @@
+# Backup for GitHub's best-effort scheduled events.
+# The main site build remains scheduled at 05:43 and 17:43 Asia/Taipei.
+# At 06:29–09:29 and 18:29–21:29 Taipei, verify the matching refresh window.
+# Trigger only if no Pages build has succeeded or is still running since that window.
+name: Recover missed site refreshes
+
+on:
+  schedule:
+    - cron: '29 0,1,10,11,12,13,22,23 * * *'
+  workflow_dispatch:
+  # One-time self-check when this watchdog is added or modified.
+  push:
+    branches: [master]
+    paths:
+      - '.github/workflows/refresh-watchdog.yml'
+
+permissions:
+  actions: write
+
+concurrency:
+  group: pages-refresh-watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Trigger recovery only when the refresh window was missed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          now=$(date -u +%s)
+          utc_day=$(date -u +%F)
+          slot=$(date -u -d 'yesterday 21:43 UTC' +%s)
+          for hour in 09 21; do
+            candidate=$(date -u -d "$utc_day $hour:43 UTC" +%s)
+            if (( candidate <= now && candidate > slot )); then
+              slot=$candidate
+            fi
+          done
+          since=$(date -u -d "@$slot" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Refresh window began at $since (UTC)"
+
+          runs_json="$RUNNER_TEMP/pages-workflow-runs.json"
+          if gh api "repos/$GITHUB_REPOSITORY/actions/workflows/pages.yml/runs?per_page=30" > "$runs_json"; then
+            if jq -e --arg since "$since" '
+              any(.workflow_runs[];
+                .created_at >= $since
+                and (.conclusion == "success" or .status != "completed"))
+            ' "$runs_json" > /dev/null; then
+              echo "A successful or active site build exists for this window. No fallback needed."
+              exit 0
+            fi
+          else
+            echo "::warning::Unable to read workflow history; requesting a recovery build."
+          fi
+
+          echo "::notice::Missing successful site build since $since; dispatching pages.yml."
+          gh workflow run pages.yml --ref master --repo "$GITHUB_REPOSITORY"
