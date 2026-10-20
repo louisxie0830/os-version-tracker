@@ -3,6 +3,8 @@ import type { Deadline } from '../types.js';
 
 export const APPLE_REQUIREMENTS_URL = 'https://developer.apple.com/news/upcoming-requirements/';
 export const PLAY_POLICY_URL = 'https://support.google.com/googleplay/android-developer/table/12921780?hl=en';
+// Another official English localisation; only tried after a 429, never for ordinary parse errors.
+export const PLAY_POLICY_FALLBACK_URL = 'https://support.google.com/googleplay/android-developer/table/12921780?hl=en-GB';
 export const PLAY_BILLING_URL = 'https://developer.android.com/google/play/billing/deprecation-faq?hl=en';
 export const PAGE_SIZE_URL = 'https://developer.android.com/guide/practices/page-sizes?hl=en';
 
@@ -42,7 +44,15 @@ export function parseAppleRequirements(html: string): Deadline[] {
 }
 
 export async function fetchPlayPolicyDeadlines(): Promise<Deadline[]> {
-  return parsePlayPolicyDeadlines(await fetchHtml(PLAY_POLICY_URL));
+  try {
+    return parsePlayPolicyDeadlines(await fetchHtml(PLAY_POLICY_URL));
+  } catch (err) {
+    // net.ts already respects Retry-After and retries the original URL once.
+    // Some Google Support locales intermittently return 429 on hosted runners;
+    // try ONE other official English locale, not a third-party mirror or stale snapshot.
+    if (!/\b429\b/.test(String((err as Error)?.message ?? err))) throw err;
+    return parsePlayPolicyDeadlines(await fetchHtml(PLAY_POLICY_FALLBACK_URL));
+  }
 }
 
 export function parsePlayPolicyDeadlines(html: string): Deadline[] {

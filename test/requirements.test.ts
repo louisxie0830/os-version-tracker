@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   APPLE_REQUIREMENTS_URL,
+  PLAY_POLICY_FALLBACK_URL,
+  PLAY_POLICY_URL,
+  fetchPlayPolicyDeadlines,
   parseAppleRequirements,
   parseMavenLatest,
   parsePageSizeDeadlines,
@@ -9,6 +12,7 @@ import {
   parsePlayPolicyDeadlines,
 } from '../src/fetchers/requirements.js';
 import { fixture, GARBAGE_HTML } from './helpers.js';
+import { setRetryDelay } from '../src/net.js';
 
 test('parseAppleRequirements: upcoming requirements with dates', () => {
   const items = parseAppleRequirements(fixture('apple-upcoming-requirements.html'));
@@ -83,4 +87,37 @@ test('table parsers throw when the header survives but no row parses', () => {
     () => parsePlayBilling('<table><tr><th>Version</th><th>Deadline</th><th>Extension deadline</th></tr><tr><td>7</td><td>TBD</td><td></td></tr></table>'),
     /parsed empty/,
   );
+});
+
+test('Play policy: a 429 on the primary locale tries the official en-GB page', async () => {
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  setRetryDelay(0);
+  try {
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = String(url);
+      urls.push(u);
+      return u === PLAY_POLICY_FALLBACK_URL
+        ? new Response(fixture('play-policy-deadlines.html'))
+        : new Response('rate limited', { status: 429, headers: { 'Retry-After': '0' } });
+    }) as typeof fetch;
+    const items = await fetchPlayPolicyDeadlines();
+    assert.ok(items.length >= 5);
+    assert.deepEqual(urls, [PLAY_POLICY_URL, PLAY_POLICY_URL, PLAY_POLICY_FALLBACK_URL]);
+  } finally {
+    globalThis.fetch = original;
+    setRetryDelay(1500);
+  }
+});
+
+test('Play policy: if both official locales are throttled the source still reports failure', async () => {
+  const original = globalThis.fetch;
+  setRetryDelay(0);
+  try {
+    globalThis.fetch = (async () => new Response('rate limited', { status: 429, headers: { 'Retry-After': '0' } })) as typeof fetch;
+    await assert.rejects(fetchPlayPolicyDeadlines(), /429/);
+  } finally {
+    globalThis.fetch = original;
+    setRetryDelay(1500);
+  }
 });

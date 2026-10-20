@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TW_BANK_APPS,
+  fetchTaiwanBankApps,
   itunesLookupUrl,
   parseItunesLookup,
   expandSparse,
@@ -10,6 +11,7 @@ import {
   playDetailsUrl,
 } from '../src/fetchers/tw-banks.js';
 import { fixture, GARBAGE_HTML } from './helpers.js';
+import { setRetryDelay } from '../src/net.js';
 
 test('parseItunesLookup: min iOS, version, Taipei-dated update and clean URL', () => {
   const apps = parseItunesLookup(fixture('tw-banks-itunes-lookup.json'));
@@ -112,4 +114,44 @@ test('requiredTargetSdk reads the level Google Play requires for new apps and up
     { platform: 'Existing apps', sdk: 'Android 15 (API level 35) or higher' },
   ] }), 36);
   assert.equal(requiredTargetSdk(null), undefined);
+});
+
+test('bank Play listing: a throttled Taiwan locale recovers from the official alternate locale', async () => {
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  setRetryDelay(0);
+  try {
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = String(url);
+      urls.push(u);
+      return u.includes('hl=en&gl=US')
+        ? new Response(fixture('tw-banks-play-cube-zh.html'))
+        : new Response('rate limited', { status: 429, headers: { 'Retry-After': '0' } });
+    }) as typeof fetch;
+    const rows = await fetchTaiwanBankApps([{ bank: 'Test Bank', app: 'Test App', playPackage: 'com.cathaybk.mymobibank.android' }]);
+    assert.equal(rows[0].android?.minOs, '9');
+    assert.equal(rows[0].android?.targetSdk, 36);
+    assert.equal(rows[0].android?.url, playDetailsUrl('com.cathaybk.mymobibank.android'));
+    assert.equal(urls.length, 3, 'the regular GET retries once, then the alternate is requested once');
+    assert.ok(urls.at(-1)?.includes('hl=en&gl=US'));
+  } finally {
+    globalThis.fetch = original;
+    setRetryDelay(1500);
+  }
+});
+
+test('bank Play listing: valid Taiwan data does not request the alternate locale', async () => {
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  try {
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      urls.push(String(url));
+      return new Response(fixture('tw-banks-play-cube-zh.html'));
+    }) as typeof fetch;
+    const rows = await fetchTaiwanBankApps([{ bank: 'Test Bank', app: 'Test App', playPackage: 'com.cathaybk.mymobibank.android' }]);
+    assert.equal(rows[0].android?.minOs, '9');
+    assert.equal(urls.length, 1);
+  } finally {
+    globalThis.fetch = original;
+  }
 });

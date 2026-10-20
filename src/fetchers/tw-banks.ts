@@ -70,7 +70,8 @@ export const TW_BANK_APPS: readonly TaiwanBankAppEntry[] = [
   { bank: '樂天國際商銀', app: '樂天國際銀行', appStoreId: 1519921465, playPackage: 'com.ricb.ebank' },
 ];
 
-const PLAY_CONCURRENCY = 4;
+// Google Play can throttle bursts even below the shared per-origin network limit.
+const PLAY_CONCURRENCY = 2;
 
 export const itunesLookupUrl = (ids: number[]): string =>
   `https://itunes.apple.com/lookup?id=${ids.join(',')}&country=tw`;
@@ -249,12 +250,23 @@ export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = 
 
   const androidPromise = mapLimit(apps, PLAY_CONCURRENCY, async a => {
     if (!a.playPackage) return undefined;
-    try {
-      const info = parsePlayDetails(await storePage(playDetailsUrl(a.playPackage), 'zh-TW,zh;q=0.9,en;q=0.8'));
-      return info && { ...info, url: playDetailsUrl(a.playPackage) };
-    } catch {
-      return undefined;
+    const url = playDetailsUrl(a.playPackage);
+    // A transient throttle or localisation-specific Play HTML must not silently drop an app.
+    // The second official Play URL is only fetched if the first request fails or cannot parse.
+    // Keep the public link pointing at the Taiwan listing regardless of the fallback locale.
+    const candidates = [
+      { url, lang: 'zh-TW,zh;q=0.9,en;q=0.8' },
+      { url: `https://play.google.com/store/apps/details?id=${encodeURIComponent(a.playPackage)}&hl=en&gl=US`, lang: 'en-US,en;q=0.9' },
+    ];
+    for (const candidate of candidates) {
+      try {
+        const info = parsePlayDetails(await storePage(candidate.url, candidate.lang));
+        if (info) return { ...info, url };
+      } catch {
+        // Try the other official localisation, then leave the missing field visible to quality alerts.
+      }
     }
+    return undefined;
   });
 
   const [ios, android] = await Promise.all([iosPromise, androidPromise]);
