@@ -79,9 +79,12 @@ export function cleanNoteLine(line: string): string {
     .trim();
 }
 
-/** Splits RELEASENOTES.md into "### <version>" sections with their bold-headed bullet lists */
+/**
+ * Splits RELEASENOTES.md into "### <version>" sections (cordova-android) or "## <version>" sections
+ * (cordova-ios) with their bold-headed bullet lists; headings that aren't a version are skipped
+ */
 export function parseReleaseNotes(markdown: string): NotesSection[] {
-  return markdown.split(/^###\s+/m).slice(1).flatMap(part => {
+  return markdown.split(/^#{2,3}\s+/m).slice(1).flatMap(part => {
     const [headingLine, ...lines] = part.split('\n');
     const version = headingLine.match(/^(\d+\.\d+\.\d+(?:-[\w.]+)?)/)?.[1];
     if (!version) return [];

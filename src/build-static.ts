@@ -12,6 +12,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveOutputDir } from './output-dir.js';
 import { buildIntoDirectory, requireFiles } from './publish-dir.js';
+import { copyComponentScripts, SCRIPTS } from './asset-versions.js';
 import { publishDecision } from './publish-health.js';
 import { fetchText } from './net.js';
 import { buildRunSummary } from './run-summary.js';
@@ -109,6 +110,8 @@ async function main(): Promise<void> {
   await buildIntoDirectory(OUT, ROOT, async dir => {
     await mkdir(path.join(dir, 'state'), { recursive: true });
     await cp(path.join(ROOT, 'public'), dir, { recursive: true });
+    // The component scripts are compiled from src/browser/ (dist/browser/), not kept in public/
+    await copyComponentScripts(dir);
 
     await writeFile(path.join(dir, 'index.html'), renderHTML(data, { refreshMinutes: REFRESH_MINUTES }));
     await writeFile(path.join(dir, 'style.css'), PAGE_CSS);
@@ -131,7 +134,7 @@ async function main(): Promise<void> {
     await copyFile(ALERTS_STATE, path.join(dir, 'state', 'alerts.json'));
     // Written on the first bank or version check; a run where both were skipped may not have it yet
     await copyFile(HISTORY_STATE, path.join(dir, 'state', 'history.json')).catch(() => {});
-  }, { verify: dir => requireFiles(dir, ['index.html', 'style.css', 'app.js', 'sw.js', 'api.json', 'api/index.json', 'calendar.ics', 'feed.xml', 'health.json', 'state/changes.json', ...LEGAL_PAGES.map(p => p.path)]) });
+  }, { verify: dir => requireFiles(dir, ['index.html', 'style.css', ...SCRIPTS, 'sw.js', 'api.json', 'api/index.json', 'calendar.ics', 'feed.xml', 'health.json', 'state/changes.json', ...LEGAL_PAGES.map(p => p.path)]) });
 
   console.log(`Built ${OUT} for ${SITE_URL}`);
 }

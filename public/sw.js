@@ -20,8 +20,9 @@ self.addEventListener('activate', event => {
   );
 });
 
-// The stylesheet and scripts, linked as <file>?v=<content hash>
-const VERSIONED = new Set(['style.css', 'theme.js', 'app.js', 'notifications.js']);
+// The stylesheet and scripts, linked as <file>?v=<content hash>: every name in SCRIPTS (src/asset-versions.ts),
+// which test/sw.test.ts checks, since the worker can't import it
+const VERSIONED = new Set(['style.css', 'theme.js', 'notifications.js', 'choice-chips.js', 'bank-table.js', 'trend-charts.js', 'app.js']);
 
 // Pages, data and scripts are network-first so they stay fresh, falling back to the last copy when offline;
 // icons and the manifest rarely change, so they're served cache-first.

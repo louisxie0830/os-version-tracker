@@ -4,7 +4,8 @@
  *
  * - layout: anything past the right edge (outside intentional horizontal scrollers), all sections expanded
  * - clicks: controls covered by another element; links that catch clicks outside their own row or card
- * - behaviour: script errors; every filter, sort, button, search and the theme toggle exercised
+ * - behaviour: script errors; every filter, sort, button, search and the theme toggle exercised; the custom
+ *   elements defined, chip state (is-active / aria-pressed) in step, chart toggles and tooltips working
  * - structure: duplicate ids, broken anchors and id references, controls without a name
  * - text contrast below WCAG AA
  *
@@ -98,7 +99,7 @@ export async function checkPage(
   themes: readonly string[] = THEMES,
   pages = PAGES,
   // For tests: the browser and how it's run
-  deps: { chrome?: () => string; run?: typeof runChrome } = {},
+  deps: { chrome?: () => string; run?: typeof runChrome; concurrency?: number } = {},
 ): Promise<PageResult[]> {
   const chrome = (deps.chrome ?? findChrome)();
   const run = deps.run ?? runChrome;
@@ -148,7 +149,8 @@ export async function checkPage(
         results[i] = await check(runs[i]);
       }
     };
-    await Promise.all(Array.from({ length: Math.min(runs.length, Math.max(2, availableParallelism())) }, worker));
+    const concurrency = deps.concurrency ?? Math.max(2, availableParallelism());
+    await Promise.all(Array.from({ length: Math.min(runs.length, Math.max(1, concurrency)) }, worker));
     return results;
   } finally {
     // Never leave the probe files in the site that gets deployed

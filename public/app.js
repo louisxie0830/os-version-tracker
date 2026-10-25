@@ -1,5 +1,7 @@
-// Page behaviour: service worker, offline banner, "新" markers, feed and news filters, section links.
-// Kept out of the HTML so the Content-Security-Policy can forbid inline scripts.
+// Page behaviour: service worker, offline banner, "新" markers, feed and news filters, search, section links.
+// Kept out of the HTML so the Content-Security-Policy can forbid inline scripts. The chip groups, the bank
+// table and the trend charts are custom elements in their own scripts (choice-chips.js, bank-table.js,
+// trend-charts.js); the feed here listens to the rail's choice-change events.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
@@ -98,14 +100,11 @@ try {
     const feedEmpty = document.getElementById('feed-empty');
     if (feedEmpty && document.querySelector('#feed [data-feed-item]')) feedEmpty.hidden = shown.feed > 0;
   };
-  document.querySelectorAll('[data-filter-group]').forEach(group => group.addEventListener('click', event => {
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
-    filters[group.dataset.filterGroup] = chip.dataset.value;
-    for (const c of group.querySelectorAll('.chip')) {
-      c.classList.toggle('is-active', c === chip);
-      c.setAttribute('aria-pressed', String(c === chip));
-    }
+  // The rail's type / platform groups are <choice-chips> (choice-chips.js), which keep the chips' state
+  document.querySelectorAll('.rail choice-chips').forEach(group => group.addEventListener('choice-change', event => {
+    const { name, value } = event.detail ?? {};
+    if (!(name in filters)) return;
+    filters[name] = value;
     apply();
   }));
   // Whole-page search: rows in the other sections are matched too; sections with nothing left hide
@@ -160,98 +159,6 @@ try {
     if (event.key === 'Enter') document.getElementById('now')?.scrollIntoView({ block: 'start' });
   });
   more?.addEventListener('click', () => { more.dataset.expanded = '1'; apply(); });
-} catch {}
-
-// Bank table: kind / minimum iOS / minimum Android filters and sorting by requirement
-try {
-  const body = document.getElementById('bank-rows');
-  if (body) {
-    const rows = [...body.rows];
-    const count = document.getElementById('bank-count');
-    const empty = document.getElementById('bank-empty');
-    const sort = document.getElementById('bank-sort');
-    const filters = { kind: 'all', ios: 'all', android: 'all', changed: 'all', target: 'all' };
-    const apply = () => {
-      let shown = 0;
-      for (const row of rows) {
-        const match = Object.entries(filters).every(([key, value]) => value === 'all' || row.dataset[key] === value);
-        row.hidden = !match;
-        if (match) shown++;
-      }
-      // Highest minimum first, lowest targetSdk first (the ones behind Play's rule); ties keep the page's order
-      const by = sort?.value ?? 'default';
-      const key = by === 'ios' ? 'iosSort' : by === 'android' ? 'androidSort' : by === 'target' ? 'targetSort' : null;
-      const direction = by === 'target' ? -1 : 1;
-      const ordered = [...rows].sort((a, b) => (key ? direction * (Number(b.dataset[key]) - Number(a.dataset[key])) : 0) || Number(a.dataset.index) - Number(b.dataset.index));
-      body.append(...ordered);
-      if (count) count.textContent = shown === rows.length ? `共 ${rows.length} 個 App` : `顯示 ${shown} / ${rows.length} 個 App`;
-      if (empty) empty.hidden = shown > 0;
-    };
-    document.querySelectorAll('[data-bank-filter]').forEach(group => group.addEventListener('click', event => {
-      const chip = event.target.closest('.chip');
-      if (!chip) return;
-      filters[group.dataset.bankFilter] = chip.dataset.value;
-      for (const c of group.querySelectorAll('.chip')) {
-        c.classList.toggle('is-active', c === chip);
-        c.setAttribute('aria-pressed', String(c === chip));
-      }
-      apply();
-    }));
-    sort?.addEventListener('change', apply);
-  }
-} catch {}
-
-// Trend charts: region / platform toggles, and a crosshair tooltip for each month
-try {
-  document.querySelectorAll('[data-chart-toggle]').forEach(group => group.addEventListener('click', event => {
-    const chip = event.target.closest('.chip');
-    if (!chip) return;
-    for (const c of group.querySelectorAll('.chip')) {
-      c.classList.toggle('is-active', c === chip);
-      c.setAttribute('aria-pressed', String(c === chip));
-    }
-    for (const el of document.querySelectorAll(`[data-chart-group="${group.dataset.chartToggle}"]`)) el.hidden = el.dataset.value !== chip.dataset.value;
-  }));
-
-  const fmt = v => (Number.isInteger(v) ? String(v) : v.toFixed(1));
-  for (const figure of document.querySelectorAll('figure.chart[data-chart]')) {
-    const data = JSON.parse(figure.dataset.chart);
-    const svg = figure.querySelector('svg');
-    const cross = figure.querySelector('.chart-cross');
-    const tip = figure.querySelector('.chart-tip');
-    const plot = figure.querySelector('.chart-plot');
-    if (!svg || !cross || !tip || !plot) continue;
-    const show = rect => {
-      const i = Number(rect.dataset.i);
-      const cx = Number(rect.dataset.cx);
-      cross.setAttribute('x1', cx);
-      cross.setAttribute('x2', cx);
-      cross.setAttribute('visibility', 'visible');
-      tip.replaceChildren();
-      const title = document.createElement('strong');
-      title.textContent = data.x[i];
-      tip.append(title);
-      for (const s of data.series) {
-        const row = document.createElement('div');
-        const swatch = document.createElement('span');
-        swatch.className = `chart-swatch series-${s.slot}`;
-        const name = document.createElement('span');
-        name.textContent = s.name;
-        const value = document.createElement('span');
-        value.textContent = s.values[i] == null ? '—' : `${fmt(s.values[i])}${data.unit}`;
-        row.append(swatch, name, value);
-        tip.append(row);
-      }
-      tip.hidden = false;
-      // Beside the crosshair, flipped to the left near the right edge
-      const box = plot.getBoundingClientRect();
-      const x = (cx / svg.viewBox.baseVal.width) * box.width;
-      const left = x + 12 + tip.offsetWidth > box.width ? x - 12 - tip.offsetWidth : x + 12;
-      tip.style.left = `${Math.max(0, left)}px`;
-    };
-    svg.addEventListener('pointerover', event => { if (event.target.classList.contains('chart-hit')) show(event.target); });
-    svg.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
-  }
 } catch {}
 
 // Horizontal scrollers (section nav and filter chips on narrower windows): a mouse wheel scrolls them

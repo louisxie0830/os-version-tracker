@@ -154,10 +154,38 @@
   async function interactions() {
     const tick = () => wait(30);
     const resetChips = () => document.querySelectorAll('[data-filter-group], [data-bank-filter], .news-filters').forEach(g => g.querySelector('.chip')?.click());
+    // The custom elements in the page (choice-chips.js, bank-table.js, trend-charts.js) are defined
+    for (const tag of ['choice-chips', 'bank-table', 'chart-switch', 'line-chart']) {
+      if (document.querySelector(tag) && !customElements.get(tag)) add('component not defined', tag);
+    }
     for (const chip of document.querySelectorAll('.chip')) {
       if (!visible(chip)) continue;
       chip.click();
       await tick();
+      // In a choice-chips group the clicked chip is the only active one, and aria-pressed says so
+      const group = chip.closest('choice-chips');
+      for (const c of group ? group.querySelectorAll('.chip') : []) {
+        if (c.classList.contains('is-active') !== (c === chip) || c.getAttribute('aria-pressed') !== String(c === chip)) {
+          add('chip state out of step', `${describe(chip)}: ${describe(c)}`);
+        }
+      }
+      // A chart toggle shows exactly the chosen chart (and its note) of its group
+      const toggle = chip.closest('[data-chart-toggle]');
+      const card = toggle?.closest('chart-switch');
+      for (const el of card ? card.querySelectorAll(`[data-chart-group="${toggle.dataset.chartToggle}"]`) : []) {
+        if (el.hidden !== (el.dataset.value !== chip.dataset.value)) add('chart toggle', `${describe(chip)}: ${describe(el)}`);
+      }
+    }
+    // Pointing at a month of a visible chart shows the crosshair and the tooltip; leaving hides them
+    for (const chart of document.querySelectorAll('line-chart')) {
+      const hit = chart.querySelector('.chart-hit');
+      const tip = chart.querySelector('.chart-tip');
+      const cross = chart.querySelector('.chart-cross');
+      if (!hit || !tip || !cross || !visible(chart.querySelector('figure'))) continue;
+      hit.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      if (tip.hidden || !tip.querySelector('strong')?.textContent || cross.getAttribute('visibility') !== 'visible') add('chart tooltip', `no tooltip on ${describe(chart.querySelector('svg'))}`);
+      chart.querySelector('svg').dispatchEvent(new PointerEvent('pointerleave'));
+      if (!tip.hidden || cross.getAttribute('visibility') !== 'hidden') add('chart tooltip', `tooltip stays after leaving ${describe(chart.querySelector('svg'))}`);
     }
     resetChips();
     await tick();

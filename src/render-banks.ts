@@ -22,15 +22,26 @@ function countByMajor(values: string[], prefix: string): string {
 
 const BANK_APP_KIND: Record<string, string> = { business: '企業', merchant: '商家收款', auth: '認證' };
 
-/** Filters for the bank table: app kind, minimum iOS / Android major, and a sort; applied in the browser (app.js) */
+/**
+ * The bank table's sort options: value, label, the row dataset key it orders by (data-*-sort on each <tr>)
+ * and the direction. <bank-table> reads the key and direction from the chosen option; ties keep the page order.
+ */
+const BANK_SORTS: Array<[string, string, string?, ('asc' | 'desc')?]> = [
+  ['default', '預設'],
+  ['ios', '最低 iOS 由高到低', 'iosSort', 'desc'],
+  ['android', '最低 Android 由高到低', 'androidSort', 'desc'],
+  ['target', 'targetSdk 由低到高', 'targetSort', 'asc'],
+];
+
+/** Filters for the bank table: app kind, minimum iOS / Android major, and a sort; applied in the browser by <bank-table> (bank-table.js) */
 function renderBankFilters(banks: AllVersions['twBanks'], hasChanges: boolean, requiredTarget?: number): string {
   const majors = (values: Array<string | undefined>) => [...new Set(values.flatMap(v => v?.match(/^\d+/)?.[0] ?? []))].sort((a, b) => Number(a) - Number(b));
   const chips = (group: string, label: string, options: Array<[string, string]>) => `<div class="bank-filter">
       <span class="rail-label">${label}</span>
-      <div class="chips" role="group" aria-label="${label}" data-bank-filter="${group}">
+      <choice-chips name="${group}"><div class="chips" role="group" aria-label="${label}" data-bank-filter="${group}">
         <button type="button" class="chip is-active" data-value="all" aria-pressed="true">全部</button>
         ${options.map(([value, text]) => `<button type="button" class="chip" data-value="${esc(value)}" aria-pressed="false">${esc(text)}</button>`).join('')}
-      </div>
+      </div></choice-chips>
     </div>`;
   const hasOthers = banks.some(b => (b.kind ?? 'personal') !== 'personal');
   return `<div class="bank-filters">
@@ -41,14 +52,11 @@ function renderBankFilters(banks: AllVersions['twBanks'], hasChanges: boolean, r
     ${requiredTarget && banks.some(b => b.android?.targetSdk && b.android.targetSdk < requiredTarget) ? chips('target', 'targetSdk', [['below', `低於 Play 規定（${requiredTarget}）`]]) : ''}
     <div class="bank-filter-foot">
       <label class="bank-sort">排序
-        <select id="bank-sort">
-          <option value="default">預設</option>
-          <option value="ios">最低 iOS 由高到低</option>
-          <option value="android">最低 Android 由高到低</option>
-          <option value="target">targetSdk 由低到高</option>
+        <select id="bank-sort" data-bank-sort>
+          ${BANK_SORTS.map(([value, text, key, dir]) => `<option value="${value}"${key ? ` data-sort-key="${key}" data-sort-dir="${dir}"` : ''}>${text}</option>`).join('')}
         </select>
       </label>
-      <span class="feed-count" id="bank-count" aria-live="polite">共 ${banks.length} 個 App</span>
+      <span class="feed-count" id="bank-count" data-bank-count aria-live="polite">共 ${banks.length} 個 App</span>
     </div>
   </div>`;
 }
@@ -106,12 +114,14 @@ export function renderBanksSection(data: AllVersions): string {
       <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>
       <div class="tl-source">共 ${banks.length} 個 App${others ? `（個人行動銀行 ${personal.length} 個、企業／收款／認證 ${others} 個）` : ''}；要求最高：iOS ${esc(strictestIos ?? '—')}、Android ${esc(strictestAndroid ?? '—')}；${changedApps.size ? `<strong>近 90 天有 ${changedApps.size} 個 App 調整最低版本</strong>` : '近 90 天沒有 App 調整最低版本'}${requiredTarget ? `；Google Play 目前規定 targetSdk ${requiredTarget}，${belowTarget ? `<strong>${belowTarget} 個 App 的最新版還低於這個值</strong>` : '所有 App 都已達到'}` : ''}</div>
     </div>
+    <bank-table>
     ${renderBankFilters(banks, changedApps.size > 0, requiredTarget)}
     <div class="table-wrap"><table class="compat-table stack-on-mobile bank-table">
       <thead><tr><th>銀行 / App</th><th>最低 iOS</th><th>最低 Android</th><th>targetSdk</th><th>最近更新</th></tr></thead>
       <tbody id="bank-rows">${rows}</tbody>
     </table></div>
-    <p class="feed-empty" id="bank-empty" hidden>沒有符合篩選的 App。</p>
+    <p class="feed-empty" id="bank-empty" data-bank-empty hidden>沒有符合篩選的 App。</p>
+    </bank-table>
     ${renderSources(data, ['twBanks'])}
   </section>`;
 }

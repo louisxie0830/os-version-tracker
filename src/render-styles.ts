@@ -224,6 +224,9 @@ a { color: var(--accent); }
 .rail { position: sticky; top: calc(var(--topbar-h) + 20px); max-height: calc(100vh - var(--topbar-h) - 40px); overflow-y: auto; display: flex; flex-direction: column; gap: 22px; scrollbar-width: thin; }
 .rail-group { display: flex; flex-direction: column; gap: 8px; }
 .rail-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+/* Custom-element wrappers (choice-chips.js, bank-table.js, trend-charts.js) add behaviour only: no box of their
+   own, so the grid and flex layouts around them lay out the wrapped markup as before */
+choice-chips, bank-table, chart-switch, line-chart { display: contents; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .section-nav { display: flex; flex-direction: column; gap: 2px; }
 .section-nav .rail-label { margin-bottom: 6px; }
