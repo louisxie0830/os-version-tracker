@@ -24,14 +24,13 @@ const FIXTURE = path.join(ROOT, 'test', 'fixtures', 'all-versions.json');
 const SITE_URL = 'https://example.test/os-version-tracker';
 
 /**
- * The historical snapshot predates three optional sections. Keep the production renderer unchanged while
+ * The historical snapshot predates two optional sections. Keep the production renderer unchanged while
  * giving its permanent navigation links real targets in this isolated browser fixture.
  */
 export function completeFixturePage(html: string): string {
   const missing = [
     ['security', '資安'],
     ['frameworks', '跨平台框架'],
-    ['news', '開發者新聞'],
   ].filter(([id]) => !html.includes(`id="${id}"`));
   if (!missing.length) return html;
   const sections = missing.map(([id, title]) => `<section class="panel" id="${id}"><h2>${title}</h2><p>End-to-end fixture</p></section>`).join('\n');
@@ -40,6 +39,17 @@ export function completeFixturePage(html: string): string {
 
 async function buildFixtureSite(dir: string): Promise<void> {
   const data = JSON.parse(await readFile(FIXTURE, 'utf8')) as AllVersions;
+  // Exercise the real news-list component, including its 25-row cap and every filter, with no network input.
+  data.devNews = Array.from({ length: 26 }, (_, i) => ({
+    id: `e2e-news-${i}`,
+    source: 'E2E official feed',
+    platform: i % 3 === 0 ? 'iOS' : i % 3 === 1 ? 'Android' : '跨平台',
+    category: i % 2 ? 'release' : 'announcement',
+    title: `E2E release ${i}`,
+    url: `https://example.com/news/${i}`,
+    date: '2026-10-25',
+    important: i === 0,
+  }));
   await cp(PUBLIC_DIR, dir, { recursive: true });
   await copyComponentScripts(dir);
 

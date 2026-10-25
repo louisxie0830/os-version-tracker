@@ -103,17 +103,20 @@ export function renderNewsSection(data: AllVersions): string {
   return `<section class="panel" id="news">
     <h2>開發者新聞</h2>
     <p class="table-note">彙整 ${sources.length} 個官方來源近 60 天的公告、版本發布與部落格文章，標題維持原文。「重要」為規定、期限、棄用、重大版本或服務異常等需要留意的項目。</p>
-    <div class="news-filters" role="group" aria-label="篩選新聞">
-      <button type="button" class="chip is-active" data-filter="all">全部</button>
-      <button type="button" class="chip" data-filter="iOS">iOS</button>
-      <button type="button" class="chip" data-filter="Android">Android</button>
-      <button type="button" class="chip" data-filter="跨平台">跨平台</button>
-      <button type="button" class="chip" data-filter="important">只看重要</button>
-    </div>
-    <div class="case mt-12">
-      <ul class="news news-feed" id="news-list">${rows}</ul>
-      ${items.length > 25 ? `<button type="button" class="news-show-more" id="news-show-more">顯示更多（共 ${items.length} 則）</button>` : ''}
-    </div>
+    <news-list filter-name="news">
+      <choice-chips name="news"><div class="news-filters" role="group" aria-label="篩選新聞">
+        <button type="button" class="chip is-active" data-value="all" aria-pressed="true">全部</button>
+        <button type="button" class="chip" data-value="iOS" aria-pressed="false">iOS</button>
+        <button type="button" class="chip" data-value="Android" aria-pressed="false">Android</button>
+        <button type="button" class="chip" data-value="跨平台" aria-pressed="false">跨平台</button>
+        <button type="button" class="chip" data-value="important" aria-pressed="false">只看重要</button>
+      </div></choice-chips>
+      <div class="case mt-12">
+        <ul class="news news-feed" id="news-list" data-news-items>${rows}</ul>
+        ${items.length > 25 ? `<button type="button" class="news-show-more" id="news-show-more" data-news-more>顯示更多（共 ${items.length} 則）</button>` : ''}
+        <div class="news-empty" data-news-empty hidden>沒有符合的新聞</div>
+      </div>
+    </news-list>
     ${renderSources(data, ['devNews'])}
   </section>`;
 }

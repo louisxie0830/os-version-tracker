@@ -154,8 +154,8 @@
   async function interactions() {
     const tick = () => wait(30);
     const resetChips = () => document.querySelectorAll('[data-filter-group], [data-bank-filter], .news-filters').forEach(g => g.querySelector('.chip')?.click());
-    // The custom elements in the page (choice-chips.js, bank-table.js, trend-charts.js) are defined
-    for (const tag of ['choice-chips', 'bank-table', 'chart-switch', 'line-chart']) {
+    // The custom elements in the page are defined
+    for (const tag of ['choice-chips', 'bank-table', 'news-list', 'chart-switch', 'line-chart']) {
       if (document.querySelector(tag) && !customElements.get(tag)) add('component not defined', tag);
     }
     for (const chip of document.querySelectorAll('.chip')) {
@@ -217,6 +217,17 @@
       group.querySelector('.chip')?.click();
       await tick();
     }
+    // News filters: a match or the component's empty state is always visible
+    for (const chip of document.querySelectorAll('.news-filters .chip')) {
+      chip.click();
+      await tick();
+      const news = chip.closest('news-list');
+      if (news && ![...news.querySelectorAll('[data-news-items] > li')].some(visible) && !visible(news.querySelector('[data-news-empty]'))) {
+        add('filter leaves a blank list', `news: "${chip.textContent.trim()}"`);
+      }
+    }
+    document.querySelector('.news-filters .chip')?.click();
+    await tick();
     const sort = document.getElementById('bank-sort');
     if (sort) {
       for (const option of sort.options) { sort.value = option.value; sort.dispatchEvent(new Event('change')); await tick(); }

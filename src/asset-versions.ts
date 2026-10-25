@@ -23,7 +23,7 @@ export const COMPONENT_DIR = path.join(ROOT_DIR, 'dist', 'browser');
  * The custom elements the home page's server-rendered markup is wrapped in (Light DOM, no framework): each
  * adds behaviour to markup that is complete without it. Loaded deferred, before app.js.
  */
-export const COMPONENT_SCRIPTS = ['choice-chips.js', 'bank-table.js', 'trend-charts.js'] as const;
+export const COMPONENT_SCRIPTS = ['choice-chips.js', 'bank-table.js', 'news-list.js', 'trend-charts.js'] as const;
 
 /** Every script that pages link, at the site root; the server's static allow-list, the static build and the tests derive from this */
 export const SCRIPTS = ['theme.js', 'notifications.js', ...COMPONENT_SCRIPTS, 'app.js'] as const;
