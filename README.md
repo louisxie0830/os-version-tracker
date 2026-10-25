@@ -38,7 +38,7 @@ pull request：            驗證（Node 24＋覆蓋率門檻、Node 26）
 - 「首次出現時間」、未送達的通知與警報狀態存在 Actions cache，在各次執行之間延續（建置失敗也會保存）。
 - 超過 40% 的來源抓取失敗時不發布，線上保留上一版。
 - 網站先寫到 `site/` 旁邊的暫存資料夾，檢查必要檔案都在之後才替換 `site/`；建置中途失敗時原本的 `site/` 完整保留。替換時先把舊版改名為備份、新版改名進來、再刪備份，任何一步失敗都會把舊版放回；萬一中途當掉，下次建置會先從備份復原。暫存與備份資料夾的名稱記錄建立它的程序與時間；只有該程序還在、且建立不到 1 小時的才視為進行中（建置 job 上限 15 分鐘），所以 PID 被重複使用也不會讓舊資料夾一直留著。
-- 頁面引用的 `style.css`、`theme.js`、`notifications.js`、元件腳本（`choice-chips.js`、`bank-table.js`、`trend-charts.js`）與 `app.js` 都帶 `?v=<檔案內容雜湊>`，內容一改網址就變，不會被舊快取擋住；service worker 對同一檔案的不同版本只保留最新一份離線副本。
+- 頁面引用的 `style.css`、`theme.js`、`notifications.js`、元件腳本（`choice-chips.js`、`bank-table.js`、`news-list.js`、`trend-charts.js`）與 `app.js` 都帶 `?v=<檔案內容雜湊>`，內容一改網址就變，不會被舊快取擋住；service worker 對同一檔案的不同版本只保留最新一份離線副本。
 - 所有對外請求都經過 `src/net.ts`：專案的 User-Agent、涵蓋內容下載的逾時、同一網站同時最多 4 個請求（名額保留到內容讀完、取消、出錯或逾時才釋放，釋放時直接交給排隊中的下一個）、遇到 429／502–504 或網路錯誤時重試一次（依 Retry-After 的秒數或日期等待，最多 10 秒）。`fetchText`／`fetchJson`／`fetchBytes` 把「請求＋讀完內容」當成一次嘗試，內容下載到一半斷線也會重試；JSON 格式錯誤、逾時、POST 不重試，所以單一來源最多等一次完整逾時。呼叫端可傳 `signal` 取消，排隊、等待重試或下載中都會立刻停止，錯誤維持 AbortError，與逾時錯誤不同。錯誤訊息只寫主機與路徑，不含 query string。例外（各有原因，測試會檢查清單）：webhook 與 GitHub issues API（網址或權杖是機密，且有自己的重試方式）、gdmf.apple.com 與 robots.txt 檢查（需要 Apple 根憑證，改用 `src/https-get.ts`：一個涵蓋 DNS、連線、標頭與完整內容的總期限、內容大小上限；gdmf 只對暫時性連線錯誤在同一個期限內重試一次）。同一個 feed 在一次更新中只下載一次，更新結束就不再共用。
 - 跨次保存的狀態檔以原子方式寫入（先寫暫存檔、同步到磁碟、改名，再同步所在目錄；任何一步失敗都會清掉暫存檔、保留原檔）。讀取時會檢查結構：舊版缺少的欄位補預設值、型別錯誤的欄位或項目重設並在 log 列出欄位名稱（不含內容）；整個檔案無法使用時改名為 `.corrupt-` 備份並從空白開始。
 - 每次建置的 Actions 執行頁面上有「資料來源」摘要表：每個來源的狀態（正常／不完整／失敗）、筆數、抓取時間與失敗原因，問題排在最前面。
@@ -173,7 +173,7 @@ src/
   server.ts        Node 伺服器模式
   build-static.ts  靜態網站建置；publish-dir.ts 暫存資料夾建置與替換、復原
   asset-versions.ts 前端腳本的位置（唯一的解析器：元件來自 dist/browser/，其餘來自 public/）與內容版本（?v=）
-  browser/         前端元件（choice-chips、bank-table、trend-charts，Light DOM custom elements）的 TypeScript 原始碼；
+  browser/         前端元件（choice-chips、bank-table、news-list、trend-charts，Light DOM custom elements）的 TypeScript 原始碼；
                    tsc 編譯成 dist/browser/*.js（一般 <script defer>，非 module），伺服器與靜態建置以網站根目錄的同名 .js 提供
 public/            PWA manifest、service worker、圖示、手寫的前端腳本（theme.js、notifications.js、app.js）
 scripts/           頁面檢查在瀏覽器裡執行的腳本
