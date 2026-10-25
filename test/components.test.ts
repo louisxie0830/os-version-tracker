@@ -5,17 +5,18 @@ import { COMPONENT_SCRIPTS, readScript, scriptPath } from '../src/asset-versions
 import type { AllVersions } from '../src/fetch-all.ts';
 import { renderHTML } from '../src/render.ts';
 import { renderBanksSection } from '../src/render-banks.ts';
+import { renderNewsSection } from '../src/render-docs.ts';
 import { renderTrendsSection } from '../src/render-trends.ts';
 
 /**
- * The custom elements around the server-rendered markup (src/browser/choice-chips.ts, bank-table.ts,
- * trend-charts.ts, compiled by tsc to dist/browser/): the markup they wrap, and the compiled scripts'
+ * The custom elements around the server-rendered markup (src/browser/*.ts, compiled to dist/browser/):
+ * the markup they wrap, and the compiled scripts'
  * behaviour against a small fake of the DOM they use.
  * The page check (scripts/page-probe.js) exercises the same behaviour in a real browser.
  */
 
 const snapshot = JSON.parse(readFileSync(new URL('./fixtures/all-versions.json', import.meta.url), 'utf8')) as AllVersions;
-const TAGS = ['choice-chips', 'bank-table', 'chart-switch', 'line-chart'];
+const TAGS = ['choice-chips', 'bank-table', 'news-list', 'chart-switch', 'line-chart'];
 
 /** Every custom element opened is closed, and none is nested in another of the same name */
 function assertBalanced(html: string) {
@@ -41,9 +42,27 @@ test('home page: the feed rail and bank filters are wrapped in choice-chips name
   const bankGroups = [...html.matchAll(/data-bank-filter="(\w+)"/g)].map(m => m[1]);
   assert.ok(bankGroups.length >= 2, 'the fixture has bank filters');
   for (const group of bankGroups) assert.match(html, new RegExp(`<choice-chips name="${group}"><div class="chips" role="group" aria-label="[^"]+" data-bank-filter="${group}">`));
-  // Every chip group on the page is a choice-chips, except the news filters (still app.js)
+  // Every generic .chips group on the page is a choice-chips
   const groups = html.match(/<div class="chips[^"]*" role="group"/g) ?? [];
   assert.equal(groups.length, (html.match(/<choice-chips name="[^"]+"><div class="chips/g) ?? []).length);
+});
+
+test('news: one news-list owns declarative choice chips, rows, show-more and an existing empty state', () => {
+  const item = (platform: 'iOS' | 'Android' | '跨平台', important: boolean, i: number) => ({
+    id: `item-${i}`, source: 'Official', platform, category: 'release' as const, title: `Release ${i}`,
+    url: `https://example.com/${i}`, date: '2026-10-25', important,
+  });
+  const html = renderNewsSection({
+    ...snapshot,
+    devNews: Array.from({ length: 26 }, (_, i) => item(i % 2 ? 'Android' : 'iOS', i === 0, i)),
+  });
+  assertBalanced(html);
+  const inner = html.match(/<news-list filter-name="news">([\s\S]*?)<\/news-list>/)?.[1] ?? '';
+  assert.match(inner, /<choice-chips name="news"><div class="news-filters"/);
+  assert.match(inner, /data-value="all" aria-pressed="true"/);
+  assert.match(inner, /<ul class="news news-feed" id="news-list" data-news-items>/);
+  assert.match(inner, /data-news-more/);
+  assert.match(inner, /data-news-empty hidden>沒有符合的新聞/);
 });
 
 test('banks: one bank-table wraps the filters, the sort, the count, the table and the empty message', () => {
@@ -304,6 +323,45 @@ test('bank-table: optional parts may be missing; without a table it does nothing
   assert.equal(bare.querySelector('tbody')!.rows[0].hidden, true, 'filters without count, empty message or sort');
   const none = build(registry, ['bank-table', {}, [chips('kind', ['all', 'other'])]]);
   assert.doesNotThrow(() => { connectAll(none); click(none.querySelectorAll('.chip')[1]); });
+});
+
+test('news-list: filters rows, exposes a stable empty state and expands the unfiltered list', () => {
+  const registry = loadComponents();
+  const news = build(registry, ['news-list', { 'filter-name': 'news' }, [
+    chips('news', ['all', 'Android', 'important', 'missing']),
+    ['ul', { 'data-news-items': '' }, [
+      ['li', { 'data-platform': 'iOS', 'data-important': '1' }],
+      ['li', { 'data-platform': 'Android', 'data-important': '0' }],
+      ['li', { 'data-platform': '跨平台', 'data-important': '0' }],
+    ]],
+    ['button', { 'data-news-more': '' }],
+    ['div', { 'data-news-empty': '', hidden: '' }],
+  ]]);
+  connectAll(news);
+  connectAll(news);
+  const list = news.querySelector('[data-news-items]')!;
+  const more = news.querySelector('[data-news-more]')!;
+  const empty = news.querySelector('[data-news-empty]')!;
+  const [, android, important, missing] = news.querySelectorAll('.chip');
+  assert.equal(list.classList.contains('collapsed'), true);
+  assert.equal(more.hidden, false);
+  assert.equal(empty.hidden, true);
+
+  click(android);
+  assert.deepEqual(list.children.map(row => row.hidden), [true, false, true]);
+  assert.equal(list.classList.contains('collapsed'), false, 'a filter shows every match');
+  assert.equal(more.hidden, true);
+  click(important);
+  assert.deepEqual(list.children.map(row => row.hidden), [false, true, true]);
+  click(missing);
+  assert.deepEqual(list.children.map(row => row.hidden), [true, true, true]);
+  assert.equal(empty.hidden, false);
+
+  click(news.querySelectorAll('.chip')[0]);
+  click(more);
+  assert.equal(more.dataset.expanded, '1');
+  assert.equal(more.hidden, true);
+  assert.equal(list.classList.contains('collapsed'), false);
 });
 
 test('chart-switch: a choice shows the chosen element of that group only; other groups and other cards are untouched', () => {
