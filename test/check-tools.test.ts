@@ -61,6 +61,29 @@ test('checkPage: a garbled or missing probe report fails that run only; the rest
   }
 });
 
+test('checkPage: browser concurrency can be capped for resource-constrained runners', async () => {
+  const site = fakeSite();
+  let active = 0;
+  let peak = 0;
+  try {
+    const results = await checkPage(site, [390, 1100, 1440], ['light', 'dark'], ['index.html'], {
+      chrome: () => 'fake',
+      concurrency: 2,
+      run: async () => {
+        active++;
+        peak = Math.max(peak, active);
+        await new Promise(resolve => setTimeout(resolve, 5));
+        active--;
+        return { status: 0, stdout: report(), stderr: '' };
+      },
+    });
+    assert.equal(results.length, 6);
+    assert.equal(peak, 2);
+  } finally {
+    rmSync(site, { recursive: true, force: true });
+  }
+});
+
 test('checkPage: missing local files are findings, and the probe files are removed even when a run throws', async () => {
   const site = fakeSite();
   try {

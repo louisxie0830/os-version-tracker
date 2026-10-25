@@ -114,6 +114,7 @@ image 基於 Node 26 alpine（鎖定 digest）、以非 root 使用者執行、�
 
 ```bash
 npm run build:static && npm run check:page   # 需要 Chrome，可用 CHROME_PATH 指定
+npm run test:e2e                            # 用固定資料建立暫存網站並跑完整瀏覽器互動測試
 ```
 
 ## API
