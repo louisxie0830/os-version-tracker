@@ -42,6 +42,16 @@ test('parseBetaReleaseFeed reads the newest iOS beta with its build', () => {
   assert.equal(parseBetaReleaseFeed([{ title: 'iOS 27.1 (24B83)' }]), null);
 });
 
+test('parseBetaReleaseFeed reads a release candidate once it replaces the betas', () => {
+  const v = parseBetaReleaseFeed([
+    { title: 'Xcode 27.2 RC (27B48)', pubDate: 'Tue, 20 Oct 2026 17:00:00 GMT' },
+    { title: 'iOS 27.2 RC (24B115)', pubDate: 'Tue, 20 Oct 2026 17:00:00 GMT' },
+    { title: 'iOS 27.2 beta 4 (24C5050a)', pubDate: 'Tue, 13 Oct 2026 17:00:00 GMT' },
+  ]);
+  assert.deepEqual([v?.version, v?.build, v?.releaseDate, v?.isBeta], ['27.2 RC', '24B115', '2026-10-20', true]);
+  assert.deepEqual(parseBetaReleaseFeed([{ title: 'iOS 27.2 RC 2 (24B120)' }])?.version, '27.2 RC 2');
+});
+
 test('parseEndOfLifeiOS uses the newest cycle', () => {
   assert.equal(parseEndOfLifeiOS([{ cycle: '27', releaseDate: '2026-09-14', latest: '27.1' }, { cycle: '26', releaseDate: '2025-09-15', latest: '26.7.1' }]).version, '27.1');
   assert.throws(() => parseEndOfLifeiOS([]), /No iOS versions/);
