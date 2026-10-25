@@ -72,6 +72,7 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要內容</a>
+  <activity-filter>
   <header class="topbar">
     <div class="topbar-in">
       <a class="brand" href="./">
@@ -81,7 +82,7 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <span class="sr-only">搜尋動態</span>
-        <input type="search" id="search" placeholder="搜尋 CVE、SDK、版本號…" autocomplete="off" aria-keyshortcuts="/">
+        <input type="search" id="search" data-activity-search placeholder="搜尋 CVE、SDK、版本號…" autocomplete="off" aria-keyshortcuts="/">
         <kbd class="search-kbd" aria-hidden="true">/</kbd>
       </label>
       <a class="btn primary topbar-subscribe" href="#subscribe">訂閱更新</a>
@@ -163,6 +164,7 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
 
     ${renderSnapshotRail(data)}
   </div>
+  </activity-filter>
   <footer class="site-foot">
     <a href="legal/">免責聲明</a> · <a href="legal/#7-隱私">隱私</a> · <a href="legal/sources/">資料來源與授權</a> · <a href="https://github.com/louisxie0830/os-version-tracker/blob/master/SECURITY.md" rel="noopener noreferrer" target="_blank">私密回報</a> · 非官方網站，資料僅供參考
   </footer>
