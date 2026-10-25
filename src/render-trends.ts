@@ -71,7 +71,7 @@ function renderVendorTrendCard(data: AllVersions): string {
   const series = pickVendorSeries(trends);
   const regions = (['TW', 'ww'] as const).filter(r => trends[r]);
   const group = 'share-vendor';
-  return `<div class="case trend-card">
+  return `<chart-switch><div class="case trend-card">
     <div class="case-head">
       <span class="case-no">手機品牌占比</span>
       ${regions.length > 1 ? renderToggle(group, regions.map(r => [r, REGION_LABEL[r]]), '手機品牌地區') : ''}
@@ -89,7 +89,7 @@ function renderVendorTrendCard(data: AllVersions): string {
         })}<p class="trend-insight" data-chart-group="${group}" data-value="${r}"${i > 0 ? ' hidden' : ''}>${esc(displayDate(trends[r]!.months.at(-1)!))}：${latest}</p>`;
       }).join('')}
     </div>
-  </div>`;
+  </div></chart-switch>`;
 }
 
 /** "iOS 27：3.1% → 24.5%" for the newest major in the chart */
@@ -109,7 +109,7 @@ function renderShareTrendCard(data: AllVersions, platform: 'ios' | 'android'): s
   const series = pickTrendSeries(trends, prefix);
   const regions = (['TW', 'ww'] as const).filter(r => trends[r]);
   const group = `share-${platform}`;
-  return `<div class="case trend-card">
+  return `<chart-switch><div class="case trend-card">
     <div class="case-head">
       <span class="case-no">${prefix} 主版本占比</span>
       ${regions.length > 1 ? renderToggle(group, regions.map(r => [r, REGION_LABEL[r]]), `${prefix} 地區`) : ''}
@@ -124,7 +124,7 @@ function renderShareTrendCard(data: AllVersions, platform: 'ios' | 'android'): s
         attrs: `data-chart-group="${group}" data-value="${r}"`,
       })}<p class="trend-insight" data-chart-group="${group}" data-value="${r}"${i > 0 ? ' hidden' : ''}>${trendInsight(series[r]!, trends[r]!.months)}</p>`).join('')}
     </div>
-  </div>`;
+  </div></chart-switch>`;
 }
 
 function renderBankTrendCard(data: AllVersions): string {
@@ -147,13 +147,13 @@ function renderBankTrendCard(data: AllVersions): string {
         attrs: `data-chart-group="bank-trend" data-value="${platform}"`,
       });
     }).join('');
-  return `<div class="case trend-card">
+  return `<chart-switch><div class="case trend-card">
     <div class="case-head">
       <span class="case-no">銀行 App 最低版本要求</span>
       ${snaps.length >= 2 ? renderToggle('bank-trend', [['iOS', 'iOS'], ['Android', 'Android']], '平台') : ''}
     </div>
     <div class="case-body">${body}</div>
-  </div>`;
+  </div></chart-switch>`;
 }
 
 export function renderTrendsSection(data: AllVersions): string {

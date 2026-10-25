@@ -52,7 +52,7 @@ export const DAY_MS = 24 * 60 * 60 * 1000;
 export const platformClass = (p: string) => p === 'iOS' ? 'tl-ios' : p === 'Android' ? 'tl-android' : 'tl-cross';
 
 export function renderToggle(group: string, options: Array<[string, string]>, label: string): string {
-  return `<div class="chips chart-toggle" role="group" aria-label="${esc(label)}" data-chart-toggle="${group}">
+  return `<choice-chips name="${esc(group)}"><div class="chips chart-toggle" role="group" aria-label="${esc(label)}" data-chart-toggle="${group}">
     ${options.map(([value, text], i) => `<button type="button" class="chip${i === 0 ? ' is-active' : ''}" data-value="${esc(value)}" aria-pressed="${i === 0}">${esc(text)}</button>`).join('')}
-  </div>`;
+  </div></choice-chips>`;
 }

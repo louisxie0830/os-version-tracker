@@ -97,11 +97,14 @@ export function parseStableReleaseFeed(items: ReleaseFeedItem[]): OSVersionInfo 
   return { platform: 'iOS', ...latest };
 }
 
-/** Newest iOS beta in the Developer Releases feed, e.g. "iOS 26.4 beta 3 (23E5223f)" */
+/**
+ * Newest iOS pre-release in the Developer Releases feed: a beta ("iOS 26.4 beta 3 (23E5223f)") or a release
+ * candidate ("iOS 26.4 RC (23E5234a)"), which replaces the betas once it's out
+ */
 export function parseBetaReleaseFeed(items: ReleaseFeedItem[]): OSVersionInfo | null {
-  const betaRelease = items.find(item => /^iOS\s/i.test(item.title ?? '') && /\bbeta\b/i.test(item.title ?? ''));
+  const betaRelease = items.find(item => /^iOS\s/i.test(item.title ?? '') && /\bbeta\b|\bRC\b/i.test(item.title ?? ''));
   if (!betaRelease) return null;
-  const m = betaRelease.title?.match(/iOS\s+([\d.]+\s+beta\s*\d*)\s*(?:\((\w+)\))?/i);
+  const m = betaRelease.title?.match(/iOS\s+([\d.]+\s+(?:beta|RC)\s*\d*)\s*(?:\((\w+)\))?/i);
   return {
     platform: 'iOS',
     version: m?.[1]?.trim() ?? 'unknown',

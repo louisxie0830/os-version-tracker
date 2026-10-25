@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { SCRIPTS } from '../src/asset-versions.ts';
 
 /**
  * Runs public/sw.js against a small fake of the service worker globals (caches, fetch, events), to check
@@ -91,14 +92,30 @@ test('activating removes only this project\'s old caches: the current one and ot
 
 test('each script keeps one offline entry whatever its ?v= version, and a newer version replaces the old copy', async () => {
   const sw = loadWorker();
-  for (const name of ['app.js', 'theme.js', 'notifications.js']) {
+  for (const name of SCRIPTS) {
     await sw.request(`${SCOPE}${name}?v=old`, 'no-cors');
     await sw.request(`${SCOPE}${name}?v=new`, 'no-cors');
   }
   const cache = [...sw.store.values()][0];
-  for (const name of ['app.js', 'theme.js', 'notifications.js']) {
+  for (const name of SCRIPTS) {
     assert.deepEqual([...cache.keys()].filter(k => k.includes(name)), [`${SCOPE}${name}`], `${name}: one entry, no query`);
   }
   sw.setOnline(false);
   assert.equal(await sw.request(`${SCOPE}app.js?v=newer-still`, 'no-cors'), 'page:/x/app.js', 'offline, any version gets the latest copy');
+});
+
+test('the worker\'s VERSIONED set is exactly the stylesheet and every page script (it can\'t import SCRIPTS)', () => {
+  const source = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8');
+  const list = source.match(/const VERSIONED = new Set\((\[[^\]]*\])\)/)?.[1];
+  assert.ok(list, 'VERSIONED found');
+  const names = JSON.parse(list!.replace(/'/g, '"')) as string[];
+  assert.deepEqual([...names].sort(), ['style.css', ...SCRIPTS].sort());
+});
+
+test('a component script fetched online is served from the cache offline', async () => {
+  const sw = loadWorker();
+  await sw.request(`${SCOPE}bank-table.js?v=abc`, 'no-cors');
+  sw.setOnline(false);
+  assert.equal(await sw.request(`${SCOPE}bank-table.js?v=def`, 'no-cors'), 'page:/x/bank-table.js');
+  assert.equal(await sw.request(`${SCOPE}trend-charts.js?v=def`, 'no-cors'), null, 'never fetched: no offline copy');
 });

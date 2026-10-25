@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { cleanNoteLine, parseReleaseNotes, pluginRequirements, summarizeReleaseNotes } from '../src/fetchers/cordova.ts';
+import { fixture } from './helpers.ts';
 
-// Synthetic RELEASENOTES.md in the layout both Cordova platform repos use
+// Synthetic RELEASENOTES.md in cordova-android's layout ("###" version headings)
 const NOTES = `<!-- license header -->
 
 ## Release Notes for Cordova (Example) ##
@@ -65,6 +66,15 @@ test('summarizeReleaseNotes takes breaking changes of the current major and fixe
   // "**Breaking:**" heading of older releases, and no section for an unreleased version
   assert.deepEqual(summarizeReleaseNotes(NOTES, '8.0.0').breaking, ['chore!: older major']);
   assert.deepEqual(summarizeReleaseNotes(NOTES, '9.2.0').fixes, []);
+});
+
+test('summarizeReleaseNotes reads cordova-ios notes, whose version headings are "##"', () => {
+  const notes = fixture('cordova-ios-releasenotes.md');
+  assert.deepEqual(parseReleaseNotes(notes).map(s => s.version), ['8.2.0', '8.1.1', '8.0.0', '8.0.0-beta.1']);
+  const summary = summarizeReleaseNotes(notes, '8.1.1');
+  assert.equal(summary.majorRelease, '8.0.0');
+  assert.deepEqual(summary.breaking, ['chore!: update dependencies & node engine', 'feat!: drop iOS-sim & use simctl directly']);
+  assert.deepEqual(summary.fixes, ['fix: dont call nativeFetchMessages if not implemented', 'fix: proper macro check for TARGET_OS_VISION']);
 });
 
 test('pluginRequirements takes the highest entry not above the version, skipping placeholders and dev builds', () => {

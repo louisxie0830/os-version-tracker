@@ -6,6 +6,9 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "strict": true,
+    // Only import/export makes a file a module: src/browser/*.ts have neither and compile to classic
+    // scripts (<script defer>) instead of ending in "export {}"; every other file under src/ imports
+    "moduleDetection": "legacy",
     "outDir": "dist",
     "rootDir": "src",
     "skipLibCheck": true,

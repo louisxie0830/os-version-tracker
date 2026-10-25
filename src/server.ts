@@ -12,14 +12,12 @@ import { buildCalendar } from './calendar.js';
 import { buildAtomFeed, buildNotificationsJson } from './changes.js';
 import { renderHTML } from './render.js';
 import { PAGE_CSS, STYLE_VERSION } from './render-styles.js';
-import { SCRIPT_VERSIONS, SCRIPTS } from './asset-versions.js';
+import { isScript, PUBLIC_DIR, SCRIPT_VERSIONS, SCRIPTS, scriptPath } from './asset-versions.js';
 import { SECURITY_HEADERS } from './security-headers.js';
 import { LEGAL_PAGES, renderLegalPage } from './legal-pages.js';
 
 const PORT = Number(process.env.PORT) || 3000;
 
-// Works from both src/ (tsx) and dist/ (compiled): public/ sits next to either directory
-const PUBLIC_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
 // The legal documents sit at the project root, next to src/ and dist/
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -248,11 +246,18 @@ export function assetCacheControl(pathname: string, version: string | null): str
   return pathname === '/sw.js' ? 'no-cache' : 'public, max-age=86400';
 }
 
+/**
+ * Files served as they are: the page scripts (from SCRIPTS, so a new one can't be left out; scriptPath says where
+ * each lives) and, from public/, the worker, manifest and image
+ */
+const STATIC_FILES = new Set(['/manifest.webmanifest', '/sw.js', '/og-image.png', ...SCRIPTS.map(name => `/${name}`)]);
+
 async function serveStatic(req: http.IncomingMessage, pathname: string, version: string | null, res: http.ServerResponse): Promise<boolean> {
-  const allowed = pathname === '/manifest.webmanifest' || pathname === '/sw.js' || pathname === '/og-image.png' || pathname === '/notifications.js' || pathname === '/app.js' || pathname === '/theme.js' || /^\/icons\/[\w.-]+$/.test(pathname);
+  const allowed = STATIC_FILES.has(pathname) || /^\/icons\/[\w.-]+$/.test(pathname);
   if (!allowed) return false;
   try {
-    const cached = await cachedFile(pathname, () => readFile(path.join(PUBLIC_DIR, pathname)));
+    const name = pathname.slice(1);
+    const cached = await cachedFile(pathname, () => readFile(isScript(name) ? scriptPath(name) : path.join(PUBLIC_DIR, pathname)));
     await send(req, res, {
       'Content-Type': STATIC_TYPES[path.extname(pathname)] ?? 'application/octet-stream',
       'Cache-Control': assetCacheControl(pathname, version),

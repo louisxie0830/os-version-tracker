@@ -55,3 +55,9 @@ jobs:
       - name: Test with coverage
         if: matrix.node == 24
         run: npm run test:coverage
+
+      # Once, against a deterministic snapshot: compile the real browser assets, build a temporary site and
+      # exercise its controls, custom elements, layout and accessibility in Chrome at every supported viewport.
+      - name: Browser end-to-end test
+        if: matrix.node == 24
+        run: npm run test:e2e

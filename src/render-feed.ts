@@ -100,10 +100,10 @@ const SECTION_LINKS: Array<[string, string]> = [
 ];
 
 export function renderFilterRail(): string {
-  const chips = (group: string, values: string[]) => `<div class="chips" role="group" data-filter-group="${group}">
+  const chips = (group: string, values: string[]) => `<choice-chips name="${group}"><div class="chips" role="group" data-filter-group="${group}">
       <button type="button" class="chip is-active" data-value="all" aria-pressed="true">全部</button>
       ${values.map(v => `<button type="button" class="chip" data-value="${esc(v)}" aria-pressed="false">${esc(v)}</button>`).join('')}
-    </div>`;
+    </div></choice-chips>`;
   return `<aside class="rail rail-left" aria-label="篩選與頁面區塊">
     <div class="rail-group">
       <span class="rail-label" id="filter-type">類型</span>

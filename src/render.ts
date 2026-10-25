@@ -12,7 +12,7 @@ import { renderCordovaSection, renderCrashesSection, renderSecuritySection } fro
 import { renderTrendsSection } from './render-trends.js';
 import { renderFrameworksSection } from './render-frameworks.js';
 import { STYLE_VERSION } from './render-styles.js';
-import { scriptSrc } from './asset-versions.js';
+import { COMPONENT_SCRIPTS, scriptSrc } from './asset-versions.js';
 
 export interface RenderOptions {
   /** How often the data is refreshed, shown to readers (server cache TTL, or the static site's build schedule) */
@@ -167,6 +167,7 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
     <a href="legal/">免責聲明</a> · <a href="legal/#7-隱私">隱私</a> · <a href="legal/sources/">資料來源與授權</a> · <a href="https://github.com/louisxie0830/os-version-tracker/blob/master/SECURITY.md" rel="noopener noreferrer" target="_blank">私密回報</a> · 非官方網站，資料僅供參考
   </footer>
   <div class="offline-banner" id="offline" hidden>目前離線，顯示的是上次抓取的資料</div>
+  ${COMPONENT_SCRIPTS.map(name => `<script src="${scriptSrc(name)}" defer></script>`).join('\n  ')}
   <script src="${scriptSrc('app.js')}" defer></script>
 </body>
 </html>`;
