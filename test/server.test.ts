@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { brotliDecompressSync, gunzipSync } from 'node:zlib';
 import { assetCacheControl, compressionCount, createHandler, MIN_COMPRESS_BYTES, pickEncoding } from '../src/server.ts';
-import { SCRIPT_VERSIONS } from '../src/asset-versions.ts';
+import { readScript, SCRIPT_VERSIONS, SCRIPTS } from '../src/asset-versions.ts';
 import type { AllVersions } from '../src/fetch-all.ts';
 
 // A real snapshot of the aggregated data (taken from a static build); no network in these tests
@@ -458,4 +458,14 @@ test('the page links each script with its content version, and the server caches
   assert.ok(legal.includes(`src="../theme.js?v=${SCRIPT_VERSIONS['theme.js']}"`), 'legal pages use the same version');
   assert.equal((await fetchRaw('/sw.js')).headers['cache-control'], 'no-cache', 'the service worker is always revalidated');
   assert.equal(assetCacheControl('/icons/icon.svg', null), 'public, max-age=86400');
+});
+
+test('every page script in SCRIPTS is served from where the resolver says (components compiled, the rest public/) as JavaScript; other paths stay unlisted', async () => {
+  for (const name of SCRIPTS) {
+    const res = await get(`/${name}`);
+    assert.equal(res.status, 200, name);
+    assert.match(res.type, /^text\/javascript/, name);
+    assert.equal(res.body, readScript(name).toString(), `${name}: the file as it is`);
+  }
+  for (const path of ['/components.js', '/public/app.js', '/scripts/page-probe.js', '/browser/bank-table.js', '/dist/browser/bank-table.js', '/bank-table.ts', '/src/browser/bank-table.ts', '/server.js']) assert.equal((await get(path)).status, 404, path);
 });

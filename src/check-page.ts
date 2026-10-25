@@ -4,7 +4,8 @@
  *
  * - layout: anything past the right edge (outside intentional horizontal scrollers), all sections expanded
  * - clicks: controls covered by another element; links that catch clicks outside their own row or card
- * - behaviour: script errors; every filter, sort, button, search and the theme toggle exercised
+ * - behaviour: script errors; every filter, sort, button, search and the theme toggle exercised; the custom
+ *   elements defined, chip state (is-active / aria-pressed) in step, chart toggles and tooltips working
  * - structure: duplicate ids, broken anchors and id references, controls without a name
  * - text contrast below WCAG AA
  *

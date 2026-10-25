@@ -2,7 +2,8 @@ import { displayDate, esc } from './render-actions.js';
 
 /**
  * Server-rendered line chart (inline SVG, no script needed to draw it). Colours come from the
- * --series-* tokens (validated light / dark categorical steps); app.js adds the crosshair tooltip.
+ * --series-* tokens (validated light / dark categorical steps); the <line-chart> wrapper (trend-charts.js)
+ * adds the crosshair tooltip.
  * Identity never rests on colour alone: a legend, labels at the line ends and a table view.
  */
 
@@ -126,7 +127,7 @@ export function renderLineChart(o: LineChartOptions): string {
       <tbody>${o.xLabels.map((l, i) => `<tr><td>${esc(displayDate(l))}</td>${o.series.map(s => `<td>${s.values[i] === null ? '—' : `${fmt(s.values[i]!)}${esc(o.unit)}`}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div></details>`;
 
-  return `<figure class="chart"${o.hidden ? ' hidden' : ''}${o.attrs ? ` ${o.attrs}` : ''} data-chart="${esc(data)}">
+  return `<line-chart><figure class="chart"${o.hidden ? ' hidden' : ''}${o.attrs ? ` ${o.attrs}` : ''} data-chart="${esc(data)}">
     <ul class="chart-legend">${o.series.map(s => `<li><span class="chart-swatch series-${s.slot}" aria-hidden="true"></span>${esc(s.name)}</li>`).join('')}</ul>
     <div class="chart-plot">
       <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label)}">
@@ -138,5 +139,5 @@ export function renderLineChart(o: LineChartOptions): string {
       <div class="chart-tip" role="status" hidden></div>
     </div>
     ${table}
-  </figure>`;
+  </figure></line-chart>`;
 }
