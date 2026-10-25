@@ -45,36 +45,6 @@ try {
   localStorage.setItem(KEY, JSON.stringify([...seen].slice(-1000)));
 } catch {}
 
-// Developer news: platform / importance filter and "show more"
-try {
-  const list = document.getElementById('news-list');
-  const more = document.getElementById('news-show-more');
-  if (list) {
-    if (more) list.classList.add('collapsed');
-    let filter = 'all';
-    const apply = () => {
-      let shown = 0;
-      for (const li of list.children) {
-        const match = filter === 'all' || (filter === 'important' ? li.dataset.important === '1' : li.dataset.platform === filter);
-        li.hidden = !match;
-        if (match) shown++;
-      }
-      // With a filter on, show every match; the "show more" cap only applies to the full list
-      list.classList.toggle('collapsed', filter === 'all' && !!more && !more.dataset.expanded);
-      if (more) more.hidden = filter !== 'all' || !!more.dataset.expanded;
-      let empty = list.parentElement.querySelector('.news-empty');
-      if (!shown && !empty) list.insertAdjacentHTML('afterend', '<div class="news-empty">沒有符合的新聞</div>');
-      if (shown && empty) empty.remove();
-    };
-    document.querySelectorAll('.news-filters .chip').forEach(chip => chip.addEventListener('click', () => {
-      filter = chip.dataset.filter;
-      document.querySelectorAll('.news-filters .chip').forEach(c => c.classList.toggle('is-active', c === chip));
-      apply();
-    }));
-    more?.addEventListener('click', () => { more.dataset.expanded = '1'; apply(); });
-  }
-} catch {}
-
 // Feed: type / platform chips and the search box filter the "now" cards and the feed; "load more" uncaps the feed
 try {
   const items = [...document.querySelectorAll('[data-feed-item]')];
