@@ -155,7 +155,7 @@
     const tick = () => wait(30);
     const resetChips = () => document.querySelectorAll('[data-filter-group], [data-bank-filter], .news-filters').forEach(g => g.querySelector('.chip')?.click());
     // The custom elements in the page are defined
-    for (const tag of ['choice-chips', 'bank-table', 'news-list', 'chart-switch', 'line-chart']) {
+    for (const tag of ['choice-chips', 'activity-filter', 'bank-table', 'news-list', 'chart-switch', 'line-chart']) {
       if (document.querySelector(tag) && !customElements.get(tag)) add('component not defined', tag);
     }
     for (const chip of document.querySelectorAll('.chip')) {

@@ -45,38 +45,10 @@ try {
   localStorage.setItem(KEY, JSON.stringify([...seen].slice(-1000)));
 } catch {}
 
-// Feed: type / platform chips and the search box filter the "now" cards and the feed; "load more" uncaps the feed
+// Whole-page search. <activity-filter> independently uses the same input for the "now" cards and feed.
 try {
   const items = [...document.querySelectorAll('[data-feed-item]')];
-  const more = document.getElementById('feed-more');
   const search = document.getElementById('search');
-  const filters = { type: 'all', platform: 'all' };
-  const apply = () => {
-    const q = (search?.value ?? '').trim().toLowerCase();
-    const filtering = filters.type !== 'all' || filters.platform !== 'all' || q !== '';
-    const shown = { now: 0, feed: 0 };
-    for (const el of items) {
-      const match = (filters.type === 'all' || el.dataset.type === filters.type)
-        && (filters.platform === 'all' || el.dataset.platform === filters.platform)
-        && (!q || el.textContent.toLowerCase().includes(q));
-      // Without a filter only the first rows show until "load more"; with one, every match shows
-      const capped = !filtering && el.classList.contains('feed-extra') && !more?.dataset.expanded;
-      el.hidden = !match || capped;
-      if (match) shown[el.closest('#now') ? 'now' : 'feed']++;
-    }
-    if (more) more.hidden = filtering || !!more.dataset.expanded;
-    const nowEmpty = document.getElementById('now-empty');
-    if (nowEmpty) nowEmpty.hidden = !filtering || shown.now > 0 || !document.querySelector('#now [data-feed-item]');
-    const feedEmpty = document.getElementById('feed-empty');
-    if (feedEmpty && document.querySelector('#feed [data-feed-item]')) feedEmpty.hidden = shown.feed > 0;
-  };
-  // The rail's type / platform groups are <choice-chips> (choice-chips.js), which keep the chips' state
-  document.querySelectorAll('.rail choice-chips').forEach(group => group.addEventListener('choice-change', event => {
-    const { name, value } = event.detail ?? {};
-    if (!(name in filters)) return;
-    filters[name] = value;
-    apply();
-  }));
   // Whole-page search: rows in the other sections are matched too; sections with nothing left hide
   const ROWS = '.crash-list > li, .news-feed > li, .actions > li, .timeline > li, .compat-table tbody tr, .privacy-card, .tile, .version-card, .now-card, .feed-row';
   const status = document.getElementById('search-status');
@@ -117,18 +89,16 @@ try {
   let timer;
   search?.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => { apply(); searchPage((search.value ?? '').trim().toLowerCase()); }, 120);
+    timer = setTimeout(() => searchPage((search.value ?? '').trim().toLowerCase()), 120);
   });
   document.getElementById('search-clear')?.addEventListener('click', () => {
     search.value = '';
-    apply();
-    searchPage('');
+    search.dispatchEvent(new Event('input'));
     search.focus();
   });
   search?.addEventListener('keydown', event => {
     if (event.key === 'Enter') document.getElementById('now')?.scrollIntoView({ block: 'start' });
   });
-  more?.addEventListener('click', () => { more.dataset.expanded = '1'; apply(); });
 } catch {}
 
 // Horizontal scrollers (section nav and filter chips on narrower windows): a mouse wheel scrolls them

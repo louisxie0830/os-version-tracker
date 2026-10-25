@@ -16,7 +16,7 @@ import { renderTrendsSection } from '../src/render-trends.ts';
  */
 
 const snapshot = JSON.parse(readFileSync(new URL('./fixtures/all-versions.json', import.meta.url), 'utf8')) as AllVersions;
-const TAGS = ['choice-chips', 'bank-table', 'news-list', 'chart-switch', 'line-chart'];
+const TAGS = ['choice-chips', 'activity-filter', 'bank-table', 'news-list', 'chart-switch', 'line-chart'];
 
 /** Every custom element opened is closed, and none is nested in another of the same name */
 function assertBalanced(html: string) {
@@ -45,6 +45,18 @@ test('home page: the feed rail and bank filters are wrapped in choice-chips name
   // Every generic .chips group on the page is a choice-chips
   const groups = html.match(/<div class="chips[^"]*" role="group"/g) ?? [];
   assert.equal(groups.length, (html.match(/<choice-chips name="[^"]+"><div class="chips/g) ?? []).length);
+});
+
+test('activity: one component contains the search input, filter rail, now cards and feed controls', () => {
+  const html = renderHTML(snapshot);
+  const inner = html.match(/<activity-filter>([\s\S]*?)<\/activity-filter>/)?.[1] ?? '';
+  assert.match(inner, /<input type="search" id="search" data-activity-search/);
+  assert.match(inner, /<choice-chips name="type">/);
+  assert.match(inner, /<choice-chips name="platform">/);
+  assert.match(inner, /id="now" data-feed-now/);
+  assert.match(inner, /id="now-empty" data-now-empty hidden/);
+  assert.match(inner, /id="feed-empty" data-feed-empty/);
+  assert.equal(html.match(/<activity-filter>/g)?.length, 1);
 });
 
 test('news: one news-list owns declarative choice chips, rows, show-more and an existing empty state', () => {
@@ -237,7 +249,7 @@ function build(registry: Map<string, new () => FakeElement>, [tag, attrs = {}, k
   return el;
 }
 const connectAll = (el: FakeElement) => {
-  for (const node of [el, ...el.querySelectorAll('choice-chips'), ...el.querySelectorAll('bank-table'), ...el.querySelectorAll('chart-switch'), ...el.querySelectorAll('line-chart')]) {
+  for (const node of [el, ...el.querySelectorAll('choice-chips'), ...el.querySelectorAll('activity-filter'), ...el.querySelectorAll('bank-table'), ...el.querySelectorAll('news-list'), ...el.querySelectorAll('chart-switch'), ...el.querySelectorAll('line-chart')]) {
     (node as unknown as { connectedCallback?: () => void }).connectedCallback?.();
   }
 };
@@ -258,6 +270,58 @@ test('choice-chips: a click keeps is-active and aria-pressed in step and sends o
   assert.deepEqual(seen, [{ name: 'platform', value: 'Android' }], 'bubbled to the parent, once');
   click(group.querySelector('.chips')!);
   assert.equal(seen.length, 1, 'a click between chips changes nothing');
+});
+
+test('activity-filter: combines type, platform and search; filters uncap extras and more restores them', () => {
+  const registry = loadComponents();
+  const activity = build(registry, ['activity-filter', {}, [
+    ['input', { 'data-activity-search': '', value: '' }],
+    chips('type', ['all', 'security']),
+    chips('platform', ['all', 'iOS']),
+    ['section', { 'data-feed-now': '' }, [
+      ['article', { 'data-feed-item': '', 'data-type': 'security', 'data-platform': 'iOS' }],
+      ['article', { 'data-feed-item': '', 'data-type': 'news', 'data-platform': 'Android' }],
+      ['p', { 'data-now-empty': '', hidden: '' }],
+    ]],
+    ['ul', {}, [
+      ['li', { 'data-feed-item': '', 'data-type': 'security', 'data-platform': 'Android' }],
+      ['li', { class: 'feed-extra', 'data-feed-item': '', 'data-type': 'deadline', 'data-platform': 'iOS', hidden: '' }],
+    ]],
+    ['p', { 'data-feed-empty': '', hidden: '' }],
+    ['button', { 'data-feed-more': '' }],
+  ]]);
+  const items = activity.querySelectorAll('[data-feed-item]');
+  ['iOS security fix', 'Android announcement', 'Android security alert', 'iOS deadline'].forEach((text, i) => { items[i].textContent = text; });
+  connectAll(activity);
+  connectAll(activity);
+  const more = activity.querySelector('[data-feed-more]')!;
+  const nowEmpty = activity.querySelector('[data-now-empty]')!;
+  const feedEmpty = activity.querySelector('[data-feed-empty]')!;
+  assert.deepEqual(items.map(item => item.hidden), [false, false, false, true]);
+  assert.equal(more.hidden, false);
+
+  click(activity.querySelectorAll('choice-chips')[0].querySelectorAll('.chip')[1]);
+  assert.deepEqual(items.map(item => item.hidden), [false, true, false, true]);
+  click(activity.querySelectorAll('choice-chips')[1].querySelectorAll('.chip')[1]);
+  assert.deepEqual(items.map(item => item.hidden), [false, true, true, true]);
+  assert.equal(nowEmpty.hidden, true);
+  assert.equal(feedEmpty.hidden, false, 'no feed match: its empty state shows');
+
+  click(activity.querySelectorAll('choice-chips')[0].querySelectorAll('.chip')[0]);
+  click(activity.querySelectorAll('choice-chips')[1].querySelectorAll('.chip')[0]);
+  const search = activity.querySelector('[data-activity-search]')!;
+  search.value = 'security alert';
+  search.dispatchEvent(new FakeEvent('input'));
+  assert.deepEqual(items.map(item => item.hidden), [true, true, false, true]);
+  assert.equal(nowEmpty.hidden, false);
+  assert.equal(feedEmpty.hidden, true);
+
+  search.value = '';
+  search.dispatchEvent(new FakeEvent('input'));
+  click(more);
+  assert.equal(more.dataset.expanded, '1');
+  assert.equal(more.hidden, true);
+  assert.deepEqual(items.map(item => item.hidden), [false, false, false, false]);
 });
 
 test('bank-table: chips filter the rows, the count and empty message follow, and the sort reorders by data value', () => {

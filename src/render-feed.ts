@@ -61,10 +61,10 @@ export function renderNow(data: AllVersions): string {
         <p>${esc(displayDate(c.body))}</p>
       </article>`).join('')
     : '<p class="feed-empty">目前沒有需要立即處理的項目。</p>';
-  return `<section class="feed-section" id="now" aria-labelledby="now-h">
+  return `<section class="feed-section" id="now" data-feed-now aria-labelledby="now-h">
     <h2 class="feed-h" id="now-h">待處理</h2>
     <div class="now-list">${list}</div>
-    <p class="feed-empty" id="now-empty" hidden>沒有符合篩選的項目。</p>
+    <p class="feed-empty" id="now-empty" data-now-empty hidden>沒有符合篩選的項目。</p>
   </section>`;
 }
 
@@ -87,8 +87,8 @@ export function renderFeed(data: AllVersions): string {
     </div>
     <div class="feed-box">
       ${items.length ? `<ul class="feed-list">${rows}</ul>` : ''}
-      <p class="feed-empty" id="feed-empty"${items.length ? ' hidden' : ''}>${items.length ? '沒有符合篩選的動態。' : '目前沒有動態。'}</p>
-      ${items.length > FEED_SHOWN ? `<button type="button" class="feed-more" id="feed-more">載入更多（共 ${items.length} 項）</button>` : ''}
+      <p class="feed-empty" id="feed-empty" data-feed-empty${items.length ? ' hidden' : ''}>${items.length ? '沒有符合篩選的動態。' : '目前沒有動態。'}</p>
+      ${items.length > FEED_SHOWN ? `<button type="button" class="feed-more" id="feed-more" data-feed-more>載入更多（共 ${items.length} 項）</button>` : ''}
     </div>
   </section>`;
 }
