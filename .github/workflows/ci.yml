@@ -1,5 +1,5 @@
-# The project's verification: type-check and tests on every Node.js version it runs on, 24 (GitHub Actions,
-# the site build) with a coverage floor, and 26 (the Docker image). Read-only: no secrets, no deploy.
+# The project's verification: type-check, tests with a coverage floor and the browser end-to-end test on
+# Node.js 24 (GitHub Actions, the site build). Read-only: no secrets, no deploy.
 #
 # Runs on pull requests, and is called by the Pages workflow (pages.yml) before it builds and deploys a code
 # change, so a push to master is verified once and can't be deployed without passing. It has no push trigger
@@ -21,14 +21,10 @@ concurrency:
 
 jobs:
   test:
-    name: test (Node ${{ matrix.node }})
+    # The name stays "test (Node 24)", so a required status check that names it keeps matching
+    name: test (Node 24)
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        # Keep in step with the Pages / links workflows (24) and the Dockerfile's NODE_IMAGE (26)
-        node: [24, 26]
     steps:
       # Actions are pinned to full commit SHAs (tag in the comment) so a moved tag can't change what runs
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,7 +33,8 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: ${{ matrix.node }}
+          # .nvmrc: one place to change the Node version, for every workflow
+          node-version-file: .nvmrc
           cache: npm
 
       # --ignore-scripts: dependencies' install scripts never run on the runner
@@ -46,18 +43,12 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
-      - name: Test
-        if: matrix.node != 24
-        run: npm test
-
-      # Once, on the version the site is built with: the tests plus a coverage floor (a little under the
-      # measured baseline of 92% lines / 85.7% branches / 87% functions), so coverage can't quietly slide
+      # The tests plus a coverage floor (a little under the measured baseline of 92% lines / 85.7% branches /
+      # 87% functions), so coverage can't quietly slide
       - name: Test with coverage
-        if: matrix.node == 24
         run: npm run test:coverage
 
-      # Once, against a deterministic snapshot: compile the real browser assets, build a temporary site and
-      # exercise its controls, custom elements, layout and accessibility in Chrome at every supported viewport.
+      # Against a deterministic snapshot: compile the real browser assets, build a temporary site and exercise
+      # its controls, custom elements, layout and accessibility in Chrome at every supported viewport.
       - name: Browser end-to-end test
-        if: matrix.node == 24
         run: npm run test:e2e

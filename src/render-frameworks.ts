@@ -46,10 +46,14 @@ function renderFramework(f: FrameworkInfo, advisories: string, flagsNote: boolea
     </div>
     <div class="case-body">
       ${advisories ? `<div class="cordova-notes"><div class="cordova-notes-title">已知漏洞</div>${advisories}</div>` : ''}
-      <div class="table-wrap"><table class="compat-table">
-        <thead><tr><th>近期版本</th><th>發布</th><th>${flagsNote ? 'release notes 標示' : 'Dart'}</th></tr></thead>
-        <tbody>${rows}</tbody>
+      <div class="table-wrap"><table class="compat-table stack-on-mobile">
+        <thead><tr><th>近期版本</th><th>發布</th><th class="th-wrap">${flagsNote ? 'release notes 標示' : 'Dart'}</th></tr></thead>
+        <tbody data-search-rows>${rows}</tbody>
       </table></div>
+      ${f.breakingChanges?.length ? `<div class="cordova-notes"><div class="cordova-notes-title">近期版本的破壞性變更（點開為官方遷移指南）</div>
+        ${f.breakingChanges.map(b => `<div class="breaking-minor">${esc(f.name)} ${esc(b.minor)}</div>
+          <ul class="breaking-list" data-search-rows>${b.changes.map(c => `<li>${externalLink(c.url, esc(c.title))}</li>`).join('')}</ul>`).join('')}
+      </div>` : ''}
       <div class="tl-source">${externalLink(f.releaseNotesUrl, 'release notes')} · ${externalLink(f.breakingChangesUrl, f.name === 'Flutter' ? '破壞性變更清單' : '官方部落格（升級說明）')}</div>
     </div>
   </div>`;

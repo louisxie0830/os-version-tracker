@@ -99,13 +99,14 @@ export function parseItunesLookup(json: string): Map<number, ItunesAppInfo> {
   let data: unknown;
   try {
     data = JSON.parse(json);
-  } catch {
+  } catch (err) {
+    console.warn(`[twBanks] iTunes lookup response is not JSON (${(err as Error).name}); its apps are left without iOS data`);
     return out;
   }
   const results = (data as { results?: unknown })?.results;
   if (!Array.isArray(results)) return out;
   for (const r of results as Record<string, unknown>[]) {
-    if (typeof r?.trackId !== 'number' || typeof r.minimumOsVersion !== 'string') continue;
+    if (typeof r?.trackId !== 'number' || typeof r.minimumOsVersion !== 'string' || !/^\d+(?:\.\d+)*$/.test(r.minimumOsVersion)) continue;
     const released = typeof r.currentVersionReleaseDate === 'string' ? Date.parse(r.currentVersionReleaseDate) : NaN;
     out.set(r.trackId, {
       trackId: r.trackId,
@@ -187,7 +188,10 @@ export function parsePlayDetails(html: string): PlayAppInfo | undefined {
   if (app) {
     const block = app[140];
     const min = at(block, 1, 1, 0, 0, 1);
-    if (typeof min === 'string' && min.trim()) minOs = min.trim();
+    // A version ("9", "9.0"), whatever words Play puts around it ("9 以上", "9.0 and up"): the stored minimum
+    // must stay comparable, or a wording change would record a "change" for every app
+    const minVersion = typeof min === 'string' ? min.match(/\d+(?:\.\d+)*/)?.[0] : undefined;
+    if (minVersion) minOs = minVersion;
     else {
       // Some apps ship per-device builds; Play then shows a label instead of a version
       const label = JSON.stringify(block).match(/"(Varies with device|依裝置而異|因裝置而異)"/);
@@ -198,7 +202,8 @@ export function parsePlayDetails(html: string): PlayAppInfo | undefined {
     const target = at(block, 1, 0, 0, 0);
     if (typeof target === 'number' && target > 0) targetSdk = target;
     const secs = at(app, 145, 0, 1, 0);
-    if (typeof secs === 'number') updated = taipeiDate(secs * 1000);
+    // Epoch seconds between the App Store era and tomorrow (milliseconds here would be a date 50,000 years out)
+    if (typeof secs === 'number' && secs > 1.2e9 && secs < Date.now() / 1000 + 86_400) updated = taipeiDate(secs * 1000);
   }
 
   if (!minOs) {

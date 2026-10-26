@@ -4,7 +4,8 @@ import { readFileSync } from 'node:fs';
 import { lastRefreshDiagnostics, REFRESH_DEPS, refreshAllVersions, SITE_URL, SOURCES, type AllVersions, type RefreshDeps } from '../src/fetch-all.ts';
 import { publishDecision } from '../src/publish-health.ts';
 import { resetHistoryState } from '../src/history.ts';
-import { resetChangesState } from '../src/changes.ts';
+import { ITEM_SOURCES, resetChangesState } from '../src/changes.ts';
+import { resetLastGood } from '../src/last-good.ts';
 import type { TaiwanBankApp } from '../src/fetchers/tw-banks.ts';
 
 /**
@@ -50,6 +51,9 @@ function fakeFetchers(): Fetchers {
     security: async () => null as never,
     appleStatus: async () => ({ services: 1, events: [], url: 'https://developer.apple.com/system-status/' }),
     frameworks: async () => ({}),
+    sdkReleases: async () => [],
+    behaviorChanges: async () => null,
+    appleDeprecations: async () => [],
     crashes: async () => CRASHES,
   };
 }
@@ -81,6 +85,7 @@ const realFetch = globalThis.fetch;
 beforeEach(() => {
   resetHistoryState();
   resetChangesState();
+  resetLastGood();
   // Nothing here may reach the network: any real fetcher left in would fail loudly
   globalThis.fetch = (async (url: string) => { throw new Error(`unexpected network request: ${url}`); }) as typeof fetch;
 });
@@ -104,6 +109,11 @@ test('all sources succeed: every source ok, no errors, the data assembled and pu
   assert.ok(data.iosActions.length > 0 && data.androidActions.length > 0, 'actions derived from the versions');
   assert.equal(calls.status.length, Object.keys(SOURCES).length);
   assert.ok(calls.status.every(s => s.ok));
+  // api.json is this object at its top level: a refresh never drops one of its fields (test/api.test.ts)
+  assert.deepEqual(Object.keys(data).sort(), ['agpJdk', 'android', 'androidActions', 'androidCompat', 'androidNews', 'androidToolchain', 'announcedDevices',
+    'appleDeadline', 'appleNews', 'appleStatus', 'bankChanges', 'bankTrend', 'cachedAt', 'ciImages', 'cordova', 'crashes', 'devNews', 'frameworks',
+    'googleDeadline', 'ios', 'iosActions', 'iosAdoption', 'iosToolchain', 'osShare', 'privacy', 'recent', 'security', 'sources', 'timeline', 'tracked',
+    'twBanks', 'xcodeSupport']);
 });
 
 test('non-critical sources failing: their fallbacks are used, the errors recorded and alerted, and it still publishes', async () => {
@@ -127,6 +137,7 @@ test('non-critical sources failing: their fallbacks are used, the errors recorde
 
 test('iOS or Android failing: empty data and a refusal to publish', async () => {
   for (const key of ['ios', 'android'] as const) {
+    resetLastGood();
     const { run } = harness({ [key]: async () => { throw new Error(`${key} down`); } });
     const data = await run();
     assert.deepEqual(data[key], []);
@@ -134,6 +145,109 @@ test('iOS or Android failing: empty data and a refusal to publish', async () => 
     assert.equal(lastRefreshDiagnostics().errors[key], `${key} down`);
     assert.equal(publishDecision(data.sources).publish, false, `${key} is critical`);
   }
+});
+
+test('a failed source shows its last good result, marked stale, and iOS / Android that way still publish', async () => {
+  const LATER = new Date(NOW.getTime() + 12 * 60 * 60 * 1000);
+  await harness().run(); // every source good: remembered
+  const { calls, run } = harness({
+    ios: async () => { throw new Error('ios down'); },
+    cordova: async () => { throw new Error('HTTP 503'); },
+  }, { now: () => LATER });
+  const data = await run();
+  assert.deepEqual(data.ios, snap.ios, 'the last good iOS versions');
+  assert.equal(data.sources.ios.ok, false);
+  assert.equal(data.sources.ios.staleFrom, NOW.toISOString());
+  assert.equal(data.sources.ios.fetchedAt, LATER.toISOString(), 'fetchedAt is still when this refresh tried');
+  assert.deepEqual(data.cordova, { platforms: [], plugins: [] });
+  assert.match(lastRefreshDiagnostics().errors.ios ?? '', /ios down（沿用 .* UTC 的資料）/);
+  assert.ok(calls.status.some(s => s.key === 'ios' && !s.ok && s.detail === 'ios down'), 'still alerted');
+  const decision = publishDecision(data.sources);
+  assert.equal(decision.publish, true, 'stale iOS is still a page worth publishing');
+  assert.deepEqual(decision.stale.sort(), ['cordova', 'ios']);
+});
+
+test('a source that takes longer than its deadline fails without holding up the rest', async () => {
+  const { run } = harness({ cordova: () => new Promise(() => {}) }, { sourceDeadlineMs: () => 20 });
+  const data = await run();
+  assert.equal(data.sources.cordova.ok, false);
+  assert.match(lastRefreshDiagnostics().errors.cordova ?? '', /gave up after/);
+  assert.equal(data.sources.ios.ok, true);
+});
+
+test('a saved result of another kind (from an older build) is not used: the empty fallback is', async () => {
+  const { calls, run } = harness({ devNews: async () => { throw new Error('down'); } }, {
+    lastGood: (<T>() => ({ fetchedAt: NOW.toISOString(), value: { not: 'a list' } as unknown as T })) as RefreshDeps['lastGood'],
+  });
+  const data = await run();
+  assert.deepEqual(data.devNews, []);
+  assert.equal(data.sources.devNews.staleFrom, undefined);
+  assert.ok(calls.status.some(s => s.key === 'devNews' && !s.ok));
+});
+
+test('notifications follow the injected publish gate (the server shows every refresh)', async () => {
+  await harness().run(); // baseline
+  const extra = [...devNews(10), { ...devNews(1)[0], id: 'fresh2', title: 'New', important: true }];
+  resetLastGood();
+  const { calls, run } = harness({ devNews: async () => extra, ios: async () => { throw new Error('down'); } }, { willPublish: () => true });
+  await run();
+  assert.equal(calls.notified.length, 1, 'sent although the static build wouldn\'t publish this refresh');
+});
+
+test('a core version that went back is replaced by the last good one (not published), and stays out of the publish gate', async () => {
+  await harness().run(); // remembers iOS as it is now
+  const good = snap.ios.find(v => !v.isBeta)!.version;
+  const { run } = harness({ ios: async () => [{ platform: 'iOS', version: '18.7', releaseDate: '2025-01-01' }] }, {
+    coreVersionProblems: () => [{ source: 'ios', message: 'iOS stable went back' }],
+  });
+  const data = await run();
+  assert.equal(data.ios.find(v => !v.isBeta)?.version, good, 'the rejected 18.7 is never published');
+  assert.equal(data.sources.ios.ok, false);
+  assert.ok(data.sources.ios.staleFrom);
+  const androidBack = harness({}, { coreVersionProblems: () => [{ source: 'android', message: 'went back' }] });
+  const a = await androidBack.run();
+  assert.deepEqual(a.android, snap.android, 'Android the same way');
+  assert.ok(a.sources.android.staleFrom);
+});
+
+test('seen items are forgotten only for the sources that answered this time', async () => {
+  const prunes: Array<(id: string) => boolean> = [];
+  const recordItems = ((items: unknown[], _now: Date, opts?: { prune?: (id: string) => boolean }) => { prunes.push(opts!.prune!); return { items, added: [] }; }) as unknown as RefreshDeps['recordItems'];
+  await harness({ devNews: async () => { throw new Error('down'); } }, { recordItems }).run();
+  const [prunable] = prunes;
+  assert.equal(prunable('dev-news:https://swift.org/x'), false, 'its source failed: kept');
+  assert.equal(prunable('crash:https://github.com/x/1'), true, 'another source answered: may go');
+  assert.equal(prunable('device:iPhone Duo'), true);
+  assert.equal(prunable('mystery:1'), false, 'an unknown kind is never forgotten');
+});
+
+test('a last good result older than a week is not used', async () => {
+  await harness().run();
+  const { run } = harness({ cordova: async () => { throw new Error('HTTP 503'); } }, { now: () => new Date(NOW.getTime() + 8 * 24 * 60 * 60 * 1000) });
+  const data = await run();
+  assert.equal(data.cordova, null);
+  assert.equal(data.sources.cordova.staleFrom, undefined);
+});
+
+test('a list that shrank shows its last good result until the drop persists', async () => {
+  await harness().run(); // 10 developer news items
+  const { calls, run } = harness({ devNews: async () => devNews(2) });
+  const data = await run();
+  assert.equal(data.devNews.length, 10, 'the previous, complete list');
+  assert.equal(data.sources.devNews.ok, false);
+  assert.ok(data.sources.devNews.staleFrom);
+  assert.ok(calls.quality.some(q => q.source === 'devNews' && q.problems.length === 1), 'the drop is still alerted');
+});
+
+test('new items are notified only with a refresh that will be published', async () => {
+  const deferred: unknown[][] = [];
+  await harness().run(); // baseline
+  const extraNews = [...devNews(10), { ...devNews(1)[0], id: 'fresh', title: 'Brand new', important: true }];
+  const { calls, run } = harness({ devNews: async () => extraNews, ios: async () => { throw new Error('down'); } }, { deferNotifications: added => { deferred.push(added); } });
+  resetLastGood(); // iOS has nothing to fall back on: not publishable
+  await run();
+  assert.equal(calls.notified.length, 0);
+  assert.equal(deferred.length, 1);
 });
 
 test('core version rollback guard: an older Xcode than last time marks the toolchain failed and leaves it out', async () => {
@@ -145,11 +259,17 @@ test('core version rollback guard: an older Xcode than last time marks the toolc
     crashes: async context => { crashContext = context; return CRASHES; },
   });
   const data = await run();
-  assert.equal(data.iosToolchain, null, 'the implausible toolchain is not published');
+  assert.equal(data.iosToolchain?.xcodeStable?.version, snap.iosToolchain!.xcodeStable!.version, 'the implausible toolchain is not published: the last good one stands in');
   assert.equal(data.sources.iosToolchain.ok, false);
+  assert.equal(data.sources.iosToolchain.staleFrom, NOW.toISOString());
   assert.match(lastRefreshDiagnostics().errors.iosToolchain ?? '', /Xcode/);
   assert.ok(calls.status.some(s => s.key === 'iosToolchain' && !s.ok));
-  assert.equal((crashContext as { xcodeNotesUrl?: string }).xcodeNotesUrl, undefined, 'crash notes do not follow the rejected Xcode');
+  assert.notEqual((crashContext as { xcodeNotesUrl?: string }).xcodeNotesUrl, older.notesUrl, 'crash notes do not follow the rejected Xcode');
+  // With no last good result, the rejected toolchain is left out
+  resetLastGood();
+  const again = await run();
+  assert.equal(again.iosToolchain, null);
+  assert.equal(again.sources.iosToolchain.staleFrom, undefined);
   assert.equal(data.sources.ios.ok, true, 'the other sources are unaffected');
 });
 
@@ -176,6 +296,7 @@ test('the crash fetcher runs only after the core versions are in, and gets them'
 
 test('quality diagnostics: a list source that suddenly returns far fewer items is reported, and the data still published', async () => {
   await harness().run(); // 10 developer news items: the baseline
+  resetLastGood(); // nothing to fall back on
   const { calls, run } = harness({ devNews: async () => devNews(2) });
   const data = await run();
   const problems = lastRefreshDiagnostics().quality.devNews ?? [];
@@ -183,6 +304,7 @@ test('quality diagnostics: a list source that suddenly returns far fewer items i
   assert.match(problems[0], /devNews\.items/);
   assert.ok(calls.quality.some(q => q.source === 'devNews' && q.problems.length === 1), 'quality alert raised');
   assert.equal(data.sources.devNews.ok, true, 'still a working source');
+  assert.equal(data.devNews.length, 2, 'the short list is all there is'); 
   assert.equal(lastRefreshDiagnostics().counts.devNews?.['devNews.items'], 2);
   // A source that failed is not checked for completeness (its empty fallback would look like a drop)
   const failed = harness({ devNews: async () => { throw new Error('down'); } });
@@ -240,4 +362,12 @@ test('cachedAt and every source\'s fetchedAt come from the injected clock', asyn
   // Failed sources and rollback-rejected ones too
   const failed = await harness({ cordova: async () => { throw new Error('x'); } }).run();
   assert.equal(failed.sources.cordova.fetchedAt, NOW.toISOString());
+});
+
+test('every kind of tracked item names real sources to answer for it', async () => {
+  for (const [kind, sources] of Object.entries(ITEM_SOURCES)) {
+    for (const source of sources) assert.ok(source in SOURCES, `${kind}: ${source}`);
+  }
+  const data = await harness().run();
+  for (const item of data.tracked) assert.ok(item.id.slice(0, item.id.indexOf(':')) in ITEM_SOURCES, item.id);
 });

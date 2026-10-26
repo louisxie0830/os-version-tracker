@@ -1,9 +1,12 @@
-import { fetchJson, NETWORK_TIMEOUT_MS, USER_AGENT } from '../net.js';
+import { fetchJson, fetchText, githubHeaders, NETWORK_TIMEOUT_MS } from '../net.js';
 import { settleSources } from './settle.js';
+import { sharedDownload } from './feed.js';
+import { cleanText } from './html-table.js';
+import { dayOf } from '../taipei-date.js';
 
 /**
  * React Native and Flutter releases, the cross-platform counterparts of the Cordova section:
- * - React Native: GitHub releases of facebook/react-native. For each minor's first stable release the
+ * - React Native: GitHub releases of react/react-native. For each minor's first stable release the
  *   release notes are only counted by section (Breaking / Deprecated / Security), never republished.
  * - Flutter: the official release index the Flutter tool itself uses (stable channel, macOS archive list).
  */
@@ -27,6 +30,11 @@ export interface FrameworkInfo {
   recentMinors: FrameworkRelease[];
   releaseNotesUrl: string;
   breakingChangesUrl: string;
+  /**
+   * Flutter: the breaking changes of its recent minor lines, each a title with its migration guide (absent when
+   * the list couldn't be read, and for React Native, whose notes are counted, not republished)
+   */
+  breakingChanges?: Array<{ minor: string; changes: Array<{ title: string; url: string }> }>;
 }
 
 export interface Frameworks {
@@ -35,8 +43,8 @@ export interface Frameworks {
 }
 
 const MINORS = 4;
-const RN_RELEASES = 'https://api.github.com/repos/facebook/react-native/releases?per_page=60';
-const FLUTTER_RELEASES = 'https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json';
+const RN_RELEASES = 'https://api.github.com/repos/react/react-native/releases?per_page=60';
+export const FLUTTER_RELEASES = 'https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json';
 
 /** "0.88.0" → [0, 88, 0]; anything else → null */
 const parts = (v: string) => (/^\d+\.\d+\.\d+$/.test(v) ? v.split('.').map(Number) : null);
@@ -70,7 +78,7 @@ export function parseReactNativeReleases(releases: GithubRelease[]): FrameworkIn
     .map(r => ({ ...r, version: r.tag_name.slice(1) }))
     .sort((a, b) => newerFirst(a.version, b.version));
   if (!stable.length) throw new Error('No stable React Native release');
-  const toRelease = (r: (typeof stable)[number]): FrameworkRelease => ({ version: r.version, date: r.published_at.slice(0, 10), url: r.html_url });
+  const toRelease = (r: (typeof stable)[number]): FrameworkRelease => ({ version: r.version, date: dayOf(r.published_at), url: r.html_url });
   const minors = [...new Set(stable.map(r => minorOf(r.version)))].slice(0, MINORS);
   const recentMinors = minors.map(minor => {
     const latestPatch = stable.find(r => minorOf(r.version) === minor)!;
@@ -90,12 +98,12 @@ export function parseReactNativeReleases(releases: GithubRelease[]): FrameworkIn
     name: 'React Native',
     latest: recentMinors[0],
     recentMinors,
-    releaseNotesUrl: 'https://github.com/facebook/react-native/releases',
+    releaseNotesUrl: 'https://github.com/react/react-native/releases',
     breakingChangesUrl: 'https://reactnative.dev/blog',
   };
 }
 
-interface FlutterIndex {
+export interface FlutterIndex {
   current_release?: { stable?: string };
   releases?: Array<{ hash: string; channel: string; version: string; release_date: string; dart_sdk_version?: string }>;
 }
@@ -108,7 +116,7 @@ export function parseFlutterReleases(index: FlutterIndex): FrameworkInfo {
   if (!current) throw new Error('No stable Flutter release');
   const toRelease = (r: (typeof unique)[number]): FrameworkRelease => ({
     version: r.version,
-    date: r.release_date.slice(0, 10),
+    date: dayOf(r.release_date),
     url: `https://github.com/flutter/flutter/releases/tag/${r.version}`,
     ...(r.dart_sdk_version ? { dart: r.dart_sdk_version } : {}),
   });
@@ -124,13 +132,40 @@ export function parseFlutterReleases(index: FlutterIndex): FrameworkInfo {
 
 const json = <T>(url: string, headers: Record<string, string> = {}) => fetchJson<T>(url, { headers }, NETWORK_TIMEOUT_MS, status => `HTTP ${status}`);
 
+/** Flutter's release index, downloaded once per refresh */
+export const flutterIndex = () => sharedDownload('json flutter-releases', () => json<FlutterIndex>(FLUTTER_RELEASES));
+
+export const FLUTTER_BREAKING_URL = 'https://docs.flutter.dev/release/breaking-changes';
+
+/**
+ * The breaking changes listed under "Released in Flutter <minor>" for the given minors: each change's title and
+ * its migration guide (titles only; the guides stay on Flutter's site)
+ */
+export function parseFlutterBreaking(html: string, minors: string[]): NonNullable<FrameworkInfo['breakingChanges']> {
+  const heads = [...html.matchAll(/<h3[^>]*>\s*Released in Flutter (\d+\.\d+)\s*<\/h3>/g)];
+  if (heads.length < 3) throw new Error(`Flutter breaking changes: only ${heads.length} releases listed (the page changed?)`);
+  return heads.flatMap((m, i) => {
+    if (!minors.includes(m[1])) return [];
+    const list = html.slice(m.index! + m[0].length, heads[i + 1]?.index ?? html.length).match(/<ul[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
+    const changes = [...list.matchAll(/<li[^>]*>\s*<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)]
+      .map(([, href, title]) => ({ title: cleanText(title), url: new URL(href, FLUTTER_BREAKING_URL).href }))
+      .filter(c => c.title);
+    return changes.length ? [{ minor: m[1], changes }] : [];
+  });
+}
+
 /** Partial results are fine; fails only when both frameworks failed */
 export async function fetchFrameworks(): Promise<Frameworks> {
-  const githubHeaders: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': USER_AGENT };
-  if (process.env.GITHUB_TOKEN) githubHeaders.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
   const { values } = await settleSources('frameworks', [
-    ['reactNative', async () => parseReactNativeReleases(await json<GithubRelease[]>(RN_RELEASES, githubHeaders))],
-    ['flutter', async () => parseFlutterReleases(await json<FlutterIndex>(FLUTTER_RELEASES))],
+    ['reactNative', async () => parseReactNativeReleases(await json<GithubRelease[]>(RN_RELEASES, githubHeaders()))],
+    ['flutter', async () => {
+      const flutter = parseFlutterReleases(await flutterIndex());
+      // The breaking changes are extra: without them the releases still stand
+      const breaking = await fetchText(FLUTTER_BREAKING_URL, {}, NETWORK_TIMEOUT_MS)
+        .then(html => parseFlutterBreaking(html, flutter.recentMinors.map(r => minorOf(r.version))))
+        .catch(err => { console.warn(`[frameworks] Flutter breaking changes failed (${(err as Error)?.message ?? err})`); return []; });
+      return breaking.length ? { ...flutter, breakingChanges: breaking } : flutter;
+    }],
   ] as const, () => true);
   return Object.fromEntries(values) as Frameworks;
 }

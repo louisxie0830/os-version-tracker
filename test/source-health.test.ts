@@ -66,3 +66,27 @@ test('publishDecision: critical sources and the healthy share both gate publishi
   assert.match(publishDecision({ ios: src(true), android: src(true), a: src(false), b: src(false), c: src(false) }).reason ?? '', /only 2\/5/);
   assert.equal(publishDecision({}).publish, false);
 });
+
+test('publishDecision: the 60% line, critical sources, and stale results', () => {
+  const src = (ok: boolean, staleFrom?: string) => ({ label: 'x', url: 'https://x', fetchedAt: '2026-10-26T00:00:00Z', ok, ...(staleFrom ? { staleFrom } : {}) });
+  const set = (oks: boolean[], over: Record<string, ReturnType<typeof src>> = {}) => ({
+    ios: src(true), android: src(true), ...Object.fromEntries(oks.map((ok, i) => [`s${i}`, src(ok)])), ...over,
+  });
+  assert.equal(publishDecision(set([true, false, false])).publish, true, '3 of 5: exactly 60%');
+  const low = publishDecision(set([false, false, false]));
+  assert.equal(low.publish, false);
+  assert.equal(low.reason, 'only 2/5 sources succeeded');
+  const staleIos = publishDecision(set([true, true, true], { ios: src(false, '2026-10-25T00:00:00Z') }));
+  assert.equal(staleIos.publish, true, 'iOS showing its last good result still publishes');
+  assert.deepEqual([staleIos.failed, staleIos.stale], [['ios'], ['ios']]);
+  assert.equal(publishDecision(set([true, true, true], { android: src(false) })).reason, 'critical source failed: android');
+  const allStale = Object.fromEntries(Object.entries(set(Array.from({ length: 8 }, () => false))).map(([k, s]) => [k, k.startsWith('s') ? src(false, '2026-10-25T00:00:00Z') : s]));
+  assert.equal(publishDecision(allStale).publish, false, 'stale results don\'t count toward the healthy share (a network outage keeps the old site)');
+});
+
+test('publishDecision: half the sources is below the line', () => {
+  const src = (ok: boolean) => ({ label: 'x', url: 'https://x', fetchedAt: '2026-10-26T00:00:00Z', ok });
+  const set = (failed: number) => ({ ios: src(true), android: src(true), ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`s${i}`, src(i >= failed)])) });
+  assert.equal(publishDecision(set(5)).publish, false, '5 of 10');
+  assert.equal(publishDecision(set(4)).publish, true, '6 of 10');
+});

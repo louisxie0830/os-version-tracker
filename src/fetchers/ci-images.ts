@@ -1,5 +1,5 @@
 import { cleanText, fetchHtml } from './html-table.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
 import { fetchText, type HttpErrorFormat, NETWORK_TIMEOUT_MS } from '../net.js';
 
 const RAW_BASE = 'https://raw.githubusercontent.com/actions/runner-images/main';
@@ -120,7 +120,8 @@ export function parseMacosImageReadme(markdown: string): Pick<GithubMacosRunner,
       version,
       build: cells[1] || undefined,
       isDefault: /\(default\)/i.test(cells[0]),
-      isBeta: /\b(beta|rc|release candidate)\b/i.test(cells[0]),
+      // The version cell ("27.2 RC") or the install path ("Xcode_27.2_Release_Candidate.app") says so
+      isBeta: /(?:^|[^a-z])(?:beta|rc|release[ _]candidate)(?![a-z])/i.test(cells.join(' ')),
     });
   }
   xcodeDetails.sort((a, b) => compareVersions(b.version, a.version));

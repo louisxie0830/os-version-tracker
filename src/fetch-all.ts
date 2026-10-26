@@ -1,10 +1,15 @@
 import { reportDataQuality, reportSourceStatus } from './alerts.js';
-import { dataQualityProblems } from './quality.js';
+import { bankFieldGaps, countProblems } from './quality.js';
+import { lastGood, rememberGood, saveLastGood } from './last-good.js';
+import { publishDecision } from './publish-health.js';
 import { fetchiOSVersions } from './fetchers/ios.js';
 import { fetchAndroidVersions } from './fetchers/android.js';
 import { fetchAppleSubmissionDeadline } from './fetchers/apple-deadline.js';
 import { fetchGooglePlayDeadline } from './fetchers/google-deadline.js';
-import { compareVersions, fetchiOSToolchain } from './fetchers/ios-toolchain.js';
+import { fetchiOSToolchain } from './fetchers/ios-toolchain.js';
+import { compareVersions } from './versions.js';
+import { calendarDate } from './taipei-date.js';
+import { monthOnlyNote, submissionDay } from './deadline-dates.js';
 import { fetchAndroidToolchain } from './fetchers/android-toolchain.js';
 import { fetchAppleNews, fetchAndroidNews, findAnnouncedDevices } from './fetchers/news.js';
 import { beginFeedScope } from './fetchers/feed.js';
@@ -35,13 +40,16 @@ import { fetchCordovaReleases, type CordovaReleases } from './fetchers/cordova.j
 import { APPLE_SECURITY_URL, fetchSecurityReport, type SecurityReport } from './fetchers/security.js';
 import { DEVELOPER_STATUS_PAGE, fetchDeveloperStatus, type DeveloperStatus } from './fetchers/apple-status.js';
 import { fetchFrameworks, type Frameworks } from './fetchers/frameworks.js';
+import { fetchSdkReleases, FIREBASE_APPLE_NOTES_URL } from './fetchers/sdk-releases.js';
+import { fetchBehaviorChanges } from './fetchers/behavior-changes.js';
+import { fetchAppleDeprecations } from './fetchers/apple-deprecations.js';
 import { fetchTaiwanBankApps, TW_BANK_APPS, type TaiwanBankApp } from './fetchers/tw-banks.js';
 import { bankSnapshots, coreVersionProblems, recordBankVersions, type BankChange, type BankSnapshot } from './history.js';
 import { anonymizeAppStoreUrl, maskName } from './mask.js';
 import { createRefreshCache } from './refresh-cache.js';
 import { safeUrl } from './safe-url.js';
 import { buildAndroidActions, buildDeadlineTimeline, buildiOSActions, zhPlatform, zhSdk } from './insights.js';
-import { notifyWebhook, recentItems, recordItems, toTrackedItems, type TrackedItem } from './changes.js';
+import { deferNotifications, notifyWebhook, prunableWhen, recentItems, recordItems, toTrackedItems, type TrackedItem } from './changes.js';
 import type {
   ActionItem,
   AndroidCompat,
@@ -147,15 +155,13 @@ export const SOURCES = {
   cordova: { label: 'npm registry · Apache Cordova RELEASENOTES.md', url: 'https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md' },
   security: { label: 'Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database', url: APPLE_SECURITY_URL },
   appleStatus: { label: 'Apple Developer System Status', url: DEVELOPER_STATUS_PAGE },
-  frameworks: { label: 'GitHub facebook/react-native releases · Flutter release index', url: 'https://github.com/facebook/react-native/releases' },
+  frameworks: { label: 'GitHub react/react-native releases · Flutter release index', url: 'https://github.com/react/react-native/releases' },
+  sdkReleases: { label: 'Firebase（Apple / Android）與 Google Play services 版本說明', url: FIREBASE_APPLE_NOTES_URL },
+  behaviorChanges: { label: 'Android 行為變更（以新版本為目標的 App）', url: 'https://developer.android.com/about/versions' },
+  appleDeprecations: { label: 'Apple 文件的淘汰標記（收據驗證、伺服器通知）', url: 'https://developer.apple.com/documentation/appstorereceipts' },
 } as const;
 
 export type SourceKey = keyof typeof SOURCES;
-
-
-function toISODate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 /**
  * xcodereleases.com sometimes lags on a release's SDK (e.g. lists 27.0 for Xcode 27.1 RC);
@@ -213,6 +219,9 @@ const FETCHERS = {
   security: () => fetchSecurityReport(),
   appleStatus: () => fetchDeveloperStatus(),
   frameworks: () => fetchFrameworks(),
+  sdkReleases: () => fetchSdkReleases(),
+  behaviorChanges: (major: string | undefined) => fetchBehaviorChanges(major),
+  appleDeprecations: () => fetchAppleDeprecations(),
   crashes: (context: Parameters<typeof fetchCrashReport>[0]) => fetchCrashReport(context),
 } satisfies Record<SourceKey, (...args: never[]) => Promise<unknown>>;
 
@@ -231,7 +240,18 @@ export const REFRESH_DEPS = {
   bankSnapshots,
   recordItems,
   notifyWebhook,
+  deferNotifications,
   beginFeedScope,
+  lastGood,
+  rememberGood,
+  saveLastGood,
+  /** Whether this refresh will be seen (the static build's publish gate; the server shows every refresh) */
+  willPublish: (sources: Record<SourceKey, SourceInfo>): boolean => publishDecision(sources).publish,
+  /**
+   * The most one source may take, retries and queueing for a connection included. The bank apps read 28 Play
+   * pages two at a time (each with a fallback URL), so they get longer
+   */
+  sourceDeadlineMs: (key: SourceKey): number => (key === 'twBanks' ? 360_000 : 180_000),
 };
 export type RefreshDeps = typeof REFRESH_DEPS;
 
@@ -254,25 +274,53 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
   const sources = {} as Record<SourceKey, SourceInfo>;
   const run: RefreshDiagnostics = { errors: {}, quality: {}, counts: {} };
   diagnostics = run;
+  // This refresh's results, remembered as each source's last good one at the end if every check passed
+  const fresh = new Map<SourceKey, unknown>();
+  /**
+   * The source failed or its result can't be trusted: its last good result (marked stale) when there is
+   * a recent one, otherwise `fallback` (an empty section)
+   */
+  function fail<T>(key: SourceKey, message: string, fallback: T): T {
+    run.errors[key] = message;
+    fresh.delete(key);
+    // A saved result of another kind than this source returns (a list for a list, an object for an object) is
+    // from an older build: not used
+    const saved = deps.lastGood<T>(key, now());
+    const previous = saved && Array.isArray(saved.value) === Array.isArray(fallback) && (fallback === null || typeof saved.value === typeof fallback || Array.isArray(fallback)) ? saved : undefined;
+    sources[key] = { ...SOURCES[key], fetchedAt: now().toISOString(), ok: false, ...(previous ? { staleFrom: previous.fetchedAt } : {}) };
+    if (previous) run.errors[key] = `${message}（沿用 ${previous.fetchedAt.slice(0, 16).replace('T', ' ')} UTC 的資料）`;
+    return previous ? previous.value : fallback;
+  }
   async function track<T>(key: SourceKey, task: () => Promise<T>, fallback: T): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
     try {
-      const value = await task();
+      // Each request has its own timeout, but one source makes many (a queue of them behind the per-site
+      // connection limit), so the whole source also has a deadline: one slow source can't hold up the refresh
+      const value = await Promise.race([
+        task(),
+        new Promise<never>((_, reject) => {
+          const limit = deps.sourceDeadlineMs(key);
+          timer = setTimeout(() => reject(new Error(`gave up after ${Math.round(limit / 1000)}s`)), limit);
+        }),
+      ]);
       sources[key] = { ...SOURCES[key], fetchedAt: now().toISOString(), ok: true };
+      fresh.set(key, value);
       void reportSourceStatus(key, true);
       return value;
     } catch (err) {
       // reportSourceStatus logs the failure and alerts the webhook on the first failure of a streak
-      run.errors[key] = String((err as Error)?.message ?? err);
-      void reportSourceStatus(key, false, run.errors[key]);
-      sources[key] = { ...SOURCES[key], fetchedAt: now().toISOString(), ok: false };
-      return fallback;
+      const message = String((err as Error)?.message ?? err);
+      void reportSourceStatus(key, false, message);
+      return fail(key, message, fallback);
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   let [
     ios, android, appleDeadline, googleDeadline, iosToolchain, androidToolchain, iosAdoption,
     appleNews, androidNews, androidCompat, xcodeSupport, appleRequirements, playPolicy, playBilling, pageSize,
-    ciImages, agpJdk, privacy, osShare, twBanks, devNews, cordova, security, appleStatus, frameworks,
+    ciImages, agpJdk, privacy, osShare, twBanks, devNews, cordova, security, appleStatus, frameworks, sdkReleases, appleDeprecations,
   ] = await Promise.all([
     track('ios', f.ios, []),
     track('android', f.android, []),
@@ -299,6 +347,8 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
     track('security', f.security, null),
     track('appleStatus', f.appleStatus, null),
     track('frameworks', f.frameworks, null),
+    track('sdkReleases', f.sdkReleases, []),
+    track('appleDeprecations', f.appleDeprecations, []),
   ]);
 
   // Versions everything else is derived from: a source that suddenly reports an implausible or older
@@ -308,22 +358,67 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
     androidStable: android.find(v => !v.isBeta)?.version.replace(/^Android\s*/i, ''),
     xcodeStable: iosToolchain?.xcodeStable?.version,
     agpStable: androidToolchain?.agpStable?.version,
-  });
+  // These must be there when their source succeeded (AGP may be missing alone: the toolchain is several sources)
+  }, (['iosStable', 'androidStable', 'xcodeStable'] as const).filter(f => sources[({ iosStable: 'ios', androidStable: 'android', xcodeStable: 'iosToolchain' } as const)[f]]?.ok));
   for (const { source, message } of problems) {
     const key = source as SourceKey;
-    sources[key] = { ...SOURCES[key], fetchedAt: now().toISOString(), ok: false };
-    run.errors[key] = message;
     void reportSourceStatus(key, false, message);
-    if (key === 'iosToolchain') iosToolchain = null;
-    if (key === 'androidToolchain') androidToolchain = null;
+    if (key === 'ios') ios = fail(key, message, ios);
+    if (key === 'android') android = fail(key, message, android);
+    if (key === 'iosToolchain') iosToolchain = fail(key, message, null);
+    if (key === 'androidToolchain') androidToolchain = fail(key, message, null);
   }
 
+  // What targeting the newest Android changes (the next Play target API requirement brings exactly this)
+  const behaviorChanges = await track('behaviorChanges', () => f.behaviorChanges(android.find(v => !v.isBeta)?.version.match(/\d+/)?.[0]), null);
+
   // Crash notes depend on which OS / Xcode versions are current
-  const crashes = await track('crashes', () => f.crashes({
+  let crashes = await track('crashes', () => f.crashes({
     iosMajor: ios.find(v => !v.isBeta)?.version.match(/^\d+/)?.[0],
     androidMajor: android.find(v => !v.isBeta)?.version.match(/\d+/)?.[0],
     xcodeNotesUrl: iosToolchain?.xcodeStable?.notesUrl,
   }), null);
+
+  // A list that suddenly came back with far fewer items than usual: a parser that half broke without throwing.
+  // Checked before anything is derived from it, so its last good result (if any) can stand in everywhere
+  run.counts = {
+    // The app list is fixed: what can shrink is how many each store answered for
+    twBanks: { 'twBanks.apps': twBanks.length, 'twBanks.ios': twBanks.filter(b => b.ios).length, 'twBanks.android': twBanks.filter(b => b.android).length },
+    devNews: { 'devNews.items': devNews.length },
+    appleNews: { 'appleNews.items': appleNews.length },
+    androidNews: { 'androidNews.items': androidNews.length },
+    xcodeSupport: { 'xcodeSupport.rows': xcodeSupport.length },
+    appleRequirements: { 'appleRequirements.items': appleRequirements.length },
+    playPolicy: { 'playPolicy.items': playPolicy.length },
+    agpJdk: { 'agpJdk.lines': agpJdk.length },
+    security: security ? {
+      'security.appleReleases': security.apple.length,
+      'security.androidBulletins': security.android.length,
+      'security.exploited': security.exploited.length,
+      'security.advisories': security.advisories.length,
+    } : {},
+    crashes: crashes ? { 'crashes.items': crashes.ios.length + crashes.android.length + crashes.sdks.length + crashes.community.length + crashes.cordova.length } : {},
+    privacy: privacy ? { 'privacy.requiredReasonApis': privacy.appleRequiredReasonApis.length, 'privacy.sdks': privacy.appleSdksRequiringManifest.length } : {},
+    cordova: cordova ? { 'cordova.packages': cordova.platforms.length + cordova.plugins.length } : {},
+    ciImages: ciImages ? { 'ciImages.githubRunners': ciImages.githubActions.length } : {},
+  };
+  const quality = countProblems(key => sources[key]?.ok === true, run.counts);
+  const shrunk = (key: SourceKey) => !!quality.get(key)?.length && !!deps.lastGood(key, now());
+  // The quality alert below still reports the drop; the page shows the previous, complete list meanwhile
+  const stale = <T>(key: SourceKey, value: T): T => (shrunk(key) ? fail(key, quality.get(key)!.join('；'), value) : value);
+  twBanks = stale('twBanks', twBanks);
+  devNews = stale('devNews', devNews);
+  appleNews = stale('appleNews', appleNews);
+  androidNews = stale('androidNews', androidNews);
+  xcodeSupport = stale('xcodeSupport', xcodeSupport);
+  appleRequirements = stale('appleRequirements', appleRequirements);
+  playPolicy = stale('playPolicy', playPolicy);
+  agpJdk = stale('agpJdk', agpJdk);
+  security = stale('security', security);
+  crashes = stale('crashes', crashes);
+  privacy = stale('privacy', privacy);
+  cordova = stale('cordova', cordova);
+  ciImages = stale('ciImages', ciImages);
 
   if (iosToolchain) {
     correctXcodeSdks(iosToolchain.releases, xcodeSupport);
@@ -333,38 +428,43 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
     ? findAnnouncedDevices(appleNews, iosToolchain.knowniPhones)
     : [];
 
-  const allDeadlines: Deadline[] = [...appleRequirements, ...playPolicy, ...playBilling.deadlines, ...pageSize];
-  const targetSdk = googleDeadline?.requirements[0];
-  const targetDate = googleDeadline ? new Date(googleDeadline.deadline) : null;
-  if (googleDeadline && targetSdk && targetDate && !Number.isNaN(targetDate.getTime())) {
-    const ext = googleDeadline.extensionDate ? new Date(googleDeadline.extensionDate) : null;
+  const allDeadlines: Deadline[] = [...appleRequirements, ...playPolicy, ...playBilling.deadlines, ...pageSize, ...sdkReleases];
+  // Google's target API deadline, and an earlier one still on the page (its extension may still be open)
+  for (const play of googleDeadline ? [googleDeadline, ...(googleDeadline.earlier ?? [])] : []) {
+    const targetSdk = play.requirements.find(r => /new apps/i.test(r.platform)) ?? play.requirements[0];
+    // The calendar day as written: a Date's local getters would turn it into the day before west of UTC
+    const targetDate = calendarDate(play.deadline);
+    if (!targetSdk || !targetDate) continue;
     allDeadlines.push({
       platform: 'Android',
-      date: toISODate(targetDate),
+      date: targetDate,
       title: `Google Play 目標 API 等級：${zhSdk(targetSdk.sdk)}`,
-      detail: googleDeadline.requirements.map(r => `${zhPlatform(r.platform)}：${zhSdk(r.sdk)}`).join('；'),
+      detail: play.requirements.map(r => `${zhPlatform(r.platform)}：${zhSdk(r.sdk)}`).join('；'),
       source: SOURCES.googleDeadline.label,
       url: SOURCES.googleDeadline.url,
-      extensionDate: ext && !Number.isNaN(ext.getTime()) ? toISODate(ext) : undefined,
+      extensionDate: play.extensionDate ? calendarDate(play.extensionDate) ?? undefined : undefined,
+    });
+  }
+
+  // Apple's SDK minimum, until the Upcoming Requirements page lists it too (that page only names a day once
+  // Apple has one; the news post may give just the month)
+  const appleDay = appleDeadline ? submissionDay(appleDeadline) : null;
+  if (appleDeadline && appleDay && !appleRequirements.some(r => r.date.slice(0, 7) === appleDay.date.slice(0, 7) && /\bSDK\b/.test(`${r.title} ${r.detail}`))) {
+    allDeadlines.push({
+      platform: 'iOS',
+      date: appleDay.date,
+      title: 'App Store 最低 SDK 要求',
+      detail: `上傳至 App Store Connect 的 App 必須以下列 SDK 建置：${appleDeadline.requirements.map(r => `${zhPlatform(r.platform)}：${zhSdk(r.sdk)}`).join('；')}${appleDay.detail ? monthOnlyNote('Apple', appleDay.date) : ''}${/^\d{4}-\d{2}-\d{2}$/.test(appleDeadline.announcedAt ?? '') ? `（${appleDeadline.announcedAt} 公告）` : ''}`,
+      source: SOURCES.appleDeadline.label,
+      // The post that announced it, else Apple's news page
+      url: appleDeadline.url ?? SOURCES.appleDeadline.url,
     });
   }
 
   const timeline = buildDeadlineTimeline(allDeadlines);
 
-  // Sources that worked but came back with holes (a field missing for some apps, far fewer items than usual)
-  run.counts = {
-    twBanks: { 'twBanks.apps': twBanks.length },
-    devNews: { 'devNews.items': devNews.length },
-    appleNews: { 'appleNews.items': appleNews.length },
-    androidNews: { 'androidNews.items': androidNews.length },
-    xcodeSupport: { 'xcodeSupport.rows': xcodeSupport.length },
-    security: security ? { 'security.appleReleases': security.apple.length, 'security.androidBulletins': security.android.length } : {},
-    crashes: crashes ? { 'crashes.items': crashes.ios.length + crashes.android.length + crashes.sdks.length + crashes.community.length + crashes.cordova.length } : {},
-    privacy: privacy ? { 'privacy.requiredReasonApis': privacy.appleRequiredReasonApis.length } : {},
-    cordova: cordova ? { 'cordova.packages': cordova.platforms.length + cordova.plugins.length } : {},
-    ciImages: ciImages ? { 'ciImages.githubRunners': ciImages.githubActions.length } : {},
-  };
-  const quality = dataQualityProblems({ ok: key => sources[key]?.ok === true, bankEntries: TW_BANK_APPS, banks: twBanks, counts: run.counts });
+  // Sources that worked but came back with holes: far fewer items than usual (above), a field missing for some apps
+  if (sources.twBanks?.ok) quality.set('twBanks', [...bankFieldGaps(TW_BANK_APPS, twBanks), ...(quality.get('twBanks') ?? [])]);
   for (const [source, problems] of quality) {
     if (problems.length) run.quality[source] = problems;
     void reportDataQuality(source, problems);
@@ -378,9 +478,20 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
     ios: b.ios && { ...b.ios, url: anonymizeAppStoreUrl(b.ios.url) },
   }));
   // An empty list means the source failed this time: don't let it look like every app went away
-  const bankChanges = maskedBanks.length ? deps.recordBankVersions(maskedBanks, now()) : [];
-  const { items: tracked, added } = deps.recordItems(toTrackedItems({ deadlines: timeline, appleNews, androidNews, devices: announcedDevices, crashes: [...(crashes?.sdks ?? []), ...(crashes?.cordova ?? [])], devNews, security, bankChanges, appleStatus }), now());
-  void deps.notifyWebhook(added, SITE_URL);
+  // Each app's identity from the configured list it was fetched from, in the same order
+  const bankKeys = maskedBanks.length === TW_BANK_APPS.length
+    ? TW_BANK_APPS.map(e => (e.appStoreId ? `ios:${e.appStoreId}` : `play:${e.playPackage}`))
+    : undefined;
+  const bankChanges = maskedBanks.length ? deps.recordBankVersions(maskedBanks, now(), bankKeys) : [];
+  const { items: tracked, added } = deps.recordItems(toTrackedItems({ deadlines: timeline, appleNews, androidNews, devices: announcedDevices, crashes: [...(crashes?.sdks ?? []), ...(crashes?.cordova ?? [])], devNews, security, bankChanges, appleStatus }), now(), { prune: prunableWhen(key => sources[key as SourceKey]?.ok === true) });
+  // Announce new items only with a refresh that will be published: otherwise a notification could point at a
+  // page that still shows the old data. Held back, they go out with the next published refresh
+  if (deps.willPublish(sources)) void deps.notifyWebhook(added, SITE_URL);
+  else deps.deferNotifications(added);
+
+  // Every source that passed all checks is the new last good result for next time
+  for (const [key, value] of fresh) if (sources[key]?.ok) deps.rememberGood(key, value, now());
+  deps.saveLastGood();
 
   return {
     ios,
@@ -399,6 +510,7 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
       requirements: appleRequirements,
       announcedDevices,
       ciRunners: ciImages?.githubActions ?? [],
+      deprecations: appleDeprecations,
     }),
     androidActions: buildAndroidActions(android, googleDeadline, {
       osShare,
@@ -407,6 +519,7 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
       billing: playBilling,
       policies: playPolicy,
       pageSize,
+      behaviorChanges,
     }),
     iosAdoption,
     appleNews: appleNews.slice(0, 6),

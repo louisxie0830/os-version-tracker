@@ -18,7 +18,7 @@ test('parseRequiredReasonApis: the five categories with APIs and reason codes', 
   assert.deepEqual(defaults.apis, ['UserDefaults']);
   assert.deepEqual(defaults.reasons.map(r => r.code), ['CA92.1', '1C8F.1', 'C56D.1', 'AC6B.1']);
   // First paragraph only, with inline references resolved to their titles
-  assert.equal(defaults.reasons[0].description, 'Test reason: read and write values that only this app can see via UserDefaults.');
+  assert.equal(defaults.reasons[0].description, 'Test reason: read and write values that only this app can see via UserDefaults. Second paragraph, kept.', 'every paragraph: the later ones carry the conditions');
   assert.match(defaults.url, /^https:\/\/developer\.apple\.com\/documentation\/bundleresources\//);
 
   const boot = cats[1];
@@ -49,4 +49,13 @@ test('PRIVACY_LINKS are official https links with notes for both platforms', () 
   }
   assert.ok(PRIVACY_LINKS.some(l => l.platform === 'ios'));
   assert.ok(PRIVACY_LINKS.some(l => l.platform === 'android'));
+});
+
+test('parseSdksRequiringManifest: the list under the heading, and only a list long enough to be Apple\'s', () => {
+  const sdks = Array.from({ length: 25 }, (_, i) => `<li>SDK${i}</li>`).join('');
+  const html = `<meta content="SDKs that require a privacy manifest"><nav><ul><li>Home</li><li>News</li></ul></nav><h2>SDKs that require a privacy manifest and signature</h2><ul>${sdks}</ul>`;
+  const list = parseSdksRequiringManifest(html);
+  assert.equal(list.length, 25);
+  assert.equal(list[0], 'SDK0', 'not the navigation');
+  assert.deepEqual(parseSdksRequiringManifest('<h2>SDKs that require a privacy manifest</h2><ul><li>Intro</li><li>More</li></ul>'), [], 'two items is an intro list, not the SDK list');
 });

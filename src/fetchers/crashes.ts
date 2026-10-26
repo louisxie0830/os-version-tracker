@@ -1,12 +1,14 @@
 import { cleanText, fetchHtml } from './html-table.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
 import { settleSources } from './settle.js';
-import { fetchJson, NETWORK_TIMEOUT_MS as TIMEOUT_MS, USER_AGENT } from '../net.js';
+import { fetchJson, githubHeaders, NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
+import { inlineText } from './docc.js';
 
 export interface CrashItem {
   platform: 'iOS' | 'Android' | '跨平台';
   source: 'iOS release notes' | 'Xcode release notes' | 'Android release notes' | 'GitHub' | 'Stack Overflow';
-  /** known = still open in the latest release; fixed = fixed in a recent release; reported = community report */
+  /** known = listed under "Known Issues" in the release notes named by `context` (later notes may have fixed it);
+   *  fixed = fixed in a recent release; reported = community report */
   kind: 'known' | 'fixed' | 'reported';
   title: string;
   /** Area / release the item belongs to, e.g. "SwiftUI", "iOS 27.2 Beta 3", "firebase/firebase-ios-sdk" */
@@ -43,15 +45,6 @@ interface DocPage {
   metadata?: { title?: string };
   primaryContentSections?: DocNode[];
   references?: Record<string, { title?: string; url?: string }>;
-}
-
-function inlineText(nodes: DocNode[] | undefined, refs: DocPage['references'] = {}): string {
-  return (nodes ?? []).map(n => {
-    if (n.type === 'text') return n.text ?? '';
-    if (n.type === 'codeVoice') return n.code ?? '';
-    if (n.type === 'reference' && n.identifier) return refs[n.identifier]?.title ?? '';
-    return inlineText(n.inlineContent, refs);
-  }).join('').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -116,7 +109,11 @@ export async function fetchAppleCrashes(iosMajor: string, xcodeNotesUrl?: string
   if (xcodePath) {
     tasks.push(fetchDocJson(xcodePath)
       .then(page => parseAppleReleaseNotes(page, xcodeNotesUrl!, 'iOS', 'Xcode release notes'))
-      .catch(() => []));
+      .catch(err => {
+        // The iOS notes still count; the missing Xcode part is logged rather than lost silently
+        console.warn(`[crashes] Xcode release notes failed (${(err as Error).message})`);
+        return [];
+      }));
   }
   const kindOrder = { known: 0, fixed: 1, reported: 2 };
   const pageOrder = new Map(pages.map((p, i) => [`https://developer.apple.com${p.path}`, pages.length - i]));
@@ -168,18 +165,22 @@ export async function fetchAndroidCrashes(androidMajor: string): Promise<CrashIt
   // The newest quarterly platform release (QPR) page carries the current beta's notes
   const base = `https://developer.android.com/about/versions/${androidMajor}`;
   const candidates = [`${base}/qpr3/release-notes?hl=en`, `${base}/qpr2/release-notes?hl=en`, `${base}/qpr1/release-notes?hl=en`, `${base}/release-notes?hl=en`];
-  for (const url of candidates) {
-    let html: string;
-    try {
-      html = await fetchHtml(url);
-    } catch {
+  // All at once (a QPR page that doesn't exist yet is a quick 404; four timeouts in a row were not), newest first
+  const pages = await Promise.allSettled(candidates.map(url => fetchHtml(url)));
+  const failures: string[] = [];
+  for (const [i, url] of candidates.entries()) {
+    const page = pages[i];
+    if (page.status === 'rejected') {
+      const message = (page.reason as Error)?.message ?? String(page.reason);
+      if (!/\b404\b/.test(message)) failures.push(message);
       continue;
     }
+    const html = page.value;
     const qpr = url.match(/\/(qpr\d)\//)?.[1]?.toUpperCase();
     const items = parseAndroidReleaseNotes(html, url.replace('?hl=en', ''), `Android ${androidMajor}${qpr ? ` ${qpr}` : ''}`);
     if (items.length || /issues fixed|known issue/i.test(html)) return items;
   }
-  throw new Error(`No Android ${androidMajor} release notes found`);
+  throw new Error(`No Android ${androidMajor} release notes found${failures.length ? ` (${failures.join('; ')})` : ''}`);
 }
 
 // ---------- Popular SDKs on GitHub ----------
@@ -200,7 +201,7 @@ export const SDK_REPOS: Array<{ repo: string; platform: CrashItem['platform'] }>
   { repo: 'square/okhttp', platform: 'Android' },
   { repo: 'getsentry/sentry-java', platform: 'Android' },
   { repo: 'coil-kt/coil', platform: 'Android' },
-  { repo: 'facebook/react-native', platform: '跨平台' },
+  { repo: 'react/react-native', platform: '跨平台' },
   { repo: 'flutter/flutter', platform: '跨平台' },
   { repo: 'firebase/flutterfire', platform: '跨平台' },
 ];
@@ -239,30 +240,48 @@ export function parseGithubIssues(items: GithubIssue[], newOsPattern?: RegExp, p
     });
 }
 
+/** Most reports any one repo gets in the SDK list */
+const MAX_PER_REPO = 3;
+
+/**
+ * The issues of the search groups that answered. A group that failed is logged (its repos are missing from
+ * the list); only when every group failed is it the source's failure.
+ */
+function settledItems(results: PromiseSettledResult<GithubIssue[]>[], label: string): GithubIssue[] {
+  const failed = results.flatMap(r => r.status === 'rejected' ? [String((r.reason as Error)?.message ?? r.reason)] : []);
+  if (failed.length === results.length) throw new Error(failed[0] ?? 'GitHub search failed');
+  for (const message of failed) console.warn(`[crashes] ${label} search group failed (${message})`);
+  return results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+}
+
 /**
  * Crash reports opened in the last `days` days in popular SDK repos, most-upvoted first.
  * Unauthenticated search allows 10 requests/minute; set GITHUB_TOKEN for higher limits.
  */
 export async function fetchSdkCrashes(newOsPattern?: RegExp, days = 30, limit = 12, now = new Date()): Promise<CrashItem[]> {
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': USER_AGENT };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const headers = githubHeaders();
 
   // Search queries are length-limited, so query the repos in a few groups
   const groups: string[][] = [];
   for (let i = 0; i < SDK_REPOS.length; i += 6) groups.push(SDK_REPOS.slice(i, i + 6).map(r => r.repo));
 
   const results = await Promise.allSettled(groups.map(async repos => {
-    const q = `crash in:title is:issue created:>=${since} ${repos.map(r => `repo:${r}`).join(' ')}`;
-    return (await fetchJson<{ items: GithubIssue[] }>(`https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=reactions&order=desc&per_page=15`, { headers }, TIMEOUT_MS, status => `GitHub search failed: ${status}`)).items;
+    // Open issues only: a report already closed (fixed, a duplicate, not a bug) isn't something to check before upgrading
+    const q = `crash in:title is:issue is:open created:>=${since} ${repos.map(r => `repo:${r}`).join(' ')}`;
+    return (await fetchJson<{ items: GithubIssue[] }>(`https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=reactions&order=desc&per_page=100`, { headers }, TIMEOUT_MS, status => `GitHub search failed: ${status}`)).items;
   }));
 
-  const items = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-  if (!items.length && results.every(r => r.status === 'rejected')) {
-    throw new Error((results[0] as PromiseRejectedResult).reason?.message ?? 'GitHub search failed');
-  }
+  const items = settledItems(results, 'SDK');
+  // One busy repo (flutter/flutter) would otherwise fill the whole list
+  const perRepo = new Map<string, number>();
   return parseGithubIssues(items, newOsPattern)
     .sort((a, b) => (b.reactions! * 2 + b.comments!) - (a.reactions! * 2 + a.comments!))
+    .filter(item => {
+      const n = (perRepo.get(item.context ?? '') ?? 0) + 1;
+      perRepo.set(item.context ?? '', n);
+      return n <= MAX_PER_REPO;
+    })
     .slice(0, limit);
 }
 
@@ -291,22 +310,18 @@ export const CORDOVA_ISSUE_PATTERN = { test: (title: string) => CORDOVA_SYMPTOM.
  */
 export async function fetchCordovaCrashes(newOsPattern?: RegExp, days = 180, limit = 12, now = new Date()): Promise<CrashItem[]> {
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': USER_AGENT };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const headers = githubHeaders();
 
   // Platforms in one query, plugins in groups that keep the query under GitHub's length limit
   const repos = CORDOVA_REPOS.map(r => r.repo);
   const groups = [repos.slice(0, 2), repos.slice(2, 6), repos.slice(6)];
 
   const results = await Promise.allSettled(groups.map(async group => {
-    const q = `is:issue created:>=${since} ${group.map(r => `repo:${r}`).join(' ')}`;
+    const q = `is:issue is:open created:>=${since} ${group.map(r => `repo:${r}`).join(' ')}`;
     return (await fetchJson<{ items: GithubIssue[] }>(`https://api.github.com/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=100`, { headers }, TIMEOUT_MS, status => `GitHub search failed: ${status}`)).items;
   }));
 
-  const items = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
-  if (!items.length && results.every(r => r.status === 'rejected')) {
-    throw new Error((results[0] as PromiseRejectedResult).reason?.message ?? 'GitHub search failed');
-  }
+  const items = settledItems(results, 'Cordova');
   return rankCordovaIssues(parseGithubIssues(items, newOsPattern, CORDOVA_ISSUE_PATTERN), limit);
 }
 

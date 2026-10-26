@@ -1,4 +1,5 @@
 import { esc } from './render-actions.js';
+import { tableSemantics, THEME_TOGGLE } from './render-common.js';
 import { CONTENT_SECURITY_POLICY } from './security-headers.js';
 import { REPO_BLOB } from './source-registry.js';
 import { STYLE_VERSION } from './render-styles.js';
@@ -36,16 +37,14 @@ function linkTarget(href: string, fromPath: string): string {
 }
 
 function inline(text: string, fromPath: string): string {
-  // Code spans first, so their contents aren't formatted
-  const parts = text.split(/(`[^`]+`)/);
-  return parts.map(part => {
-    if (/^`[^`]+`$/.test(part)) return `<code>${esc(part.slice(1, -1))}</code>`;
-    let s = esc(part);
-    s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) => `<a href="${esc(linkTarget(href.replace(/&amp;/g, '&'), fromPath))}">${label}</a>`);
-    s = s.replace(/&lt;(https?:\/\/[^\s&]+(?:&amp;[^\s&]+)*)&gt;/g, (_, url) => `<a href="${url}">${url}</a>`);
-    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    return s;
-  }).join('');
+  // Code spans are set aside behind placeholders, so their contents aren't formatted, while bold and links
+  // around them still pair up across the whole line ("**use `x` here**")
+  const codes: string[] = [];
+  let s = esc(text.replace(/`([^`]+)`/g, (_, code: string) => `\u0000${codes.push(code) - 1}\u0000`));
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, label, href) => `<a href="${esc(linkTarget(href.replace(/&amp;/g, '&'), fromPath))}">${label}</a>`);
+  s = s.replace(/&lt;(https?:\/\/[^\s&]+(?:&amp;[^\s&]+)*)&gt;/g, (_, url) => `<a href="${url}">${url}</a>`);
+  s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i: string) => `<code>${esc(codes[Number(i)])}</code>`);
 }
 
 const slug = (text: string) => text.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
@@ -72,7 +71,12 @@ export function markdownToHtml(md: string, fromPath = 'legal/index.html'): strin
       const rows: string[][] = [];
       i += 2;
       while (i < lines.length && isTableRow(lines[i])) rows.push(cells(lines[i++]));
-      out.push(`<div class="table-wrap"><table class="compat-table"><thead><tr>${head.map(c => `<th>${inline(c, fromPath)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${inline(c, fromPath)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+      // A wide table (four columns or more) becomes one card per row on a phone, each value labelled with its
+      // column, like the page's own tables; a narrow one stays a table
+      const stack = head.length >= 4;
+      const label = (i: number) => (stack ? ` data-label="${esc((head[i] ?? '').replace(/[`*]/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1'))}"` : '');
+      const cell = (c: string, i: number) => `<td${stack && i === 0 ? ' class="row-title"' : ''}${label(i)}>${inline(c, fromPath)}</td>`;
+      out.push(`<div class="table-wrap"><table class="compat-table${stack ? ' stack-on-mobile' : ''}"><thead><tr>${head.map(c => `<th>${inline(c, fromPath)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(cell).join('')}</tr>`).join('')}</tbody></table></div>`);
       continue;
     }
     if (/^\s*[-*]\s+/.test(line)) {
@@ -106,7 +110,7 @@ export function markdownToHtml(md: string, fromPath = 'legal/index.html'): strin
 export function renderLegalPage(page: LegalPage, markdown: string): string {
   const up = '../'.repeat(page.path.split('/').length - 1);
   const nav = LEGAL_PAGES.map(p => `<a href="${up}${p.path.replace(/index\.html$/, '')}"${p === page ? ' aria-current="page"' : ''}>${esc(p.title)}</a>`).join(' · ');
-  return `<!DOCTYPE html>
+  return tableSemantics(`<!DOCTYPE html>
 <html lang="${page.lang}">
 <head>
   <meta charset="UTF-8">
@@ -122,11 +126,51 @@ export function renderLegalPage(page: LegalPage, markdown: string): string {
 </head>
 <body>
   <main class="legal-doc" id="main">
-    <p class="legal-doc-nav"><a href="${up}">← OS Version Tracker</a> · ${nav}</p>
+    <div class="legal-doc-head">
+      <p class="legal-doc-nav"><a href="${up}">← OS Version Tracker</a> · ${nav}</p>
+      ${THEME_TOGGLE}
+    </div>
     <article class="panel">
 ${markdownToHtml(markdown, page.path)}
     </article>
     <p class="table-note">原始檔：${`<a href="${REPO_BLOB}/${page.source}">${esc(page.source)}</a>`}</p>
+  </main>
+</body>
+</html>`);
+}
+
+/**
+ * A page of its own for "not found" (GitHub Pages serves 404.html for any missing path) and "offline" (the
+ * service worker's answer when neither the network nor its cache has the page). Either is served at whatever
+ * address was asked for, so its links and assets go from the site's own path (`base`, e.g. "/os-version-tracker/").
+ */
+export function renderStatusPage(kind: 'not-found' | 'offline', base: string): string {
+  const root = base.endsWith('/') ? base : `${base}/`;
+  const [title, message] = kind === 'not-found'
+    ? ['找不到這個頁面', '網址可能打錯了，或這個頁面已經移除。']
+    : ['目前離線', '這個頁面還沒有存在這台裝置上。連上網路後再試一次；首頁開過的話，離線時也能看到上次的版本。'];
+  return `<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="noindex, nofollow">
+  <title>${title}｜OS Version Tracker</title>
+  <script src="${scriptSrc('theme.js', root)}"></script>
+  <link rel="icon" href="${root}icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="${root}style.css?v=${STYLE_VERSION}">
+</head>
+<body>
+  <main class="legal-doc" id="main">
+    <div class="legal-doc-head"><span></span>${THEME_TOGGLE}</div>
+    <article class="panel">
+      <h1>${title}</h1>
+      <p>${message}</p>
+      <p><a href="${root}">← 回到 OS Version Tracker 首頁</a></p>
+    </article>
   </main>
 </body>
 </html>`;

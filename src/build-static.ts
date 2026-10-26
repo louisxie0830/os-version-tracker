@@ -5,18 +5,21 @@
  * Each run is a fresh process, so "first seen" times, undelivered notifications and alert streaks are
  * carried between runs in .state/. The workflow restores and saves that directory with the Actions cache
  * (saved even when a build fails, so a failure isn't re-announced every run); the copy published under
- * state/ on the site is a fallback for when the cache is empty.
+ * state/ on the site is a fallback for when the cache is empty. Each source's last good result (last-good.ts)
+ * lives in the cache only. A live site whose state can't be restored stops the build rather than silently
+ * starting over (refuseNewBaseline).
  */
 import { appendFile, copyFile, cp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveOutputDir } from './output-dir.js';
 import { buildIntoDirectory, requireFiles } from './publish-dir.js';
-import { copyComponentScripts, SCRIPTS } from './asset-versions.js';
+import { SCRIPTS, writeAppScript } from './asset-versions.js';
 import { publishDecision } from './publish-health.js';
 import { fetchText } from './net.js';
 import { buildRunSummary } from './run-summary.js';
 import { writeJsonAtomic } from './state-file.js';
+import { loadState as restoreState, refuseNewBaseline, type RestoreDeps } from './state-restore.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // Validated up front (before any network work), and again before the new site replaces it
@@ -31,6 +34,8 @@ const STATE_DIR = path.join(ROOT, '.state');
 const CHANGES_STATE = path.join(STATE_DIR, 'changes.json');
 const ALERTS_STATE = path.join(STATE_DIR, 'alerts.json');
 const HISTORY_STATE = path.join(STATE_DIR, 'history.json');
+// Each source's last good result (last-good.ts): Actions cache only, never published (raw, unmasked data)
+const LAST_GOOD_STATE = path.join(STATE_DIR, 'last-good.json');
 
 
 // Must match the cron schedule in .github/workflows/pages.yml (twice a day)
@@ -42,26 +47,14 @@ if (!SITE_URL) {
   process.exit(1);
 }
 
-/** State from the Actions cache if present, otherwise from the live site */
-async function loadState(file: string): Promise<string | null> {
-  try {
-    const text = await readFile(file, 'utf8');
-    JSON.parse(text);
-    return text;
-  } catch {
-    return downloadState(path.basename(file));
-  }
-}
-
-async function downloadState(name: string): Promise<string | null> {
-  try {
-    const text = await fetchText(`${SITE_URL}/state/${name}`);
-    JSON.parse(text); // only accept valid JSON
-    return text;
-  } catch {
-    return null;
-  }
-}
+const restoreDeps: RestoreDeps = {
+  readFile: file => readFile(file, 'utf8'),
+  fetchText: url => fetchText(url),
+  siteUrl: SITE_URL,
+  allowNewBaseline: process.env.ALLOW_NEW_BASELINE === '1',
+  log: line => console.log(line),
+};
+const loadState = (file: string) => restoreState(file, restoreDeps);
 
 async function main(): Promise<void> {
   // 1. Restore state from the previous run
@@ -73,17 +66,23 @@ async function main(): Promise<void> {
   const previousHistory = await loadState(HISTORY_STATE);
   if (previousHistory) await writeFile(HISTORY_STATE, previousHistory);
   process.env.HISTORY_STATE_FILE = HISTORY_STATE;
+  await refuseNewBaseline([previousChanges ? '' : 'changes.json', previousHistory ? '' : 'history.json'].filter(Boolean), restoreDeps);
+  // Only ever in the cache: a missing one just means no fallback for a source that fails this time
+  process.env.LAST_GOOD_STATE_FILE = LAST_GOOD_STATE;
 
   // Imported only now: changes.ts reads CHANGES_STATE_FILE when it loads
   const alerts = await import('./alerts.js');
   const previousAlerts = await loadState(ALERTS_STATE);
   if (previousAlerts) alerts.importAlertState(JSON.parse(previousAlerts));
 
-  const { fetchAllVersions, lastRefreshDiagnostics } = await import('./fetch-all.js');
+  const { fetchAllVersions, lastRefreshDiagnostics, REFRESH_DEPS } = await import('./fetch-all.js');
+  // New items wait in the state's queue: the workflow's notify job sends them once the site that shows them
+  // is deployed (src/notify.ts), so nobody is told about something the live site doesn't have yet
+  REFRESH_DEPS.willPublish = () => false;
   const { renderHTML } = await import('./render.js');
   const { PAGE_CSS } = await import('./render-styles.js');
-  const { LEGAL_PAGES, renderLegalPage } = await import('./legal-pages.js');
-  const { buildApiFiles, legacyApiJson } = await import('./api.js');
+  const { LEGAL_PAGES, renderLegalPage, renderStatusPage } = await import('./legal-pages.js');
+  const { API_ENDPOINTS, buildApiFiles, legacyApiJson } = await import('./api.js');
   const { buildCalendar } = await import('./calendar.js');
   const { buildAtomFeed, buildNotificationsJson, flushNotifications } = await import('./changes.js');
 
@@ -110,8 +109,8 @@ async function main(): Promise<void> {
   await buildIntoDirectory(OUT, ROOT, async dir => {
     await mkdir(path.join(dir, 'state'), { recursive: true });
     await cp(path.join(ROOT, 'public'), dir, { recursive: true });
-    // The component scripts are compiled from src/browser/ (dist/browser/), not kept in public/
-    await copyComponentScripts(dir);
+    // app.js is compiled from src/browser/ (dist/browser/), not kept in public/
+    await writeAppScript(dir);
 
     await writeFile(path.join(dir, 'index.html'), renderHTML(data, { refreshMinutes: REFRESH_MINUTES }));
     await writeFile(path.join(dir, 'style.css'), PAGE_CSS);
@@ -120,6 +119,10 @@ async function main(): Promise<void> {
       await mkdir(path.dirname(path.join(dir, page.path)), { recursive: true });
       await writeFile(path.join(dir, page.path), renderLegalPage(page, await readFile(path.join(ROOT, page.source), 'utf8')));
     }
+    // A missing page (GitHub Pages serves 404.html) and an offline one (the service worker's) in the site's style
+    const base = new URL(`${SITE_URL}/`).pathname;
+    await writeFile(path.join(dir, '404.html'), renderStatusPage('not-found', base));
+    await writeFile(path.join(dir, 'offline.html'), renderStatusPage('offline', base));
     await writeFile(path.join(dir, 'api.json'), JSON.stringify(legacyApiJson(data, SITE_URL)));
     await mkdir(path.join(dir, 'api'), { recursive: true });
     for (const [file, body] of buildApiFiles(data, SITE_URL)) await writeFile(path.join(dir, file), body);
@@ -130,11 +133,14 @@ async function main(): Promise<void> {
     // GitHub Pages runs Jekyll by default, which would skip files and folders starting with "_"
     await writeFile(path.join(dir, '.nojekyll'), '');
 
-    await copyFile(CHANGES_STATE, path.join(dir, 'state', 'changes.json'));
+    // Without its notification queue: the notify job sends it after this copy is made, so a later build that
+    // restores from the live site (the Actions cache lost) would otherwise send the same notifications again
+    const { pending: _sent, ...changes } = JSON.parse(await readFile(CHANGES_STATE, 'utf8')) as Record<string, unknown>;
+    await writeFile(path.join(dir, 'state', 'changes.json'), JSON.stringify(changes));
     await copyFile(ALERTS_STATE, path.join(dir, 'state', 'alerts.json'));
     // Written on the first bank or version check; a run where both were skipped may not have it yet
     await copyFile(HISTORY_STATE, path.join(dir, 'state', 'history.json')).catch(() => {});
-  }, { verify: dir => requireFiles(dir, ['index.html', 'style.css', ...SCRIPTS, 'sw.js', 'api.json', 'api/index.json', 'calendar.ics', 'feed.xml', 'health.json', 'state/changes.json', ...LEGAL_PAGES.map(p => p.path)]) });
+  }, { verify: dir => requireFiles(dir, ['index.html', 'style.css', ...SCRIPTS, 'sw.js', 'api.json', 'api/index.json', ...API_ENDPOINTS.map(e => e.path), 'notifications.json', 'calendar.ics', 'feed.xml', 'health.json', 'state/changes.json', '404.html', 'offline.html', ...LEGAL_PAGES.map(p => p.path)]) });
 
   console.log(`Built ${OUT} for ${SITE_URL}`);
 }

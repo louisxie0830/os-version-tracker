@@ -1,5 +1,6 @@
 import { cleanText, fetchHtml } from './html-table.js';
 import { fetchJson, SLOW_NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
+import { inlineText } from './docc.js';
 
 const APPLE_DOCS_JSON = 'https://developer.apple.com/tutorials/data/documentation';
 export const REQUIRED_REASON_TYPES_JSON_URL = `${APPLE_DOCS_JSON}/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype.json`;
@@ -105,15 +106,6 @@ interface DocJson {
   references?: Record<string, { title?: string }>;
 }
 
-function inlineText(nodes: DocNode[] | undefined, refs: DocJson['references']): string {
-  return (nodes ?? []).map(n =>
-    n.type === 'text' ? n.text ?? ''
-      : n.type === 'codeVoice' ? n.code ?? ''
-        : n.type === 'reference' ? refs?.[n.identifier ?? '']?.title ?? n.identifier?.split('/').pop() ?? ''
-          : inlineText(n.inlineContent, refs),
-  ).join('').replace(/\s+/g, ' ').trim();
-}
-
 /** "NSPrivacyAccessedAPICategoryFileTimestamp" → "File timestamp" */
 function categoryLabel(key: string): string {
   const words = key.replace(/^NSPrivacyAccessedAPICategory/, '').replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
@@ -136,7 +128,8 @@ export function parseRequiredReasonApis(json: DocJson): RequiredReasonApiCategor
         .flatMap(n => n.items ?? [])
         .map(i => ({
           code: inlineText(i.term?.inlineContent, json.references),
-          description: inlineText(i.definition?.content?.[0]?.inlineContent, json.references),
+          // Every paragraph: the later ones carry the conditions App Review checks ("may not be sent off-device")
+          description: (i.definition?.content ?? []).map(p => inlineText(p.inlineContent, json.references)).filter(Boolean).join(' ').slice(0, 600),
         }))
         .filter(r => /^[0-9A-F]{4}\.\d+$/.test(r.code));
       return {
@@ -150,11 +143,17 @@ export function parseRequiredReasonApis(json: DocJson): RequiredReasonApiCategor
 }
 
 /** Parses the "SDKs that require a privacy manifest and signature" list on Apple's third-party SDK page */
+/** Apple's list has well over this many SDKs; fewer means the list read is some other list */
+const MIN_SDKS = 20;
+
 export function parseSdksRequiringManifest(html: string): string[] {
-  const start = html.search(/SDKs that require a privacy manifest/i);
+  // The list after the heading (not the same words in a meta tag or the navigation)
+  const heading = html.search(/<h\d[^>]*>[^<]*SDKs that require a privacy manifest/i);
+  const start = heading >= 0 ? heading : html.search(/SDKs that require a privacy manifest/i);
   if (start < 0) return [];
   const list = html.slice(start).match(/<ul[^>]*>([\s\S]*?)<\/ul>/)?.[1] ?? '';
-  return [...list.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map(m => cleanText(m[1])).filter(Boolean);
+  const sdks = [...list.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)].map(m => cleanText(m[1])).filter(Boolean);
+  return sdks.length >= MIN_SDKS ? sdks : [];
 }
 
 export async function fetchRequiredReasonApis(): Promise<RequiredReasonApiCategory[]> {

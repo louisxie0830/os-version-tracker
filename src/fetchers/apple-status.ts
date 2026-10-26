@@ -52,6 +52,10 @@ export function parseDeveloperStatus(js: string, now = new Date()): DeveloperSta
   const since = now.getTime() - RECENT_DAYS * 24 * 60 * 60 * 1000;
   const iso = (ms?: number | null) => (typeof ms === 'number' && ms > 0 ? new Date(ms).toISOString() : undefined);
   const events = data.services.flatMap(service => (service.events ?? []).flatMap(raw => {
+    // Epoch milliseconds (seconds would date everything 1970) and a state: without one, an old resolved incident
+    // would show as ongoing, so a changed format fails the source instead
+    if (typeof raw.epochStartDate === 'number' && raw.epochStartDate < 1e12) throw new Error('Apple status: epochStartDate is no longer in milliseconds');
+    if (!raw.eventStatus) throw new Error('Apple status: an event has no eventStatus');
     const start = iso(raw.epochStartDate);
     if (!start || !service.serviceName) return [];
     const event: DeveloperStatusEvent = {

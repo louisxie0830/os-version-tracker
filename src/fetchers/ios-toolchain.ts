@@ -1,6 +1,7 @@
 import type { iOSToolchain, iPhoneModel, XcodeRelease } from '../types.js';
 import { settleSources } from './settle.js';
 import { fetchJson, NETWORK_TIMEOUT_MS } from '../net.js';
+import { compareVersions } from '../versions.js';
 
 
 export interface XcodeReleasesEntry {
@@ -36,15 +37,6 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-export function compareVersions(a: string, b: string): number {
-  const va = a.split('.').map(Number);
-  const vb = b.split('.').map(Number);
-  for (let i = 0; i < Math.max(va.length, vb.length); i++) {
-    const diff = (va[i] ?? 0) - (vb[i] ?? 0);
-    if (diff !== 0) return diff;
-  }
-  return 0;
-}
 
 /** xcodereleases.com data.json (newest first) → Xcode releases, betas and RCs marked */
 export function parseXcodeReleases(data: XcodeReleasesEntry[]): XcodeRelease[] {

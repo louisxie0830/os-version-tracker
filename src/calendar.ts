@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Deadline } from './types.js';
 import { safeUrl } from './safe-url.js';
+import { datePrecision } from './deadline-dates.js';
 
 /** RFC 5545 text escaping */
 function icsText(value: string): string {
@@ -44,9 +45,11 @@ function nextDay(iso: string): string {
 
 /** Stable across refreshes so calendar apps update events instead of duplicating them */
 export function deadlineId(d: Pick<Deadline, 'platform' | 'date' | 'title' | 'detail'>, suffix = ''): string {
-  // Several Play policies can share a title and date, so include the start of the description
-  // (only the start: details may end with changing text such as the latest library version)
-  return createHash('sha1').update(`${d.platform}|${d.date}|${d.title}|${d.detail.slice(0, 40)}${suffix}`).digest('hex').slice(0, 16);
+  // Several Play policies can share a title and date, so include the start of the description. Text that
+  // changes on its own is left out first: the Play Billing details end with the latest library version, which
+  // fell inside those 40 characters, so every library release used to make each deadline a "new" one
+  const stable = d.detail.replace(/最新版本為[^。]*。?/g, '').trim();
+  return createHash('sha1').update(`${d.platform}|${d.date}|${d.title}|${stable.slice(0, 40)}${suffix}`).digest('hex').slice(0, 16);
 }
 
 function allDayEvent(uid: string, date: string, summary: string, description: string, url: string, stamp: string): string[] {
@@ -83,8 +86,12 @@ export function buildCalendar(deadlines: Deadline[], siteUrl: string, now = new 
   ];
 
   for (const d of deadlines) {
+    // A requirement announced for a whole year has no day to put in a calendar
+    if (datePrecision(d) === 'year') continue;
     const description = `${d.detail}\n\n來源：${d.source}${safeUrl(d.url) ? `\n${safeUrl(d.url)}` : ''}\n\n${siteUrl}/#deadlines`;
-    lines.push(...allDayEvent(deadlineId(d), d.date, `[${d.platform}] ${d.title}`, description, d.url, stamp));
+    // A month only: the event sits on its first day, and its title says the month is all that's known
+    const month = datePrecision(d) === 'month' ? `（${Number(d.date.slice(5, 7))} 月內，確切日期未定）` : '';
+    lines.push(...allDayEvent(deadlineId(d), d.date, `[${d.platform}] ${d.title}${month}`, description, d.url, stamp));
     if (d.extensionDate && d.extensionDate > d.date) {
       lines.push(...allDayEvent(
         deadlineId(d, '|extension'),

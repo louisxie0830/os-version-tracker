@@ -19,7 +19,7 @@ test('concurrent callers share one refresh', async () => {
   assert.equal(calls, 1);
 });
 
-test('results are reused within the TTL and refreshed after it', async () => {
+test('results are reused within the TTL; after it the old one answers at once while a refresh runs behind it', async () => {
   let clock = 0;
   let calls = 0;
   const cache = createRefreshCache(async () => ++calls, 1000, () => clock);
@@ -27,7 +27,24 @@ test('results are reused within the TTL and refreshed after it', async () => {
   clock = 999;
   assert.equal(await cache.get(), 1);
   clock = 1000;
-  assert.equal(await cache.get(), 2);
+  assert.equal(await cache.get(), 1, 'no reader waits for the refresh');
+  await new Promise(r => setImmediate(r));
+  assert.equal(calls, 2);
+  assert.equal(await cache.get(), 2, 'the refreshed result from then on');
+});
+
+test('a refresh that fails after a success keeps serving the last good result', async t => {
+  t.mock.method(console, 'warn', () => {});
+  let clock = 0;
+  let fail = false;
+  const cache = createRefreshCache(async () => { if (fail) throw new Error('upstream down'); return 'good'; }, 1000, () => clock);
+  assert.equal(await cache.get(), 'good');
+  fail = true;
+  clock = 5000;
+  assert.equal(await cache.get(), 'good');
+  await new Promise(r => setImmediate(r));
+  assert.equal(await cache.get(), 'good', 'still there after the failure');
+  assert.equal(cache.peek()?.fetchedAt, 0, 'and still dated when it was fetched');
 });
 
 test('a failed refresh is shared by its waiters but does not poison later calls', async () => {

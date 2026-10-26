@@ -1,5 +1,5 @@
 import type { AllVersions } from './fetch-all.js';
-import { compareVersions } from './fetchers/ios-toolchain.js';
+import { compareVersions } from './versions.js';
 import type { Region, ShareTrend } from './fetchers/os-share.js';
 import { displayDate, esc } from './render-actions.js';
 import { renderLineChart, type LineSeries } from './render-chart.js';
@@ -127,25 +127,37 @@ function renderShareTrendCard(data: AllVersions, platform: 'ios' | 'android'): s
   </div></chart-switch>`;
 }
 
+/** Daily points for the last 90 days; before that one a week (Mondays), so two years of history stay a light page */
+const DAILY_DAYS = 90;
+export function thinSnapshots<T extends { date: string }>(snaps: readonly T[]): T[] {
+  const last = snaps.at(-1)?.date;
+  if (!last) return [];
+  const cutoff = new Date(Date.parse(`${last}T00:00:00Z`) - DAILY_DAYS * 86_400_000).toISOString().slice(0, 10);
+  return snaps.filter((s, i) => i === 0 || s.date >= cutoff || new Date(`${s.date}T00:00:00Z`).getUTCDay() === 1);
+}
+
 function renderBankTrendCard(data: AllVersions): string {
-  const snaps = data.bankTrend ?? [];
+  // The page's chart only (api.json keeps every day)
+  const snaps = thinSnapshots(data.bankTrend ?? []);
   const body = snaps.length < 2
     ? `<p class="feed-empty">${snaps.length ? `從 ${esc(displayDate(snaps[0].date))} 開始每天記錄，累積兩天以上就會顯示趨勢。` : '還沒有紀錄。'}</p>`
     : (['iOS', 'Android'] as const).map((platform, i) => {
       const latest = snaps.at(-1)![platform];
       const majors = [...new Set(snaps.flatMap(s => Object.keys(s[platform])))];
       const top = majors.sort((a, b) => (latest[b] ?? 0) - (latest[a] ?? 0)).slice(0, TREND_SLOTS.length).sort((a, b) => compareVersions(b, a));
-      const series: LineSeries[] = top.map((m, k) => ({ name: `最低 ${platform} ${m}`, short: m, slot: TREND_SLOTS[k], values: snaps.map(s => s[platform][m] ?? 0) }));
+      // The line-end label names the version ("iOS 13 · 13 個"): a bare "13 · 13 個" reads as nothing
+      const series: LineSeries[] = top.map((m, k) => ({ name: `最低 ${platform} ${m}`, short: `${platform} ${m}`, slot: TREND_SLOTS[k], values: snaps.map(s => s[platform][m] ?? 0) }));
       const rest = majors.filter(m => !top.includes(m));
       if (rest.length) series.push({ name: '其他', slot: 'other', values: snaps.map(s => rest.reduce((sum, m) => sum + (s[platform][m] ?? 0), 0)) });
-      return renderLineChart({
+      const summary = series.filter(s => s.slot !== 'other').map(s => `${esc(s.name)} ${s.values.at(-1)} 個`).join('、');
+      return `${renderLineChart({
         label: `銀行 App 最低 ${platform} 要求的分布，${displayDate(snaps[0].date)} 至 ${displayDate(snaps.at(-1)!.date)}`,
         xLabels: snaps.map(s => s.date),
         series,
         unit: ' 個',
         hidden: i > 0,
         attrs: `data-chart-group="bank-trend" data-value="${platform}"`,
-      });
+      })}<p class="trend-insight" data-chart-group="bank-trend" data-value="${platform}"${i > 0 ? ' hidden' : ''}>${esc(displayDate(snaps.at(-1)!.date))}：${summary}</p>`;
     }).join('');
   return `<chart-switch><div class="case trend-card">
     <div class="case-head">

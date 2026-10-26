@@ -116,3 +116,29 @@ test('every legal page renders with the site CSP, stylesheet and links back', ()
     assert.match(html, /<a href="(?:\.\.\/)+">← OS Version Tracker<\/a>/, page.path);
   }
 });
+
+test('markdownToHtml: bold wrapping a code span pairs up across it; code stays unformatted', () => {
+  const html = markdownToHtml('**Do not use `api.json` for alerts** and `a**b**c` stays code.');
+  assert.match(html, /<strong>Do not use <code>api\.json<\/code> for alerts<\/strong>/);
+  assert.match(html, /<code>a\*\*b\*\*c<\/code>/);
+  assert.doesNotMatch(html.replace(/<code>[^<]*<\/code>/g, ''), /\*\*/, 'no stray ** left in the text');
+});
+
+test('the disclaimers render with no raw ** left', () => {
+  for (const page of LEGAL_PAGES) {
+    const html = renderLegalPage(page, readFileSync(new URL(`../${page.source}`, import.meta.url), 'utf8'));
+    assert.doesNotMatch(html.replace(/<code>[\s\S]*?<\/code>/g, '').replace(/<pre>[\s\S]*?<\/pre>/g, ''), /\*\*/, page.path);
+  }
+});
+
+test('the not-found and offline pages link to the site from its own path, whatever address they are served at', async () => {
+  const { renderStatusPage } = await import('../src/legal-pages.ts');
+  for (const kind of ['not-found', 'offline'] as const) {
+    const html = renderStatusPage(kind, '/os-version-tracker/');
+    assert.match(html, /<link rel="stylesheet" href="\/os-version-tracker\/style\.css\?v=/);
+    assert.match(html, /<a href="\/os-version-tracker\/">← 回到 OS Version Tracker 首頁<\/a>/);
+    assert.match(html, /<meta http-equiv="Content-Security-Policy"/);
+  }
+  assert.match(renderStatusPage('not-found', '/'), /找不到這個頁面/);
+  assert.match(renderStatusPage('offline', '/'), /目前離線/);
+});

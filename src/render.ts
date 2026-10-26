@@ -3,7 +3,7 @@ import { SITE_URL, type AllVersions } from './fetch-all.js';
 import { esc, renderActions } from './render-actions.js';
 import { CONTENT_SECURITY_POLICY } from './security-headers.js';
 import { renderBanksSection } from './render-banks.js';
-import { renderSources, renderTiles } from './render-common.js';
+import { renderSources, renderTiles, THEME_TOGGLE } from './render-common.js';
 import { renderApiSection, renderLegalSection, renderNewsSection, renderPrivacySection } from './render-docs.js';
 import { renderFeed, renderFilterRail, renderNow, renderSnapshotRail } from './render-feed.js';
 import { androidTiles, iOSTiles, renderAppleStatus, renderPlatformSection, renderVersionDistribution } from './render-platforms.js';
@@ -12,30 +12,47 @@ import { renderCordovaSection, renderCrashesSection, renderSecuritySection } fro
 import { renderTrendsSection } from './render-trends.js';
 import { renderFrameworksSection } from './render-frameworks.js';
 import { STYLE_VERSION } from './render-styles.js';
-import { COMPONENT_SCRIPTS, scriptSrc } from './asset-versions.js';
+import { scriptSrc } from './asset-versions.js';
+import { tableSemantics } from './render-common.js';
 
 export interface RenderOptions {
   /** How often the data is refreshed, shown to readers (server cache TTL, or the static site's build schedule) */
   refreshMinutes?: number;
 }
 
+/**
+ * One section of the page. A section that throws (data of an unexpected shape, say an old saved result) is
+ * left out and reported, instead of taking the whole page, and with it the deployment, down
+ */
+export function section(name: string, render: () => string): string {
+  try {
+    return render();
+  } catch (err) {
+    console.error(`::warning::The ${name} section failed to render and was left out (${(err as Error)?.message ?? err})`);
+    return '';
+  }
+}
+
 export function renderHTML(data: AllVersions, options: RenderOptions = {}): string {
   const minutes = options.refreshMinutes ?? 10;
-  const refresh = minutes >= 24 * 60 ? '每天' : minutes % 60 === 0 ? `每 ${minutes / 60} 小時` : `每 ${minutes} 分鐘`;
+  // A scheduled build (several hours apart) starts whenever GitHub gets to it, often hours late: "about N times
+  // a day" is what readers can count on, not a clock interval
+  const refresh = minutes >= 24 * 60 ? '每天' : minutes >= 6 * 60 ? `每天約 ${Math.round(24 * 60 / minutes)} 次` : minutes % 60 === 0 ? `每 ${minutes / 60} 小時` : `每 ${minutes} 分鐘`;
   // Kept short: search results cut Chinese descriptions off at roughly 80–100 characters
   const description = `iOS 與 Android 開發者的待處理清單：App Store 與 Google Play 上架規定與期限、已遭利用的漏洞、新系統閃退、Xcode 與 AGP 相容性，${refresh}自動更新。`;
   const shortDescription = `上架規定與期限、已遭利用的漏洞、新系統閃退與 Xcode / AGP 相容性，官方來源${refresh}自動更新。`;
   const { ios, android } = data;
-  return `<!DOCTYPE html>
+  return tableSemantics(`<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
+  <!-- First: a policy in a <meta> covers only what comes after it -->
+  <meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#14191c" media="(prefers-color-scheme: dark)">
   <script src="${scriptSrc('theme.js')}"></script>
   <meta name="color-scheme" content="light dark">
-  <meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <title>iOS / Android 上架規定、資安與閃退追蹤｜OS Version Tracker</title>
   <meta name="description" content="${esc(description)}">
@@ -72,6 +89,8 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
 </head>
 <body>
   <a class="skip-link" href="#main">跳到主要內容</a>
+  <page-search skip="now feed" jump-to="now">
+  <activity-filter filters="type platform">
   <header class="topbar">
     <div class="topbar-in">
       <a class="brand" href="./">
@@ -81,39 +100,35 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
       <label class="search">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
         <span class="sr-only">搜尋動態</span>
-        <input type="search" id="search" placeholder="搜尋 CVE、SDK、版本號…" autocomplete="off" aria-keyshortcuts="/">
+        <input type="search" id="search" data-activity-search data-page-search placeholder="搜尋 CVE、SDK、版本號…" autocomplete="off" aria-keyshortcuts="/">
         <kbd class="search-kbd" aria-hidden="true">/</kbd>
       </label>
       <a class="btn primary topbar-subscribe" href="#subscribe">訂閱更新</a>
-      <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切換深色模式" aria-pressed="false">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-      </button>
-      <div class="notif">
-        <button class="notif-bell" id="notif-bell" type="button" aria-label="通知" aria-expanded="false" aria-controls="notif-panel">
+      ${THEME_TOGGLE}
+      <notif-center><div class="notif">
+        <button class="notif-bell" id="notif-bell" type="button" aria-label="通知" aria-expanded="false" aria-controls="notif-panel" data-notif-bell>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          <span class="notif-badge" id="notif-badge" hidden>0</span>
+          <span class="notif-badge" id="notif-badge" data-notif-badge hidden>0</span>
         </button>
-        <div class="notif-panel" id="notif-panel" role="dialog" aria-label="通知中心" hidden>
+        <div class="notif-panel" id="notif-panel" role="dialog" aria-label="通知中心" tabindex="-1" data-notif-panel hidden>
           <div class="notif-head">
             <strong>通知中心</strong>
-            <button class="notif-link" id="notif-mark-read" type="button">全部標為已讀</button>
+            <button class="notif-link" id="notif-mark-read" type="button" data-notif-mark-read>全部標為已讀</button>
           </div>
-          <ul class="notif-list" id="notif-list"></ul>
+          <ul class="notif-list" id="notif-list" data-notif-list></ul>
           <div class="notif-foot">
-            <button class="btn" id="notif-permission" type="button" hidden>開啟系統通知</button>
+            <button class="btn" id="notif-permission" type="button" data-notif-permission hidden>開啟系統通知</button>
             <span>網頁開著時每 5 分鐘檢查一次；想在關閉時也收到，可訂閱行事曆或 RSS。</span>
           </div>
         </div>
-      </div>
+        <script type="application/json" id="notif-data" data-notif-items>${buildNotificationsJson(data.tracked, data.cachedAt).replace(/</g, '\\u003c')}</script>
+      </div></notif-center>
     </div>
   </header>
   <div class="toasts" id="toasts" aria-live="polite"></div>
   <button class="to-top" id="to-top" type="button" aria-label="回到頂部" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
   </button>
-  <script type="application/json" id="notif-data">${buildNotificationsJson(data.tracked, data.cachedAt).replace(/</g, '\\u003c')}</script>
-  <script src="${scriptSrc('notifications.js')}" defer></script>
 
   <div class="layout">
     ${renderFilterRail()}
@@ -123,38 +138,38 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
         <h1 class="sr-only">OS Version Tracker</h1>
         <p class="intro">iOS 與 Android 最新版本，以及隨之而來的 Xcode、SDK、資安與商店上架需求。依重要性與時間排序；類型與平台篩選套用在「待處理」與「最新動態」，搜尋則涵蓋整頁。</p>
         <p class="stale-note" id="stale-note" role="status" data-updated="${esc(data.cachedAt)}" hidden></p>
-        <p class="search-status" id="search-status" role="status" hidden><span data-search-summary></span><button type="button" class="feed-more search-clear" id="search-clear">清除搜尋</button></p>
+        <p class="search-status" id="search-status" role="status" data-search-status hidden><span data-search-summary></span><button type="button" class="feed-more search-clear" id="search-clear" data-search-clear>清除搜尋</button></p>
       </div>
 
-      ${renderNow(data)}
-      ${renderFeed(data)}
+      ${section('Now', () => renderNow(data))}
+      ${section('Feed', () => renderFeed(data))}
 
-      ${renderSecuritySection(data)}
-      ${renderCrashesSection(data)}
-      ${renderCordovaSection(data)}
-      ${renderFrameworksSection(data)}
+      ${section('SecuritySection', () => renderSecuritySection(data))}
+      ${section('CrashesSection', () => renderCrashesSection(data))}
+      ${section('CordovaSection', () => renderCordovaSection(data))}
+      ${section('FrameworksSection', () => renderFrameworksSection(data))}
 
-      ${renderNewsSection(data)}
+      ${section('NewsSection', () => renderNewsSection(data))}
 
-      ${renderTrendsSection(data)}
+      ${section('TrendsSection', () => renderTrendsSection(data))}
 
-      ${renderPlatformSection('ios', 'iOS', ios,
+      ${section('iOS', () => renderPlatformSection('ios', 'iOS', ios,
         renderActions(data.iosActions) + renderVersionDistribution('ios', data) + renderTiles(iOSTiles(data.iosToolchain, data.announcedDevices)) + renderAppleStatus(data)
         + '<p class="news-jump"><a href="#news">查看 iOS 開發者新聞 →</a></p>'
-        + renderSources(data, ['ios', 'appleDeadline', 'appleRequirements', 'iosToolchain', 'xcodeSupport', 'adoption', 'osShare', 'appleNews', 'appleStatus']))}
+        + renderSources(data, ['ios', 'appleDeadline', 'appleRequirements', 'iosToolchain', 'xcodeSupport', 'adoption', 'osShare', 'appleNews', 'appleStatus'])))}
 
-      ${renderPlatformSection('android', 'Android', android,
+      ${section('Android', () => renderPlatformSection('android', 'Android', android,
         renderActions(data.androidActions) + renderVersionDistribution('android', data) + renderTiles(androidTiles(data.androidToolchain))
         + '<p class="news-jump"><a href="#news">查看 Android 開發者新聞 →</a></p>'
-        + renderSources(data, ['android', 'googleDeadline', 'androidToolchain', 'androidCompat', 'playBilling', 'playPolicy', 'pageSize', 'osShare', 'androidNews']))}
+        + renderSources(data, ['android', 'googleDeadline', 'androidToolchain', 'androidCompat', 'playBilling', 'playPolicy', 'pageSize', 'osShare', 'androidNews'])))}
 
-      ${renderCompatSection(data)}
+      ${section('CompatSection', () => renderCompatSection(data))}
 
-      ${renderDeadlinesSection(data)}
+      ${section('DeadlinesSection', () => renderDeadlinesSection(data))}
 
-      ${renderBanksSection(data)}
+      ${section('BanksSection', () => renderBanksSection(data))}
 
-      ${renderPrivacySection(data)}
+      ${section('PrivacySection', () => renderPrivacySection(data))}
 
       ${renderApiSection(data, refresh)}
 
@@ -163,14 +178,15 @@ export function renderHTML(data: AllVersions, options: RenderOptions = {}): stri
 
     ${renderSnapshotRail(data)}
   </div>
+  </activity-filter>
+  </page-search>
   <footer class="site-foot">
     <a href="legal/">免責聲明</a> · <a href="legal/#7-隱私">隱私</a> · <a href="legal/sources/">資料來源與授權</a> · <a href="https://github.com/louisxie0830/os-version-tracker/blob/master/SECURITY.md" rel="noopener noreferrer" target="_blank">私密回報</a> · 非官方網站，資料僅供參考
   </footer>
   <div class="offline-banner" id="offline" hidden>目前離線，顯示的是上次抓取的資料</div>
-  ${COMPONENT_SCRIPTS.map(name => `<script src="${scriptSrc(name)}" defer></script>`).join('\n  ')}
   <script src="${scriptSrc('app.js')}" defer></script>
 </body>
-</html>`;
+</html>`);
 }
 
 // Kept for existing importers

@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { copyFile } from 'node:fs/promises';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,45 +14,68 @@ export const contentVersion = (body: string | Buffer): string => createHash('sha
 
 // Works from both src/ (tsx) and dist/ (compiled): the project root is the parent of either directory
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-/** The PWA assets and the hand-written page scripts */
+/** The PWA assets and the hand-written theme.js (loaded in <head>, before the page is drawn) */
 export const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
-/** Where tsc compiles src/browser/*.ts (the component scripts' only source) */
+/** Where tsc compiles src/browser/*.ts (the only source of app.js) */
 export const COMPONENT_DIR = path.join(ROOT_DIR, 'dist', 'browser');
 
 /**
- * The custom elements the home page's server-rendered markup is wrapped in (Light DOM, no framework): each
- * adds behaviour to markup that is complete without it. Loaded deferred, before app.js.
+ * The scripts compiled from src/browser/ that app.js is made of, in order: the base the components build on
+ * (light-element.js), the shared toast stack and link check, then the custom elements the home page's server-rendered
+ * markup is wrapped in (Light DOM, no framework: each adds behaviour to markup that is complete without it;
+ * choice-chips.js before the controllers that restore choices through it), then page.js, the rest of the
+ * page's behaviour. They are classic scripts sharing one global scope (tsc checks them as such), so joining
+ * them in this order is the whole build: one request, no bundler.
  */
-export const COMPONENT_SCRIPTS = ['choice-chips.js', 'bank-table.js', 'news-list.js', 'trend-charts.js'] as const;
+export const APP_PARTS = [
+  'light-element.js', 'toasts.js', 'safe-link.js',
+  'choice-chips.js', 'activity-filter.js', 'bank-table.js', 'news-list.js', 'trend-charts.js', 'page-search.js', 'section-nav.js', 'notif-center.js',
+  'page.js',
+] as const;
+export type AppPart = (typeof APP_PARTS)[number];
 
 /** Every script that pages link, at the site root; the server's static allow-list, the static build and the tests derive from this */
-export const SCRIPTS = ['theme.js', 'notifications.js', ...COMPONENT_SCRIPTS, 'app.js'] as const;
+export const SCRIPTS = ['theme.js', 'app.js'] as const;
 export type Script = (typeof SCRIPTS)[number];
 
 export const isScript = (name: string): name is Script => (SCRIPTS as readonly string[]).includes(name);
 
-/**
- * The file behind a script URL: the component scripts as compiled from src/browser/ (so `tsc` must have run),
- * the others from public/. The one place that knows where each script lives; versions, the server and the
- * static build all go through it.
- */
-export function scriptPath(name: Script): string {
-  return path.join((COMPONENT_SCRIPTS as readonly string[]).includes(name) ? COMPONENT_DIR : PUBLIC_DIR, name);
-}
-
-/** A script's content, with a hint when a component script hasn't been compiled yet */
-export function readScript(name: Script): Buffer {
-  const file = scriptPath(name);
+/** One compiled part of app.js, with a hint when it hasn't been compiled yet */
+export function readPart(name: AppPart): Buffer {
+  const file = path.join(COMPONENT_DIR, name);
   try {
     return readFileSync(file);
   } catch (err) {
-    throw new Error(`${name}: cannot read ${path.relative(ROOT_DIR, file)}${file.startsWith(COMPONENT_DIR) ? ' (run `npm run build` first)' : ''}`, { cause: err });
+    throw new Error(`${name}: cannot read ${path.relative(ROOT_DIR, file)} (run \`npm run build\` first)`, { cause: err });
   }
 }
 
-/** Puts the compiled component scripts at the root of a static site (the others come with public/) */
-export async function copyComponentScripts(dir: string): Promise<void> {
-  for (const name of COMPONENT_SCRIPTS) await copyFile(scriptPath(name), path.join(dir, name));
+/** The parts whose top-level declarations are the globals the others build on: joined as they are */
+const SHARED_PARTS: readonly string[] = ['light-element.js', 'toasts.js', 'safe-link.js'];
+
+/**
+ * Joins compiled parts into one classic script, each marked with its name. Every part but the shared ones is
+ * wrapped in its own try block, so one that throws while loading is reported and the rest still run, as they
+ * would as separate scripts.
+ */
+export function joinAppParts(parts: Array<[name: string, source: string]>): string {
+  return parts.map(([name, source]) => SHARED_PARTS.includes(name)
+    ? `// ---- ${name} ----\n${source}\n`
+    : `// ---- ${name} ----\ntry {\n${source}\n} catch (error) { console.error(${JSON.stringify(name)}, error); }\n`).join('');
+}
+
+/**
+ * A script's content, the one place that knows where each comes from: theme.js from public/, app.js joined
+ * from its compiled parts (so `tsc` must have run). Versions, the server and the static build all go through it.
+ */
+export function readScript(name: Script): Buffer {
+  if (name === 'app.js') return Buffer.from(joinAppParts(APP_PARTS.map(part => [part, readPart(part).toString()])));
+  return readFileSync(path.join(PUBLIC_DIR, name));
+}
+
+/** Writes app.js at the root of a static site (theme.js comes with public/) */
+export async function writeAppScript(dir: string): Promise<void> {
+  await writeFile(path.join(dir, 'app.js'), readScript('app.js'));
 }
 
 /** Read once at startup, from the same files the static build copies and the server sends */

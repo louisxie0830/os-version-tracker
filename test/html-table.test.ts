@@ -23,3 +23,12 @@ test('parseTables: every table, header rows included, with the text before it as
 test('parseTables: a page without tables gives none', () => {
   assert.deepEqual(parseTables('<p>no tables</p>'), []);
 });
+
+test('cleanText: no space left in front of punctuation where a tag ended', () => {
+  assert.equal(cleanText('<a>iOS 26</a> , <a>iPadOS 26</a> , and <b>macOS</b> .'), 'iOS 26, iPadOS 26, and macOS.');
+  assert.equal(cleanText('<span>A</span> 、 B'), 'A、 B');
+});
+
+test('cleanText decodes &amp; last, so an escaped entity stays text', () => {
+  assert.equal(cleanText('a &amp;lt;b&amp;gt; &amp;amp; c'), 'a &lt;b&gt; &amp; c');
+});

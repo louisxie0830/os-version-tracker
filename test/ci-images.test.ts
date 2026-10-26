@@ -79,3 +79,9 @@ test('ci-images parsers return nothing for unrelated content', () => {
   assert.deepEqual(parseXcodeCloudReleaseNotes(GARBAGE_HTML), []);
   assert.equal(latestXcodeFromEvents([]), undefined);
 });
+
+test('parseMacosImageReadme: an RC named only in the install path is not a release', () => {
+  const md = `# macOS 26\n- OS Version: macOS 26.1 (25B78)\n- Image Version: 20261013.1\n### Xcode\n| Version | Build | Path |\n| --- | --- | --- |\n| 27.2 | 27B48 | /Applications/Xcode_27.2_Release_Candidate.app |\n| 27.1 (default) | 27A9275 | /Applications/Xcode_27.1.app |\n| 26.4 | 17E100 | /Applications/Xcode_26.4.0.app |\n`;
+  const r = parseMacosImageReadme(md);
+  assert.deepEqual(r.xcodeDetails.map(x => [x.version, x.isBeta]), [['27.2', true], ['27.1', false], ['26.4', false]]);
+});

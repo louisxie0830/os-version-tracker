@@ -7,6 +7,9 @@ import type { SecurityReport, SdkAdvisory } from '../src/fetchers/security.ts';
 import type { FrameworkInfo } from '../src/fetchers/frameworks.ts';
 import { buildNowCards, nowHref } from '../src/now.ts';
 import { renderFrameworksSection } from '../src/render-frameworks.ts';
+import { renderSnapshotRail } from '../src/render-feed.ts';
+import { renderApiSection } from '../src/render-docs.ts';
+import { taipeiToday } from '../src/taipei-date.ts';
 import { renderCordovaSection, renderCrashesSection, renderSecuritySection } from '../src/render-security.ts';
 import type { CordovaPlatform, CordovaReleases } from '../src/fetchers/cordova.ts';
 
@@ -32,7 +35,7 @@ test('no actions, no security report, no crashes, no status: no cards (a quiet d
   assert.deepEqual(buildNowCards(quiet(), NOW), []);
 });
 
-test('only urgent developer actions become cards, linked to their source or else to their platform section', () => {
+test('urgent developer actions become cards (an upcoming one without a due date doesn\'t), linked to their source or else to their platform section', () => {
   const cards = buildNowCards(quiet({
     iosActions: [
       { status: 'urgent', title: 'iOS urgent', detail: 'd', url: 'https://developer.apple.com/news/' },
@@ -43,6 +46,24 @@ test('only urgent developer actions become cards, linked to their source or else
   assert.deepEqual(cards.map(c => [c.type, c.platform, c.title, c.href]), [
     ['期限', 'iOS', 'iOS urgent', 'https://developer.apple.com/news/'],
     ['期限', 'Android', 'Android urgent', '#android'],
+  ]);
+});
+
+test('announced requirements due within 180 days join the urgent ones, soonest first; later ones and estimates stay out', () => {
+  const cards = buildNowCards(quiet({
+    iosActions: [
+      { status: 'upcoming', title: 'iOS 27 SDK', detail: '2027 年 4 月起生效', dueDate: '2027-04-01' },
+      { status: 'upcoming', title: 'Too far', detail: 'd', dueDate: '2027-04-16' },
+      { status: 'upcoming', title: 'Estimate', detail: 'd', dueDate: '2027-01-01', estimated: true },
+      { status: 'urgent', title: 'iOS urgent', detail: 'd', dueDate: '2026-11-01' },
+    ],
+    androidActions: [{ status: 'upcoming', title: '16 KB', detail: 'd', dueDate: '2027-02-01' }],
+  }), NOW);
+  // NOW is 2026-10-17: 180 days later is 2027-04-15
+  assert.deepEqual(cards.map(c => [c.title, c.meta]), [
+    ['iOS urgent', '需要處理'],
+    ['16 KB', '即將到來'],
+    ['iOS 27 SDK', '即將到來'],
   ]);
 });
 
@@ -205,8 +226,8 @@ test('crashes section: absent without data; GitHub and Stack Overflow items cred
   assert.match(html, /目前沒有相關的閃退紀錄/, 'an empty list says so');
   assert.match(html, /顯示 10 \/ 11 項/, 'SDK list limited to 10');
   assert.match(html, /新系統相關/);
-  assert.match(html, /2026\/10\/10 回報 · 👍 3 · 💬 1 · 作者 <a href="https:\/\/github\.com\/octocat"/);
-  assert.match(html, /2026\/10\/10 發問 · ▲ 7 · 回答 2 · 作者 <a href="https:\/\/stackoverflow\.com\/users\/1"[^>]*>dev<\/a> · <a href="https:\/\/creativecommons\.org\/licenses\/by-sa\/4\.0\/"/);
+  assert.match(html, /2026\/10\/10 回報 · 👍 3 · 💬 1 · 作者 <a lang="en" href="https:\/\/github\.com\/octocat"/);
+  assert.match(html, /2026\/10\/10 發問 · ▲ 7 · 回答 2 · 作者 <a lang="en" href="https:\/\/stackoverflow\.com\/users\/1"[^>]*>dev<\/a> · <a lang="en" href="https:\/\/creativecommons\.org\/licenses\/by-sa\/4\.0\/"/);
 });
 
 // ---------- the Cordova section (render-security.ts) ----------
@@ -259,4 +280,46 @@ test('Cordova plugins: required platform versions and the known vulnerabilities,
   assert.match(html, /cordova-ios 8\.0\.1[\s\S]*?已知漏洞[\s\S]*?7\.1\.1 修正/, 'platform card lists its own advisories');
   const clean = renderCordovaSection({ ...snapshot, crashes: null, cordova: cordova(), security: security() });
   assert.match(clean, /沒有已知漏洞/);
+});
+
+test('framework version tables stack into cards on a phone instead of being cut off', () => {
+  const html = renderFrameworksSection({ ...snapshot, frameworks: { reactNative: rn() } });
+  assert.match(html, /<table class="compat-table stack-on-mobile">/);
+  assert.match(html, /data-label="release notes 標示"/, 'every cell labelled for the stacked view');
+});
+
+test('a negative Stack Overflow score reads ▼ 2, not ▲ -2', () => {
+  const html = renderCrashesSection({ ...snapshot, crashes: { ios: [], android: [], sdks: [], cordova: [],
+    community: [crash({ source: 'Stack Overflow', title: 'Downvoted', reactions: -2, comments: 0 })] } });
+  assert.match(html, /▼ 2/);
+  assert.doesNotMatch(html, /▲ -/);
+});
+
+test('the next deadline counts from an extension still ahead, not the passed original date', () => {
+  const day = (offset: number) => new Date(Date.parse(`${taipeiToday()}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
+  const timeline = [
+    { platform: 'Android', date: day(-56), extensionDate: day(6), title: 'targetSdk 36', detail: '', source: 's', url: 'https://example.com/a' },
+    { platform: 'Android', date: day(93), title: 'Play policy', detail: '', source: 's', url: 'https://example.com/b' },
+  ];
+  const html = renderSnapshotRail({ ...snapshot, timeline } as AllVersions);
+  assert.match(html, /<span class="next-days">6<small>天<\/small><\/span>/);
+  assert.match(html, /targetSdk 36（已申請延長者的期限）/);
+});
+
+test('the API table gives every file a size, the older all-in-one files included', () => {
+  const html = renderApiSection(snapshot, '每天約 2 次');
+  for (const file of ['api.json', 'notifications.json', 'feed.xml', 'calendar.ics', 'health.json']) {
+    const row = html.slice(html.indexOf(`<code>${file}</code>`));
+    assert.match(row.slice(0, row.indexOf('</tr>')), /data-label="大小">\d+ KB</, file);
+  }
+});
+
+test('the Flutter card lists recent breaking changes, each linking to its migration guide; none listed, no block', () => {
+  const flutter = { name: 'Flutter' as const, latest: { version: '3.47.8', date: '2026-10-23', url: 'https://github.com/flutter/flutter/releases/tag/3.47.8', dart: '3.13.7' },
+    recentMinors: [{ version: '3.47.8', date: '2026-10-23', url: 'u', dart: '3.13.7' }], releaseNotesUrl: 'https://docs.flutter.dev/release/release-notes', breakingChangesUrl: 'https://docs.flutter.dev/release/breaking-changes',
+    breakingChanges: [{ minor: '3.47', changes: [{ title: 'Removal of describeEnum <x>', url: 'https://docs.flutter.dev/release/breaking-changes/remove-describeEnum' }] }] };
+  const html = renderFrameworksSection({ ...snapshot, frameworks: { flutter } });
+  assert.match(html, /<div class="breaking-minor">Flutter 3\.47<\/div>/);
+  assert.match(html, /<a lang="en" href="https:\/\/docs\.flutter\.dev\/release\/breaking-changes\/remove-describeEnum"[^>]*>Removal of describeEnum &lt;x&gt;<\/a>/);
+  assert.doesNotMatch(renderFrameworksSection({ ...snapshot, frameworks: { flutter: { ...flutter, breakingChanges: undefined } } }), /breaking-list/);
 });

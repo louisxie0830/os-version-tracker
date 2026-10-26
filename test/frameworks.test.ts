@@ -58,3 +58,17 @@ test('parseFlutterReleases: the current stable, one entry per version (not per C
   assert.equal(flutter.latest.dart, '3.13.5');
   assert.deepEqual(flutter.recentMinors.map(m => m.version), ['3.47.7', '3.46.2', '3.45.0']);
 });
+
+test('parseFlutterBreaking: the changes of the asked minors, titles with their guides; too few releases means the page changed', async () => {
+  const { parseFlutterBreaking } = await import('../src/fetchers/frameworks.ts');
+  const release = (minor: string, items: string) => `<div class="header-wrapper"><h3 id="r${minor}">Released in Flutter ${minor}</h3></div><ul>${items}</ul>`;
+  const html = '<h3>Not yet released to stable</h3><ul><li><a href="/x">Upcoming</a></li></ul>'
+    + release('3.47', '<li> <a href="/release/breaking-changes/remove-describeEnum">Removal of <code>describeEnum</code></a> </li>')
+    + release('3.44', '<li><a href="/release/breaking-changes/a">A</a></li><li><a href="/release/breaking-changes/b">B</a></li>')
+    + release('3.41', '<li><a href="/release/breaking-changes/c">C</a></li>');
+  assert.deepEqual(parseFlutterBreaking(html, ['3.47', '3.44']), [
+    { minor: '3.47', changes: [{ title: 'Removal of describeEnum', url: 'https://docs.flutter.dev/release/breaking-changes/remove-describeEnum' }] },
+    { minor: '3.44', changes: [{ title: 'A', url: 'https://docs.flutter.dev/release/breaking-changes/a' }, { title: 'B', url: 'https://docs.flutter.dev/release/breaking-changes/b' }] },
+  ]);
+  assert.throws(() => parseFlutterBreaking('<h3>Released in Flutter 3.47</h3>', ['3.47']), /only 1 releases/);
+});

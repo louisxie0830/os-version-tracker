@@ -1,9 +1,12 @@
 import { minXcodeForiOSSdk } from './fetchers/ios-toolchain.js';
 import { calendarDate, daysUntil, taipeiToday } from './taipei-date.js';
-import { compareVersions } from './fetchers/ios-toolchain.js';
-import type { PlayBillingInfo } from './fetchers/requirements.js';
+import { compareVersions } from './versions.js';
+import { PLAY_POLICY_URL, type PlayBillingInfo } from './fetchers/requirements.js';
 import type { GithubMacosRunner } from './fetchers/ci-images.js';
 import type { OsShare } from './fetchers/os-share.js';
+import type { BehaviorChanges } from './fetchers/behavior-changes.js';
+import type { AppleDeprecation } from './fetchers/apple-deprecations.js';
+import { datePrecision, lastPossibleDay, periodLabel, submissionDay, urgencyDay } from './deadline-dates.js';
 import type {
   ActionItem,
   ActionStatus,
@@ -19,6 +22,7 @@ import type {
   XcodeRelease,
 } from './types.js';
 
+const MONTH_PATTERN = '(?:January|February|March|April|May|June|July|August|September|October|November|December)';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const URGENT_DAYS = 60;
 
@@ -59,12 +63,13 @@ export function buildiOSActions(
     announcedDevices?: AnnouncedDevice[];
     ciRunners?: GithubMacosRunner[];
     osShare?: OsShare | null;
+    deprecations?: AppleDeprecation[];
   } = {},
   now = new Date(),
 ): ActionItem[] {
   const actions: ActionItem[] = [];
   const releases = toolchain?.releases ?? [];
-  const { adoption = null, xcodeSupport = [], requirements = [], announcedDevices = [], ciRunners = [], osShare = null } = extra;
+  const { adoption = null, xcodeSupport = [], requirements = [], announcedDevices = [], ciRunners = [], osShare = null, deprecations = [] } = extra;
 
   // 1. App Store SDK requirement → which Xcode / macOS you need
   const iosReq = deadline?.requirements.find(r => /\biOS\b/.test(r.platform) || /\biOS\b/.test(r.sdk));
@@ -73,14 +78,23 @@ export function buildiOSActions(
     const xcode = minXcodeForiOSSdk(releases, requiredSdk);
     const days = daysUntil(deadline.deadline, now);
     const need = xcode ? xcodeRequirement(xcode) : `iOS ${requiredSdk} SDK`;
-    const inEffect = days !== null && days < 0;
+    // Announced by month only ("Starting April 2027"): no day to count to, and pending until the month is over
+    const day = submissionDay(deadline);
+    const period = day && periodLabel(day);
+    const pendingIn = day && period ? daysUntil(lastPossibleDay(day), now) : days;
+    const inEffect = days !== null && days < 0 && !(pendingIn !== null && pendingIn >= 0);
+    const dueIn = days === null ? null : Math.max(0, days);
+    const when = period ? `${period}起` : `${zhDate(deadline.deadline)} 起`;
     actions.push({
-      status: inEffect ? 'ok' : deadlineStatus(days ?? Infinity),
+      status: inEffect ? 'ok' : deadlineStatus(dueIn ?? Infinity),
+      ...(!inEffect && day ? { dueDate: day.date } : {}),
       title: `上架 App Store 必須使用 iOS ${requiredSdk} SDK 建置`,
       detail: inEffect
-        ? `自 ${zhDate(deadline.deadline)} 起生效。最低需求：${need}。`
-        : `${zhDate(deadline.deadline)} 起生效（${countdown(days!)}）。請升級至 ${need}。`,
-      url: 'https://developer.apple.com/news/upcoming-requirements/',
+        ? `自 ${period ?? zhDate(deadline.deadline)} 起生效。最低需求：${need}。`
+        : period
+          ? `${when}生效（Apple 只公布月份，確切日期未定）。請升級至 ${need}。`
+          : `${when}生效（${countdown(days!)}）。請升級至 ${need}。`,
+      url: deadline.url ?? 'https://developer.apple.com/news/upcoming-requirements/',
     });
 
     // Apple has raised the minimum SDK every spring; flag the next one once a newer SDK ships
@@ -107,6 +121,7 @@ export function buildiOSActions(
     const xcodeFloor = latestXcode?.deploymentiOS?.split('–')[0];
     actions.push({
       status: days !== null && days >= 0 ? deadlineStatus(days) : 'ok',
+      ...(days !== null && days >= 0 ? { dueDate: minTarget.date } : {}),
       title: `上架 App 的最低部署版本須為 iOS ${version} 以上`,
       detail: `${days !== null && days >= 0 ? `${zhDate(minTarget.date)} 起生效（${countdown(days)}）` : `自 ${zhDate(minTarget.date)} 起生效`}。`
         + `Deployment Target 低於 iOS ${version} 的 App 無法上傳至 App Store Connect。`
@@ -121,11 +136,22 @@ export function buildiOSActions(
     if (req === minTarget || /SDK minimum|^Xcode \d/i.test(req.title)) continue;
     if (new Date(req.date) < yearAgo) continue;
     const days = daysUntil(req.date, now);
-    const upcoming = days !== null && days >= 0;
+    // Dated by month only: still ahead until the month is over, and no countdown to a day nobody announced
+    const period = periodLabel(req);
+    const pending = daysUntil(lastPossibleDay(req), now);
+    const upcoming = pending !== null && pending >= 0;
+    // What the date is: an expiry ("expires on"), a deadline to act by ("by January 31, 2026"), else when it starts
+    const kind = /\bexpir/i.test(req.detail) ? 'expires' : new RegExp(`\\bby ${MONTH_PATTERN} \\d{1,2}, \\d{4}`).test(req.detail) ? 'by' : 'starts';
+    // A deadline to act by that has passed asks nothing more
+    if (!upcoming && kind === 'by') continue;
+    const when = period ?? zhDate(req.date);
+    const verb = kind === 'expires' ? '到期' : kind === 'by' ? '前須完成' : '起生效';
+    const ahead = period ? `${when}${verb}（Apple 只公布月份，確切日期未定）` : `${when} ${verb}（${countdown(Math.max(0, days ?? 0))}）`;
     actions.push({
-      status: upcoming ? deadlineStatus(days!) : 'ok',
-      title: `Apple 規定：${req.title}`,
-      detail: `${upcoming ? `${zhDate(req.date)} 起生效（${countdown(days!)}）` : `自 ${zhDate(req.date)} 起生效`}。${req.detail}`,
+      status: upcoming ? deadlineStatus(Math.max(0, daysUntil(urgencyDay(req), now) ?? 0)) : 'ok',
+      ...(upcoming ? { dueDate: urgencyDay(req) } : {}),
+      title: `Apple 規定：${req.title.replace(/^Apple Developer News：/, '')}`,
+      detail: `${upcoming ? ahead : kind === 'expires' ? `已於 ${when} 到期` : `自 ${when} 起生效`}。${req.detail}`,
       url: req.url,
     });
   }
@@ -142,7 +168,7 @@ export function buildiOSActions(
       title: `Xcode ${latestXcode.xcode}：實機除錯需 iOS ${deviceFloor} 以上裝置`,
       detail: `Xcode ${latestXcode.xcode} 的部署版本範圍為 iOS ${latestXcode.deploymentiOS ?? '?'}，需 ${latestXcode.macOS.replace(/\s+or later$/i, ' 以上')}。`
         + (fallback ? `若要在更舊的實機上除錯，需保留 Xcode ${fallback.xcode}（支援 iOS ${fallback.deviceiOS?.replace(/\s+or later$/i, '')} 以上的裝置）。` : ''),
-      url: 'https://developer.apple.com/support/xcode/',
+      url: 'https://developer.apple.com/xcode/system-requirements/',
     });
   }
 
@@ -177,11 +203,17 @@ export function buildiOSActions(
   const phones = toolchain?.newestiPhones ?? [];
   if (phones.length) {
     const iosVersion = phones[0].shipsWithiOS;
-    const xcode = minXcodeForiOSSdk(releases, iosVersion);
+    // Only a major known ("27"): a model launched mid-cycle ships with a point release (iOS 27.1) and needs the
+    // Xcode that adds it, so the newest stable Xcode of that major is the one to name, not its first
+    const majorOnly = /^\d+$/.test(iosVersion);
+    const xcode = majorOnly
+      ? releases.filter(r => !r.isBeta && r.iosSdk && majorOf(r.iosSdk) === iosVersion).sort((a, b) => b.releaseDate.localeCompare(a.releaseDate))[0]
+        ?? minXcodeForiOSSdk(releases, iosVersion)
+      : minXcodeForiOSSdk(releases, iosVersion);
     actions.push({
       status: 'info',
       title: `支援 ${phones.map(p => p.name).join(' / ')}`,
-      detail: `出廠搭載 iOS ${iosVersion}（${phones[0].releaseDate} 上市）。需使用 ${xcode ? xcodeRequirement(xcode) : `iOS ${iosVersion} SDK`}，才能在這些機型及模擬器上建置、執行與測試。`,
+      detail: `出廠搭載 iOS ${iosVersion}${majorOnly ? '.x' : ''}（${phones[0].releaseDate} 上市${majorOnly ? '；確切版本以 Apple 公告為準' : ''}）。需使用 ${xcode ? xcodeRequirement(xcode) : `iOS ${iosVersion} SDK`}，才能在這些機型及模擬器上建置、執行與測試。`,
       url: xcode?.notesUrl,
     });
   }
@@ -219,6 +251,17 @@ export function buildiOSActions(
   if (deployment) actions.push(deployment);
   const taiwan = osShare ? minVersionAction('iOS', osShare) : null;
   if (taiwan) actions.push(taiwan);
+
+  // 5. Server APIs Apple's documentation marks deprecated (no shutdown date yet: plan the move, nothing to meet)
+  for (const d of deprecations) {
+    actions.push({
+      status: 'info',
+      basis: 'official',
+      title: `${d.name} 已被 Apple 標為淘汰`,
+      detail: `Apple 文件已標示淘汰（自 ${d.deprecatedAt} 版起），尚未公布停止服務的日期；${d.replacement}。仍在使用的後端宜及早規劃遷移，公布日期後會列入期限時間軸。`,
+      url: d.url,
+    });
+  }
 
   return byUrgency(actions);
 }
@@ -289,6 +332,8 @@ const PLATFORM_ZH: Array<[RegExp, string]> = [
 
 /** Translates the requirement labels scraped from Apple / Google; unknown labels pass through */
 export function zhPlatform(platform: string): string {
+  const existing = platform.match(/^Existing (.+) apps$/i);
+  if (existing && !/^apps$/i.test(existing[1])) return `既有 ${zhPlatform(existing[1]).replace(/, /g, '、')} App`;
   return PLATFORM_ZH.find(([re]) => re.test(platform))?.[1] ?? platform.replace(/\band\b/g, '與');
 }
 
@@ -296,6 +341,8 @@ export function zhPlatform(platform: string): string {
 export function zhSdk(sdk: string): string {
   return sdk
     .replace(/\s*\(API\s+level\s+(\d+)\)/i, '（API $1）')
+    // "API level 34 or higher" (a threshold Google gives by level only)
+    .replace(/^API\s+level\s+(\d+)\s+or\s+higher$/i, 'API $1 或更高')
     .replace(/\s+or\s+higher$/i, '或更高')
     .replace(/\s+or\s+later$/i, ' 或更新版本')
     .replace(/\s+&\s+/g, ' 與 ');
@@ -304,6 +351,23 @@ export function zhSdk(sdk: string): string {
 function apiLevelOf(sdk: string): number | undefined {
   const level = sdk.match(/API\s+level\s+(\d+)/i)?.[1];
   return level ? Number(level) : undefined;
+}
+
+/**
+ * A Play policy change in brief, in Chinese, with the replacement Google names in it: these are what an app has
+ * to change. A change not recognised here is named as Google names it
+ */
+const POLICY_BRIEFS: Array<[RegExp, string]> = [
+  [/Contact Picker/i, '聯絡人：不需要完整通訊錄的 App 須改用 Android Contact Picker'],
+  [/location button/i, '精確位置：建議改用位置按鈕（location button）'],
+  [/READ_CALL_LOG|Digital Credentials/i, '通話紀錄：不再允許用來驗證帳號，改用 Digital Credentials API 或 SMS Retriever API'],
+  [/Geofence API|geofencing/i, '地理圍欄：不再是允許的前景服務用途，改用 Geofence API'],
+  [/register (?:your|any remaining) (?:Play )?apps/i, '在 Play Console 首頁確認並註冊所有要繼續發布的 App'],
+  [/anonymous (?:chat|and random chat)/i, '匿名／隨機聊天 App 的兒童與年齡限制規定擴大適用'],
+];
+function policyInBrief(p: Deadline): string {
+  if (/^(?:Play 技術品質|Android 開發者驗證)：/.test(p.title)) return p.title.replace(/^[^：]+：/, '');
+  return POLICY_BRIEFS.find(([re]) => re.test(p.detail))?.[1] ?? p.title.replace(/^Play 政策：/, '');
 }
 
 export function buildAndroidActions(
@@ -316,11 +380,12 @@ export function buildAndroidActions(
     policies?: Deadline[];
     pageSize?: Deadline[];
     osShare?: OsShare | null;
+    behaviorChanges?: BehaviorChanges | null;
   } = {},
   now = new Date(),
 ): ActionItem[] {
   const actions: ActionItem[] = [];
-  const { toolchain = null, compat = null, billing, policies = [], pageSize = [], osShare = null } = extra;
+  const { toolchain = null, compat = null, billing, policies = [], pageSize = [], osShare = null, behaviorChanges = null } = extra;
   const toolsFor = (api: number) => {
     const row = compat?.apiLevels.find(r => Number(r.api) === api);
     return row ? `需要 AGP ${row.minAgp} 以上、Android Studio ${row.minStudio} 以上。` : '';
@@ -348,18 +413,36 @@ export function buildAndroidActions(
         + (deadline.extensionDate ? `，可申請延長至 ${zhDate(deadline.extensionDate)}` : '') + '。';
     } else if (extDays !== null && extDays >= 0) {
       status = 'urgent';
-      when = `原期限 ${zhDate(deadline.deadline)} 已過；延長期限至 ${zhDate(deadline.extensionDate!)}（${countdown(extDays)}）。`;
+      when = `原期限 ${zhDate(deadline.deadline)} 已過；已申請延長者至 ${zhDate(deadline.extensionDate!)}（${countdown(extDays)}）。`;
     } else {
       status = 'ok';
       when = `自 ${zhDate(deadline.deadline)} 起生效。`;
     }
 
+    const due = days !== null && days >= 0 ? deadline.deadline : extDays !== null && extDays >= 0 ? deadline.extensionDate : undefined;
     actions.push({
       status,
+      ...(due && calendarDate(due) ? { dueDate: calendarDate(due)! } : {}),
       title: `Google Play：新 App 與更新須將 targetSdk 設為 ${requiredApi}`,
-      detail: `${when}${toolsFor(requiredApi)}${suffix}`,
+      // What happens otherwise, where the extension is asked for, and who is exempt (Google's target API page)
+      detail: `${when}${toolsFor(requiredApi)}${suffix}未達標的既有 App 對新使用者只提供給 Android 版本不高於其 targetSdk 的裝置（已安裝的使用者不受影響）；需要延長請在 Play Console 的延長申請表單提出；僅供內部發布的永久私人 App 不受此限。`,
       url: targetSdkUrl,
     });
+
+    // An earlier deadline whose extension is still open when Google has already posted the next one
+    for (const prior of deadline.earlier ?? []) {
+      const api = apiLevelOf((prior.requirements.find(r => /new apps/i.test(r.platform)) ?? prior.requirements[0])?.sdk ?? '');
+      const open = prior.extensionDate ? daysUntil(prior.extensionDate, now) : null;
+      const passed = daysUntil(prior.deadline, now);
+      if (!api || open === null || open < 0 || passed === null || passed >= 0) continue;
+      actions.push({
+        status: 'urgent',
+        ...(calendarDate(prior.extensionDate!) ? { dueDate: calendarDate(prior.extensionDate!)! } : {}),
+        title: `Google Play：targetSdk ${api} 的延長期即將結束`,
+        detail: `原期限 ${zhDate(prior.deadline)} 已過；已申請延長者至 ${zhDate(prior.extensionDate!)}（${countdown(open)}）。下一個期限（targetSdk ${requiredApi}）見上一項。`,
+        url: targetSdkUrl,
+      });
+    }
 
     // Play has required "latest major release minus one" every August 31
     const deadlineYear = new Date(deadline.deadline).getFullYear();
@@ -370,7 +453,10 @@ export function buildAndroidActions(
       actions.push({
         status: 'upcoming',
         title: `預計下一波：${deadlineYear + 1} 年 8 月 31 日前 targetSdk ${nextApi}（Android ${nextMajor}）`,
-        detail: `Google Play 過去每年 8 月 31 日調高目標 API 等級，實際日期以 Google 公告為準。${toolsFor(nextApi)}請先檢視 targetSdk 設為 ${nextApi} 時會生效的 Android ${nextMajor} 行為變更。`,
+        detail: `Google Play 過去每年 8 月 31 日調高目標 API 等級，實際日期以 Google 公告為準。${toolsFor(nextApi)}請先檢視 targetSdk 設為 ${nextApi} 時會生效的 Android ${nextMajor} 行為變更`
+          + (behaviorChanges?.major === nextMajor && behaviorChanges.changes.length
+            ? `（${behaviorChanges.changes.length} 項）：${behaviorChanges.changes.slice(0, 6).join('、')}${behaviorChanges.changes.length > 6 ? ` 等 ${behaviorChanges.changes.length} 項` : ''}。`
+            : '。'),
         url: `https://developer.android.com/about/versions/${nextMajor}/behavior-changes-${nextMajor}`,
         estimated: true,
       });
@@ -378,7 +464,9 @@ export function buildAndroidActions(
   }
 
   // 1b. Play Billing Library: the oldest version whose deadline (or extension) hasn't passed yet
+  // The library's own deadlines (the list also has the server-side Developer API shutdowns)
   const billingDue = (billing?.deadlines ?? [])
+    .filter(d => /Billing Library \d+/.test(d.title))
     .filter(d => (daysUntil(d.extensionDate ?? d.date, now) ?? -1) >= 0)
     .sort((a, b) => a.date.localeCompare(b.date))[0];
   if (billingDue) {
@@ -387,11 +475,12 @@ export function buildAndroidActions(
     const extDays = billingDue.extensionDate ? daysUntil(billingDue.extensionDate, now) : null;
     const when = days >= 0
       ? `期限 ${zhDate(billingDue.date)}（${countdown(days)}）` + (billingDue.extensionDate ? `，可申請延長至 ${zhDate(billingDue.extensionDate)}` : '')
-      : `原期限 ${zhDate(billingDue.date)} 已過；延長期限至 ${zhDate(billingDue.extensionDate!)}（${countdown(extDays!)}）`;
+      : `原期限 ${zhDate(billingDue.date)} 已過；已申請延長者至 ${zhDate(billingDue.extensionDate!)}（${countdown(extDays!)}）`;
     actions.push({
       status: days >= 0 ? deadlineStatus(days) : 'urgent',
+      dueDate: days >= 0 ? billingDue.date : billingDue.extensionDate,
       title: `Play Billing Library ${version} 以下須升級${billing?.latest ? `（最新 ${billing.latest}）` : ''}`,
-      detail: `${when}。逾期後仍使用 PBL ${version} 以下的新 App 與更新將無法上架。`,
+      detail: `${when}。逾期後仍使用 PBL ${version} 以下的新 App 與更新將無法上架。先確認 AndroidManifest 裡 com.google.android.play.billingclient.version 的實際版本（manifest 合併可能把它移除，Play 因此判斷錯誤）；需要延長請在 Play Console 該警告的「政策狀態」頁提出。`,
       url: billingDue.url,
     });
   }
@@ -402,8 +491,9 @@ export function buildAndroidActions(
     if (days === null || days < 0) continue;
     actions.push({
       status: deadlineStatus(days),
+      dueDate: d.date,
       title: `${zhDate(d.date)} 起須支援 16 KB 記憶體分頁大小`,
-      detail: `${countdown(days)}。不支援 16 KB 分頁的 App 更新將無法發布；有 NDK / 原生函式庫（.so）或第三方 SDK 含原生程式碼的 App 需以 16 KB 對齊重新建置，可用 APK Analyzer 檢查。`,
+      detail: `${countdown(days)}。適用 targetSdk 35 以上、在 64 位元裝置執行的 App。不支援 16 KB 分頁的 App 更新將無法發布；有 NDK / 原生函式庫（.so）或第三方 SDK 含原生程式碼的 App 需以 16 KB 對齊重新建置：最快的做法是升級到 AGP 8.5.1 以上與 NDK r28 以上（預設即 16 KB 對齊），再用 APK Analyzer、zipalign -c -P 16 或 check_elf_alignment.sh 檢查。`,
       url: d.url,
     });
   }
@@ -411,18 +501,35 @@ export function buildAndroidActions(
   // 1d. Upcoming Play policy changes, grouped by effective date
   const policyByDate = new Map<string, Deadline[]>();
   for (const p of policies) {
-    const days = daysUntil(p.date, now);
+    // A requirement dated by month or year only stays listed until that period is over
+    const days = daysUntil(lastPossibleDay(p), now);
     if (days === null || days < 0) continue;
-    policyByDate.set(p.date, [...(policyByDate.get(p.date) ?? []), p]);
+    // A year-only and a January-only requirement share a date but not a wording
+    const key = `${p.date}|${datePrecision(p)}`;
+    policyByDate.set(key, [...(policyByDate.get(key) ?? []), p]);
   }
-  for (const [date, list] of [...policyByDate].sort(([a], [b]) => a.localeCompare(b))) {
-    const days = daysUntil(date, now)!;
-    const names = [...new Set(list.map(p => p.title.replace(/^Play 政策：/, '')))];
+  for (const [key, list] of [...policyByDate].sort(([a], [b]) => a.localeCompare(b))) {
+    const date = key.split('|')[0];
+    const days = Math.max(0, daysUntil(date, now)!);
+    // How urgent: from the day itself, a month's first day, or a year's last (as the timeline)
+    const dueIn = daysUntil(urgencyDay(list[0]), now)!;
+    // Each change in a few words with what to use instead, where the policy's own text says (else its name)
+    const changes = [...new Set(list.map(policyInBrief))];
+    const kind = list.every(p => /^Play 技術品質：/.test(p.title)) ? 'Google Play 技術品質要求'
+      : list.every(p => /^Android 開發者驗證：/.test(p.title)) ? 'Android 開發者驗證'
+      : list.every(p => /^Play 政策：/.test(p.title)) ? 'Google Play 政策' : 'Google Play 政策與要求';
+    // Google gave only a month or a year: say that, not a day count to a day nobody announced
+    const yearOnly = datePrecision(list[0]) === 'year';
+    const monthOnly = datePrecision(list[0]) === 'month';
+    const [y, m] = date.split('-').map(Number);
+    const when = yearOnly ? `於 ${y} 年內` : monthOnly ? `自 ${y} 年 ${m} 月起` : `於 ${zhDate(date)} `;
     actions.push({
-      status: deadlineStatus(days),
-      title: `${list.length} 項 Google Play 政策將於 ${zhDate(date)} 生效`,
-      detail: `${countdown(days)}。涉及：${names.join('、')}。詳見下方期限時間軸。`,
-      url: list[0].url,
+      status: deadlineStatus(dueIn),
+      dueDate: urgencyDay(list[0]),
+      title: `${list.length} 項 ${kind}將${when}生效`,
+      detail: `${yearOnly || monthOnly ? `Google 只公布${yearOnly ? '年份' : '月份'}，確切日期未定` : countdown(days)}。${changes.join('；')}。詳見下方期限時間軸。`,
+      // Several policy changes: the deadline table that lists them all, not the first one's own page
+      url: list.length > 1 && list.every(p => p.source === 'Google Play Policy Deadlines') ? PLAY_POLICY_URL : list[0].url,
     });
   }
 
@@ -480,8 +587,15 @@ export function buildAndroidActions(
 export function buildDeadlineTimeline(deadlines: Deadline[], now = new Date()): Deadline[] {
   const today = taipeiToday(now);
   const yearAgo = taipeiToday(new Date(now.getTime() - 365 * DAY_MS));
-  const effectiveEnd = (d: Deadline) => d.extensionDate && d.extensionDate > d.date ? d.extensionDate : d.date;
-  const upcoming = deadlines.filter(d => effectiveEnd(d) >= today).sort((a, b) => a.date.localeCompare(b.date));
+  // Still ahead until its extension, or (dated by month or year only) until that period is over
+  const effectiveEnd = (d: Deadline) => [d.extensionDate ?? '', lastPossibleDay(d)].sort().at(-1)!;
+  // Same first day: the exact date first, then the month, then the year (not interleaved)
+  const RANK = { day: 0, month: 1, year: 2 } as const;
+  const upcoming = deadlines.filter(d => effectiveEnd(d) >= today).sort((a, b) => a.date.localeCompare(b.date) || RANK[datePrecision(a)] - RANK[datePrecision(b)]);
   const recent = deadlines.filter(d => effectiveEnd(d) < today && d.date >= yearAgo).sort((a, b) => b.date.localeCompare(a.date));
-  return [...upcoming, ...recent];
+  // How exact each date is, for API readers (the page reads it from the detail's own note)
+  return [...upcoming, ...recent].map(d => {
+    const precision = datePrecision(d);
+    return precision === 'day' ? d : { ...d, datePrecision: precision };
+  });
 }

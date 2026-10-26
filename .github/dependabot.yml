@@ -1,0 +1,28 @@
+# Weekly update pull requests: the actions the workflows pin by commit SHA (a pinned SHA never updates itself,
+# security fixes included) and the npm dependencies. Each pull request runs ci.yml before anything is merged.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Taipei
+    # One pull request for all the actions, not one per action
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: Asia/Taipei
+    groups:
+      # Patch and minor releases together; a major version comes as its own pull request
+      npm-minor:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5

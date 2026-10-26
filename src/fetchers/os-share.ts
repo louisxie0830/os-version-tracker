@@ -1,5 +1,5 @@
 import { androidApiLevel, newestPossibleAndroidMajor } from '../android-api.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
 import { fetchText, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 
 /**
@@ -99,11 +99,17 @@ export function parseShareCsv(csv: string): VersionShare[] {
 
 /** "iOS 26.6" → "26"; "16.0" → "16"; "9.0 Pie" → "9"; "Other" → undefined */
 export function majorOf(platform: Platform, label: string): string | undefined {
-  const m = (platform === 'ios' ? label.replace(/^iOS\s+/i, '') : label).match(/^(\d+)/);
+  // "iOS 26.6" or, should the space go, "iOS26.6"
+  const m = (platform === 'ios' ? label.replace(/^iOS\s*/i, '') : label).match(/^(\d+)/);
   return m?.[1];
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** One CSV line's cells, quotes removed; a comma inside quotes ("Android 9.0, Pie") stays in its cell */
+export function csvCells(line: string): string[] {
+  return [...line.matchAll(/(?:^|,)(?:"((?:[^"]|"")*)"|([^,]*))/g)].map(m => (m[1] !== undefined ? m[1].replace(/""/g, '"') : m[2]));
+}
 
 /** Major version for a StatCounter label, folding Android's nonsense labels (e.g. "26") into 其他 */
 function majorBucket(platform: Platform, label: string): string {
@@ -112,34 +118,44 @@ function majorBucket(platform: Platform, label: string): string {
 }
 
 /**
- * Parses a multi-month StatCounter export ("Date","iOS 18.6",… then one row per month) into share per
- * major version per month. Months with no data at all (not published yet) are dropped.
+ * A multi-month StatCounter export ("Date","<column>",… then one row per month): each column's share per
+ * month, added up into the group `groupOf` puts it in (columns it returns undefined for are skipped). Months
+ * with no data at all (not published yet) are dropped; fewer than two months left is an error.
  */
-export function parseShareHistoryCsv(platform: Platform, csv: string, url: string): ShareTrend {
+function monthlyShares(csv: string, groupOf: (column: string) => string | undefined, what: string): { months: string[]; series: Array<[string, number[]]> } {
   const lines = csv.trim().split(/\r?\n/);
-  const header = (lines[0] ?? '').split(',').map(h => h.replace(/^"|"$/g, ''));
-  const buckets = header.slice(1).map(label => majorBucket(platform, label));
+  const header = csvCells(lines[0] ?? '').map(h => h.trim());
+  const groups = header.slice(1).map(groupOf);
   const months: string[] = [];
-  const byMajor = new Map<string, number[]>();
+  const byGroup = new Map<string, number[]>();
   for (const line of lines.slice(1)) {
-    const cells = line.split(',');
+    const cells = csvCells(line);
     const month = cells[0]?.replace(/"/g, '');
     if (!/^\d{4}-\d{2}$/.test(month ?? '')) continue;
     const values = cells.slice(1).map(Number);
     if (!values.some(v => v > 0)) continue;
     const index = months.push(month) - 1;
     values.forEach((v, i) => {
-      if (!Number.isFinite(v) || buckets[i] === undefined) return;
-      const series = byMajor.get(buckets[i]) ?? [];
+      const group = groups[i];
+      if (!Number.isFinite(v) || group === undefined) return;
+      const series = byGroup.get(group) ?? [];
       series[index] = (series[index] ?? 0) + v;
-      byMajor.set(buckets[i], series);
+      byGroup.set(group, series);
     });
   }
-  if (months.length < 2) throw new Error('StatCounter history has fewer than two months');
-  const series = [...byMajor]
-    .map(([version, shares]) => ({ version, shares: months.map((_, i) => round1(shares[i] ?? 0)) }))
-    .sort((a, b) => (a.version === '其他' ? 1 : b.version === '其他' ? -1 : compareVersions(b.version, a.version)));
-  return { months, series, url };
+  if (months.length < 2) throw new Error(`StatCounter ${what} has fewer than two months`);
+  return { months, series: [...byGroup].map(([group, shares]) => [group, months.map((_, i) => round1(shares[i] ?? 0))]) };
+}
+
+/** Share per major version per month (the multi-month version export) */
+export function parseShareHistoryCsv(platform: Platform, csv: string, url: string): ShareTrend {
+  const { months, series } = monthlyShares(csv, label => majorBucket(platform, label), 'history');
+  return {
+    months,
+    series: series.map(([version, shares]) => ({ version, shares }))
+      .sort((a, b) => (a.version === '其他' ? 1 : b.version === '其他' ? -1 : compareVersions(b.version, a.version))),
+    url,
+  };
 }
 
 /**
@@ -147,30 +163,13 @@ export function parseShareHistoryCsv(platform: Platform, csv: string, url: strin
  * latest month first; "Unknown" and "Other" fold into 其他 (kept last).
  */
 export function parseVendorHistoryCsv(csv: string, url: string): ShareTrend {
-  const lines = csv.trim().split(/\r?\n/);
-  const header = (lines[0] ?? '').split(',').map(h => h.replace(/^"|"$/g, '').trim());
-  const names = header.slice(1).map(name => (/^(unknown|other)$/i.test(name) ? '其他' : name));
-  const months: string[] = [];
-  const byName = new Map<string, number[]>();
-  for (const line of lines.slice(1)) {
-    const cells = line.split(',');
-    const month = cells[0]?.replace(/"/g, '');
-    if (!/^\d{4}-\d{2}$/.test(month ?? '')) continue;
-    const values = cells.slice(1).map(Number);
-    if (!values.some(v => v > 0)) continue;
-    const index = months.push(month) - 1;
-    values.forEach((v, i) => {
-      if (!Number.isFinite(v) || !names[i]) return;
-      const series = byName.get(names[i]) ?? [];
-      series[index] = (series[index] ?? 0) + v;
-      byName.set(names[i], series);
-    });
-  }
-  if (months.length < 2) throw new Error('StatCounter brand history has fewer than two months');
-  const series = [...byName]
-    .map(([version, shares]) => ({ version, shares: months.map((_, i) => round1(shares[i] ?? 0)) }))
-    .sort((a, b) => (a.version === '其他' ? 1 : b.version === '其他' ? -1 : (b.shares.at(-1) ?? 0) - (a.shares.at(-1) ?? 0)));
-  return { months, series, url };
+  const { months, series } = monthlyShares(csv, name => (/^(unknown|other)$/i.test(name) ? '其他' : name || undefined), 'brand history');
+  return {
+    months,
+    series: series.map(([version, shares]) => ({ version, shares }))
+      .sort((a, b) => (a.version === '其他' ? 1 : b.version === '其他' ? -1 : (b.shares.at(-1) ?? 0) - (a.shares.at(-1) ?? 0))),
+    url,
+  };
 }
 
 export function summarize(platform: Platform, shares: VersionShare[], url: string): PlatformShare {
@@ -197,11 +196,15 @@ export function summarize(platform: Platform, shares: VersionShare[], url: strin
     };
   });
 
-  const topVersions = [...shares]
-    .filter(s => s.version !== 'Other')
-    .sort((a, b) => b.share - a.share)
+  // StatCounter lists some versions twice ("iOS 27" and "iOS 27.0"): one label each, their shares added up,
+  // before ranking (or 27.0 shows twice, each with part of its share)
+  const label = (v: string) => (platform === 'ios' ? v.replace(/^iOS\s+/i, '') : v).replace(/\.0(?=\s|$)/, '');
+  const merged = new Map<string, number>();
+  for (const s of shares) if (s.version !== 'Other') merged.set(label(s.version), (merged.get(label(s.version)) ?? 0) + s.share);
+  const topVersions = [...merged]
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
-    .map(s => ({ version: platform === 'ios' ? s.version.replace(/^iOS\s+/i, '') : s.version.replace(/\.0(?=\s|$)/, ''), share: round1(s.share) }));
+    .map(([version, share]) => ({ version, share: round1(share) }));
 
   return { byMajor, topVersions, coverage, url };
 }

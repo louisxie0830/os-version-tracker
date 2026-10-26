@@ -16,14 +16,14 @@ const CRASH_KIND: Record<CrashItem['kind'], { label: string; status: ActionStatu
 
 function renderCrashList(title: string, items: CrashItem[], note: string, limit = 8): string {
   const list = items.length
-    ? `<ul class="crash-list">${items.slice(0, limit).map(c => `<li data-key="crash:${esc(c.url)}:${esc(c.title.slice(0, 40))}">
+    ? `<ul class="crash-list" data-search-rows>${items.slice(0, limit).map(c => `<li data-key="crash:${esc(c.url)}:${esc(c.title.slice(0, 40))}">
         <div class="tl-head">
           <span class="status status-${CRASH_KIND[c.kind].status}">${CRASH_KIND[c.kind].label}</span>
           ${c.newOs ? '<span class="status status-urgent">新系統相關</span>' : ''}
           <span class="crash-context">${esc(c.context)}</span>
         </div>
         ${externalLink(c.url, `${esc(c.title)}`, 'crash-title')}
-        ${c.source === 'GitHub' || c.source === 'Stack Overflow' ? `<div class="tl-source">${c.date ? `${esc(displayDate(c.date))} ${c.source === 'GitHub' ? '回報' : '發問'} · ` : ''}${c.source === 'GitHub' ? '👍' : '▲'} ${c.reactions ?? 0} · ${c.source === 'GitHub' ? '💬' : '回答'} ${c.comments ?? 0}${c.author ? ` · 作者 ${externalLink(c.author.url, esc(c.author.name))}` : ''}${c.source === 'Stack Overflow' ? ` · ${externalLink('https://creativecommons.org/licenses/by-sa/4.0/', 'CC BY-SA')}` : ''}</div>` : ''}
+        ${c.source === 'GitHub' || c.source === 'Stack Overflow' ? `<div class="tl-source">${c.date ? `${esc(displayDate(c.date))} ${c.source === 'GitHub' ? '回報' : '發問'} · ` : ''}${c.source === 'GitHub' ? '👍' : (c.reactions ?? 0) < 0 ? '▼' : '▲'} ${Math.abs(c.reactions ?? 0)} · ${c.source === 'GitHub' ? '💬' : '回答'} ${c.comments ?? 0}${c.author ? ` · 作者 ${externalLink(c.author.url, esc(c.author.name))}` : ''}${c.source === 'Stack Overflow' ? ` · ${externalLink('https://creativecommons.org/licenses/by-sa/4.0/', 'CC BY-SA')}` : ''}</div>` : ''}
       </li>`).join('')}</ul>`
     : '<div class="case-body empty">目前沒有相關的閃退紀錄。</div>';
   return `<div class="case">
@@ -116,7 +116,7 @@ function renderCordovaPlugins(data: AllVersions): string {
     <p class="table-note">最新版本與它需要的最低平台版本（取自 npm 的 cordovaDependencies），以及 GitHub Advisory Database 的已知漏洞與修正版本。專案用的版本低於「修正」版本就受影響。</p>
     <div class="table-wrap"><table class="compat-table stack-on-mobile">
       <thead><tr><th>Plugin</th><th>最新版</th><th>需要平台</th><th>已知漏洞</th></tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody data-search-rows>${rows}</tbody>
     </table></div>`;
 }
 
@@ -152,7 +152,7 @@ function securityCard(title: string, rows: string[], note: string, empty: string
       <span class="case-no">${title}</span>
       <span class="case-count">${total > limit ? `顯示 ${limit} / ${total} 項` : total ? `共 ${total} 項` : ''}</span>
     </div>
-    ${rows.length ? `<ul class="crash-list">${rows.slice(0, limit).join('')}</ul>` : `<div class="case-body empty">${empty}</div>`}
+    ${rows.length ? `<ul class="crash-list" data-search-rows>${rows.slice(0, limit).join('')}</ul>` : `<div class="case-body empty">${empty}</div>`}
     <div class="crash-note">${note}</div>
   </div>`;
 }

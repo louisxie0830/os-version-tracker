@@ -1,6 +1,6 @@
 import { widthClass } from './render-styles.js';
 import type { AllVersions } from './fetch-all.js';
-import { compareVersions } from './fetchers/ios-toolchain.js';
+import { compareVersions } from './versions.js';
 import { zhDate } from './insights.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
 import type { OSVersionInfo, ToolVersion } from './types.js';
@@ -155,7 +155,7 @@ export function renderVersionDistribution(platform: 'ios' | 'android', data: All
   <div class="share-grid">
     <div class="table-wrap share-table"><table class="compat-table">
       <thead><tr><th>最低支援版本（${platform === 'ios' ? 'Deployment Target' : 'minSdk'}）</th><th>台灣</th><th>全球</th></tr></thead>
-      <tbody>${coverageRows.join('')}</tbody>
+      <tbody data-search-rows>${coverageRows.join('')}</tbody>
     </table></div>
     <div class="share-top">
       <div class="tile-label">台灣最多人使用的版本</div>
@@ -199,7 +199,7 @@ export function renderAppleStatus(data: AllVersions): string {
     return `<li>
       <div class="tl-head">
         <span class="status status-${active ? (e.type === 'Maintenance' ? 'upcoming' : 'urgent') : 'ok'}">${active ? (e.state === 'upcoming' ? '即將' : '進行中') : '已結束'}</span>
-        <span class="crash-context">${esc(taipei(e.start))}${e.end ? ` – ${esc(taipei(e.end))}` : ''}（台灣時間）</span>
+        <span class="crash-context">${esc(taipei(e.start))}${e.end ? ` – ${esc(taipei(e.end))}` : active ? '' : '，結束時間 Apple 未公布'}（台灣時間）</span>
       </div>
       <span class="crash-title">${esc(e.service)} ${esc(TYPE[e.type] ?? e.type)}</span>
     </li>`;
@@ -209,14 +209,14 @@ export function renderAppleStatus(data: AllVersions): string {
       <span class="case-no">Apple 開發者服務狀態</span>
       <span class="case-count">${status.events.length ? `近 7 天 ${status.events.length} 件` : `${status.services} 項服務，近 7 天沒有事件`}</span>
     </div>
-    ${rows ? `<ul class="crash-list">${rows}</ul>` : ''}
+    ${rows ? `<ul class="crash-list" data-search-rows>${rows}</ul>` : ''}
     <div class="case-body"><p class="table-note">App Store Connect、TestFlight、APNs、Xcode Cloud 等服務的事件紀錄，網站每天更新兩次，不是即時狀態；${externalLink(status.url, '最新狀態請看 Apple 系統狀態頁')}。</p></div>
   </div>`;
 }
 
 export function renderPlatformSection(id: string, name: string, versions: OSVersionInfo[], extra = ''): string {
   const body = versions.length
-    ? `<div class="version-grid">${versions.map(renderVersionCard).join('')}</div>`
+    ? `<div class="version-grid" data-search-rows>${versions.map(renderVersionCard).join('')}</div>`
     : '<div class="empty">暫時無法取得資料</div>';
   return `<section class="panel" id="${id}">
     <h2>${name}</h2>

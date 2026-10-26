@@ -61,6 +61,30 @@ test('checkPage: a garbled or missing probe report fails that run only; the rest
   }
 });
 
+test('checkPage: a run killed for hanging is tried again, each time with a fresh profile; hanging every time fails it', async () => {
+  const site = fakeSite();
+  try {
+    const hung = { status: null, stdout: '', stderr: 'stalled', ended: 'timeout', ms: 90_000 };
+    const profiles: string[] = [];
+    const outputs = [hung, { status: 0, stdout: report(), stderr: '' }, hung, hung, hung];
+    let i = 0;
+    const results = await checkPage(site, [390, 1100], ['light'], ['index.html'], {
+      chrome: () => 'fake',
+      concurrency: 1,
+      run: async (_chrome, args) => {
+        profiles.push(args.find(a => a.startsWith('--user-data-dir='))!);
+        return outputs[i++];
+      },
+    });
+    assert.equal(i, 5, 'the first run took two attempts, the second all three');
+    assert.equal(results[0].fatal, undefined, 'the retry reported');
+    assert.equal(results[1].fatal, 'probe did not report (exit null, stalled: killed after 90s): stalled');
+    assert.notEqual(profiles[0], profiles[1], 'the retry has its own profile');
+  } finally {
+    rmSync(site, { recursive: true, force: true });
+  }
+});
+
 test('checkPage: browser concurrency can be capped for resource-constrained runners', async () => {
   const site = fakeSite();
   let active = 0;
@@ -222,4 +246,14 @@ test('robots issue: created, updated, closed; GitHub failures fail the run', asy
   const off = fakeGithub({});
   await syncRobotsIssue(problems, 'x', { github: off.github, config: null });
   assert.deepEqual(off.calls, []);
+});
+
+test('runChrome tells a crash on a signal from a run killed for hanging', async () => {
+  const crash = await runChrome(process.execPath, ['-e', "process.kill(process.pid, 'SIGTERM')"], 10_000);
+  assert.equal(crash.status, null);
+  assert.equal(crash.ended, 'SIGTERM');
+  const stall = await runChrome(process.execPath, ['-e', 'setTimeout(() => {}, 60_000)'], 200);
+  assert.equal(stall.ended, 'timeout');
+  const fine = await runChrome(process.execPath, ['-e', "console.log('ok')"], 10_000);
+  assert.deepEqual([fine.status, fine.stdout.trim(), fine.ended], [0, 'ok', undefined]);
 });

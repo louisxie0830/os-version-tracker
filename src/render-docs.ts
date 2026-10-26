@@ -1,9 +1,10 @@
 import { REPO_BLOB } from './source-registry.js';
-import { API_ENDPOINTS, API_VERSION, buildApiFiles } from './api.js';
-import type { TrackedItem } from './changes.js';
+import { API_ENDPOINTS, API_VERSION, buildApiFiles, legacyApiJson } from './api.js';
+import { buildCalendar } from './calendar.js';
+import { buildAtomFeed, buildNotificationsJson, type TrackedItem } from './changes.js';
 import { SITE_URL, type AllVersions } from './fetch-all.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
-import { platformClass, renderSources } from './render-common.js';
+import { platformClass, renderChoiceChips, renderSources } from './render-common.js';
 import { KIND_LABEL } from './render-feed.js';
 
 /** Reference sections: developer news, privacy rules, API docs and the legal notice. */
@@ -24,10 +25,19 @@ export function renderApiSection(data: AllVersions, refresh: string): string {
     const body = files.get(path);
     return body ? `${Math.max(1, Math.round(Buffer.byteLength(body) / 1024))} KB` : '—';
   };
+  // The other files, built the same way the static build writes them (health.json is a few dozen bytes)
+  const kb = (body: string) => `${Math.max(1, Math.round(Buffer.byteLength(body) / 1024))} KB`;
+  const legacySize = (path: string): string => {
+    if (path === 'api.json') return kb(JSON.stringify(legacyApiJson(data, SITE_URL)));
+    if (path === 'notifications.json') return kb(buildNotificationsJson(data.tracked, data.cachedAt));
+    if (path === 'feed.xml') return kb(buildAtomFeed(data.tracked, SITE_URL, data.cachedAt));
+    if (path === 'calendar.ics') return kb(buildCalendar(data.timeline, SITE_URL));
+    return '1 KB';
+  };
   const row = (path: string, text: string, kb: string) => `<tr>
       <td class="row-title" data-label="端點"><a href="${esc(path)}"><code>${esc(path)}</code></a></td>
       <td class="wrap-cell" data-label="內容">${esc(text)}</td>
-      <td data-label="大小">${esc(kb)}</td>
+      <td class="nowrap" data-label="大小">${esc(kb)}</td>
     </tr>`;
   const example = JSON.stringify({
     apiVersion: API_VERSION,
@@ -42,28 +52,28 @@ export function renderApiSection(data: AllVersions, refresh: string): string {
     <h3 class="subhead">主題端點</h3>
     <div class="table-wrap"><table class="compat-table stack-on-mobile">
       <thead><tr><th>端點</th><th>內容</th><th>大小</th></tr></thead>
-      <tbody>${row('api/index.json', '所有端點的清單與說明，以及每個資料來源的抓取狀態', size('api/index.json'))}${API_ENDPOINTS.map(e => row(e.path, e.description, size(e.path))).join('')}</tbody>
+      <tbody data-search-rows>${row('api/index.json', '所有端點的清單與說明，以及每個資料來源的抓取狀態', size('api/index.json'))}${API_ENDPOINTS.map(e => row(e.path, e.description, size(e.path))).join('')}</tbody>
     </table></div>
 
     <h3 class="subhead">回傳格式</h3>
     <p class="table-note">每個主題端點的外層都相同。<code>sources</code> 列出相關資料來源，<code>ok: false</code> 表示該來源這次抓取失敗、<code>data</code> 可能不完整；<code>apiVersion</code> 只在格式有不相容的修改時才會增加。</p>
-    <pre class="api-code"><code>${esc(example)}</code></pre>
+    <pre class="api-code" tabindex="0" role="region" aria-label="回應格式範例"><code>${esc(example)}</code></pre>
 
     <h3 class="subhead">其他檔案</h3>
     <div class="table-wrap"><table class="compat-table stack-on-mobile">
       <thead><tr><th>端點</th><th>內容</th><th>大小</th></tr></thead>
-      <tbody>${LEGACY_ENDPOINTS.map(([path, text]) => row(path, text, path === 'api.json' ? `${Math.round(Buffer.byteLength(JSON.stringify(data)) / 1024)} KB` : '—')).join('')}</tbody>
+      <tbody data-search-rows>${LEGACY_ENDPOINTS.map(([path, text]) => row(path, text, legacySize(path))).join('')}</tbody>
     </table></div>
 
     <h3 class="subhead">動態項目的類型（kind）</h3>
     <p class="table-note"><code>api/feed.json</code>、<code>notifications.json</code>、<code>feed.xml</code> 的每個項目都有 <code>kind</code>。之後可能會增加新的值，<strong>遇到不認得的值請略過</strong>，不要當成錯誤。</p>
     <div class="table-wrap"><table class="compat-table stack-on-mobile">
       <thead><tr><th>kind</th><th>意思</th></tr></thead>
-      <tbody>${(Object.entries(KIND_LABEL) as Array<[TrackedItem['kind'], string]>).map(([kind, label]) => `<tr><td class="row-title" data-label="kind"><code>${esc(kind)}</code></td><td data-label="意思">${esc(label)}</td></tr>`).join('')}</tbody>
+      <tbody data-search-rows>${(Object.entries(KIND_LABEL) as Array<[TrackedItem['kind'], string]>).map(([kind, label]) => `<tr><td class="row-title" data-label="kind"><code>${esc(kind)}</code></td><td data-label="意思">${esc(label)}</td></tr>`).join('')}</tbody>
     </table></div>
 
     <h3 class="subhead">範例</h3>
-    <pre class="api-code"><code>${esc(`curl -s ${SITE_URL}/api/versions.json | jq '.data.ios[0].version'
+    <pre class="api-code" tabindex="0" role="region" aria-label="指令範例"><code>${esc(`curl -s ${SITE_URL}/api/versions.json | jq '.data.ios[0].version'
 
 const res = await fetch('${SITE_URL}/api/now.json');
 const { updatedAt, data } = await res.json();`)}</code></pre>
@@ -88,11 +98,16 @@ export function renderLegalSection(): string {
 
 const NEWS_CATEGORY: Record<string, string> = { announcement: '公告', release: '版本發布', blog: '部落格' };
 
+const NEWS_SHOWN = 25;
+
 export function renderNewsSection(data: AllVersions): string {
   const items = data.devNews ?? [];
   if (!items.length) return '';
   const sources = [...new Set(items.map(i => i.source))];
-  const rows = items.map((n, i) => `<li class="news-item${i >= 25 ? ' news-more' : ''}" data-platform="${esc(n.platform)}" data-important="${n.important ? '1' : '0'}" data-key="news:${esc(n.url)}">
+  // Rows past the first NEWS_SHOWN wait behind "show more"; data-news holds the values that let a row through
+  // the news filter (its platform, and "important")
+  const capped = items.length > NEWS_SHOWN;
+  const rows = items.map((n, i) => `<li class="news-item${i >= NEWS_SHOWN ? ' list-extra' : ''}" data-news="${esc(n.platform)}${n.important ? '|important' : ''}" data-key="news:${esc(n.url)}">
       <span class="news-date">${esc(displayDate(n.date))}</span>
       <span class="tl-platform ${platformClass(n.platform)}">${esc(n.platform)}</span>
       <span class="news-cat">${NEWS_CATEGORY[n.category] ?? ''}</span>
@@ -102,19 +117,14 @@ export function renderNewsSection(data: AllVersions): string {
     </li>`).join('');
   return `<section class="panel" id="news">
     <h2>開發者新聞</h2>
-    <p class="table-note">彙整 ${sources.length} 個官方來源近 60 天的公告、版本發布與部落格文章，標題維持原文。「重要」為規定、期限、棄用、重大版本或服務異常等需要留意的項目。</p>
-    <news-list filter-name="news">
-      <choice-chips name="news"><div class="news-filters" role="group" aria-label="篩選新聞">
-        <button type="button" class="chip is-active" data-value="all" aria-pressed="true">全部</button>
-        <button type="button" class="chip" data-value="iOS" aria-pressed="false">iOS</button>
-        <button type="button" class="chip" data-value="Android" aria-pressed="false">Android</button>
-        <button type="button" class="chip" data-value="跨平台" aria-pressed="false">跨平台</button>
-        <button type="button" class="chip" data-value="important" aria-pressed="false">只看重要</button>
-      </div></choice-chips>
+    <p class="table-note">彙整 ${sources.length} 個官方來源近 60 天的公告、版本發布與部落格文章（每個來源最多 12 則，發文較多的來源因此涵蓋較短的期間），標題維持原文。「重要」為規定、期限、棄用、重大版本或服務異常等需要留意的項目。</p>
+    <news-list filters="news">
+      ${renderChoiceChips('news', '篩選新聞', [['all', '全部'], ['iOS', 'iOS'], ['Android', 'Android'], ['跨平台', '跨平台'], ['important', '只看重要']], { className: 'news-filters' })}
       <div class="case mt-12">
-        <ul class="news news-feed" id="news-list" data-news-items>${rows}</ul>
-        ${items.length > 25 ? `<button type="button" class="news-show-more" id="news-show-more" data-news-more>顯示更多（共 ${items.length} 則）</button>` : ''}
+        <ul class="news news-feed${capped ? ' is-collapsed' : ''}"${capped ? ' data-capped' : ''} id="news-list" data-news-items data-search-rows>${rows}</ul>
+        ${capped ? `<button type="button" class="news-show-more" id="news-show-more" data-show-more>顯示更多（共 ${items.length} 則）</button>` : ''}
         <div class="news-empty" data-news-empty hidden>沒有符合的新聞</div>
+        <p class="sr-only" role="status" data-filter-status></p>
       </div>
     </news-list>
     ${renderSources(data, ['devNews'])}
@@ -127,7 +137,8 @@ export function renderPrivacySection(data: AllVersions): string {
   const apis = p.appleRequiredReasonApis.map(c => `<div class="privacy-card">
       ${externalLink(c.url, `${esc(c.category)}`, 'crash-title')}
       <div class="tl-source"><code>${esc(c.key)}</code></div>
-      <div class="action-detail">API：${esc(c.apis.join('、'))}</div>
+      <div class="action-detail">API：</div>
+      <div class="privacy-apis">${c.apis.map(api => `<code>${esc(api)}</code>`).join('')}</div>
       <div class="privacy-reasons">${c.reasons.map(r => `<span title="${esc(r.description)}"><code>${esc(r.code)}</code></span>`).join('')}</div>
     </div>`).join('');
   const links = (platform: 'ios' | 'android') => p.links.filter(l => l.platform === platform).map(l =>
@@ -135,7 +146,7 @@ export function renderPrivacySection(data: AllVersions): string {
   return `<section class="panel" id="privacy">
     <h2>隱私規範</h2>
     <div class="subhead">iOS：Required Reason API（使用這些 API 須在 PrivacyInfo.xcprivacy 宣告原因）</div>
-    <div class="privacy-grid">${apis}</div>
+    <div class="privacy-grid" data-search-rows>${apis}</div>
     <div class="subhead">iOS：須附隱私清單與簽章的常用第三方 SDK（${p.appleSdksRequiringManifest.length} 個）</div>
     <details class="sdk-list"><summary>展開清單：專案用到其中任何一個，請確認版本已內含 PrivacyInfo.xcprivacy 並已簽章</summary>
       <div class="sdk-chips">${p.appleSdksRequiringManifest.map(n => `<span>${esc(n)}</span>`).join('')}</div>

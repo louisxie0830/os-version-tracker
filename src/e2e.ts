@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildApiFiles, legacyApiJson } from './api.js';
-import { copyComponentScripts, PUBLIC_DIR } from './asset-versions.js';
+import { PUBLIC_DIR, writeAppScript } from './asset-versions.js';
 import { buildCalendar } from './calendar.js';
 import { checkPage, formatResults, PAGES, THEMES, WIDTHS } from './check-page.js';
 import { buildAtomFeed, buildNotificationsJson } from './changes.js';
@@ -22,20 +22,6 @@ import { PAGE_CSS } from './render-styles.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE = path.join(ROOT, 'test', 'fixtures', 'all-versions.json');
 const SITE_URL = 'https://example.test/os-version-tracker';
-
-/**
- * The historical snapshot predates two optional sections. Keep the production renderer unchanged while
- * giving its permanent navigation links real targets in this isolated browser fixture.
- */
-export function completeFixturePage(html: string): string {
-  const missing = [
-    ['security', '資安'],
-    ['frameworks', '跨平台框架'],
-  ].filter(([id]) => !html.includes(`id="${id}"`));
-  if (!missing.length) return html;
-  const sections = missing.map(([id, title]) => `<section class="panel" id="${id}"><h2>${title}</h2><p>End-to-end fixture</p></section>`).join('\n');
-  return html.replace('</main>', `${sections}\n</main>`);
-}
 
 async function buildFixtureSite(dir: string): Promise<void> {
   const data = JSON.parse(await readFile(FIXTURE, 'utf8')) as AllVersions;
@@ -50,10 +36,22 @@ async function buildFixtureSite(dir: string): Promise<void> {
     date: '2026-10-25',
     important: i === 0,
   }));
+  // Exercise the trend charts (chart-switch, line-chart and its tooltip), which the snapshot predates
+  const months = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
+  const trend = (names: string[]) => ({
+    months,
+    series: names.map((version, i) => ({ version, shares: months.map((_, m) => Math.max(1, 50 - i * 15 + (i ? -m : m * 2))) })),
+    url: 'https://gs.statcounter.com/',
+  });
+  if (data.osShare) {
+    data.osShare.trend = { ios: { TW: trend(['26', '18', '17']), ww: trend(['26', '18']) }, android: { TW: trend(['16', '15', '14']) } };
+    data.osShare.vendor = { TW: trend(['Apple', 'Samsung', 'Xiaomi']), ww: trend(['Apple', 'Samsung']) };
+  }
+  data.bankTrend = [{ date: '2026-10-15', iOS: { '15': 3, '16': 1 }, Android: { '9': 2, '10': 2 } }, { date: '2026-10-16', iOS: { '15': 2, '16': 2 }, Android: { '9': 1, '10': 3 } }];
   await cp(PUBLIC_DIR, dir, { recursive: true });
-  await copyComponentScripts(dir);
+  await writeAppScript(dir);
 
-  await writeFile(path.join(dir, 'index.html'), completeFixturePage(renderHTML(data)));
+  await writeFile(path.join(dir, 'index.html'), renderHTML(data));
   await writeFile(path.join(dir, 'style.css'), PAGE_CSS);
   for (const page of LEGAL_PAGES) {
     await mkdir(path.dirname(path.join(dir, page.path)), { recursive: true });

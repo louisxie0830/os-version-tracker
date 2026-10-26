@@ -25,7 +25,7 @@ export function buildRunSummary(
   // Sources finish in a different order every run: list them alphabetically so runs compare line by line
   const rows = (Object.entries(sources) as Array<[SourceKey, SourceInfo]>).sort(([a], [b]) => a.localeCompare(b)).map(([key, info]) => {
     const problems = diagnostics.quality[key] ?? [];
-    const status = !info.ok ? '❌ 失敗' : problems.length ? '⚠️ 不完整' : '✅ 正常';
+    const status = !info.ok ? (info.staleFrom ? `🕘 失敗，沿用 ${taipei(info.staleFrom)} 的資料` : '❌ 失敗') : problems.length ? '⚠️ 不完整' : '✅ 正常';
     // One list: just the number; several: each with its name ("appleReleases 14 · androidBulletins 3")
     const lists = Object.entries(diagnostics.counts[key] ?? {});
     const counts = lists.length === 1 ? String(lists[0][1]) : lists.map(([name, n]) => `${name.split('.').pop()} ${n}`).join(' · ');
@@ -37,7 +37,7 @@ export function buildRunSummary(
   return [
     '## 資料來源',
     '',
-    `${decision.publish ? '✅ 已發布' : `❌ 未發布：${decision.reason}`} · 成功 ${decision.healthy}/${decision.total}${failed ? ` · 失敗 ${failed}` : ''}${incomplete ? ` · 不完整 ${incomplete}` : ''}`,
+    `${decision.publish ? '✅ 已發布' : `❌ 未發布：${decision.reason}`} · 成功 ${decision.healthy}/${decision.total}${failed ? ` · 失敗 ${failed}` : ''}${decision.stale?.length ? `（其中 ${decision.stale.length} 個沿用上次的資料）` : ''}${incomplete ? ` · 不完整 ${incomplete}` : ''}`,
     '',
     '| 狀態 | 來源 | 名稱 | 筆數 | 抓取時間（台灣） | 說明 |',
     '| --- | --- | --- | --- | --- | --- |',
