@@ -1,5 +1,6 @@
 import { arrayField, isRecord, readJsonState, recordField, writeJsonAtomic, type Normalized } from './state-file.js';
-import { compareVersions } from './fetchers/ios-toolchain.js';
+import { compareVersions } from './versions.js';
+import { taipeiToday } from './taipei-date.js';
 import type { TaiwanBankApp } from './fetchers/tw-banks.js';
 
 /**
@@ -38,6 +39,8 @@ export interface BankSnapshot {
 
 interface CountGuard {
   value: number;
+  /** The last COUNT_WINDOW accepted counts: a drop is measured from their highest, so a slide in small steps shows */
+  recent?: number[];
   /** A much lower count seen in consecutive refreshes; accepted after ROLLBACK_ACCEPT_AFTER of them */
   low?: { value: number; seen: number };
 }
@@ -70,7 +73,9 @@ const isCounts = (v: unknown) => isRecord(v) && Object.values(v).every(num);
 const isSnapshot = (v: unknown): v is BankSnapshot => isRecord(v) && str(v.date) && isCounts(v.iOS) && isCounts(v.Android);
 const isPending = (v: unknown) => v === undefined || (isRecord(v) && num(v.seen) && (str(v.value) || num(v.value)));
 const isVersion = (v: unknown): v is VersionGuard => isRecord(v) && str(v.value) && isPending(v.pending);
-const isCount = (v: unknown): v is CountGuard => isRecord(v) && num(v.value) && (v.low === undefined || (isRecord(v.low) && num(v.low.value) && num(v.low.seen)));
+const isCount = (v: unknown): v is CountGuard => isRecord(v) && num(v.value)
+  && (v.recent === undefined || (Array.isArray(v.recent) && v.recent.every(num)))
+  && (v.low === undefined || (isRecord(v.low) && num(v.low.value) && num(v.low.seen)));
 
 /** Fields older versions didn't have (counts, snapshots…) start empty; wrong types are reset, bad entries dropped */
 export function normalizeHistoryState(raw: unknown): Normalized<HistoryState> {
@@ -120,10 +125,13 @@ export function bankAppKey(app: TaiwanBankApp): string {
  * last year, newest first. The first refresh is only a baseline. A platform missing this time (that store
  * page failed) keeps its previous value instead of counting as a change.
  */
-export function recordBankVersions(apps: TaiwanBankApp[], now = new Date()): BankChange[] {
-  const today = now.toISOString().slice(0, 10);
-  for (const app of apps) {
-    const key = bankAppKey(app);
+export function recordBankVersions(apps: TaiwanBankApp[], now = new Date(), keys?: readonly string[]): BankChange[] {
+  // The day in Taiwan (the morning build runs at 21:43 UTC, still the day before in UTC)
+  const today = taipeiToday(now);
+  for (const [i, app] of apps.entries()) {
+    // The configured identity (src/fetchers/tw-banks.ts) when given: one store page failing must not turn the
+    // app into a second one keyed by its other store
+    const key = keys?.[i] ?? bankAppKey(app);
     const previous = state.banks[key];
     const current = { ...previous };
     for (const [platform, info] of [['iOS', app.ios], ['Android', app.android]] as const) {
@@ -135,6 +143,11 @@ export function recordBankVersions(apps: TaiwanBankApp[], now = new Date()): Ban
       current[platform] = info.minOs;
     }
     state.banks[key] = current;
+  }
+  // Apps no longer on the list (or remembered under another key before) stop counting
+  if (keys) {
+    const current = new Set(keys);
+    for (const key of Object.keys(state.banks)) if (!current.has(key)) delete state.banks[key];
   }
   const since = new Date(now.getTime() - KEEP_CHANGES_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   state.bankChanges = state.bankChanges.filter(c => c.date >= since);
@@ -168,27 +181,38 @@ export function bankSnapshots(): BankSnapshot[] {
 export type VersionCheck = { ok: true } | { ok: false; message: string };
 
 /**
+ * Largest major-version step taken without question. Bigger leaps happen (iOS 18 → 26), so one is held back
+ * like a rollback and accepted once it persists.
+ */
+export const MAX_MAJOR_STEP = 1;
+
+/**
  * Accepts a version that is the same or newer than the last accepted one. An older one is rejected
  * (the source is treated as failing, so a wrong value isn't published) until it has been seen in
  * ROLLBACK_ACCEPT_AFTER consecutive refreshes, after which it's taken as a real rollback.
+ * A leap of more than MAX_MAJOR_STEP major versions is held back the same way.
  */
 export function checkVersionNotOlder(name: string, label: string, value: string): VersionCheck {
   const guard = state.versions[name];
-  if (!guard || compareVersions(value, guard.value) >= 0) {
+  const major = (v: string) => Number(v.match(/^\d+/)?.[0] ?? NaN);
+  // A misparse that reads newer ("260" for 26.0) must not become the bar the real versions then fail
+  const leap = !!guard && major(value) > major(guard.value) + MAX_MAJOR_STEP;
+  if (!guard || (compareVersions(value, guard.value) >= 0 && !leap)) {
     state.versions[name] = { value };
     saveState();
     return { ok: true };
   }
+  const change = leap ? 'jumped' : 'went back';
   const seen = guard.pending?.value === value ? guard.pending.seen + 1 : 1;
   if (seen >= ROLLBACK_ACCEPT_AFTER) {
-    console.warn(`[history] ${label} went back from ${guard.value} to ${value} for ${seen} refreshes; accepting it`);
+    console.warn(`[history] ${label} ${change} from ${guard.value} to ${value} for ${seen} refreshes; accepting it`);
     state.versions[name] = { value };
     saveState();
     return { ok: true };
   }
   state.versions[name] = { ...guard, pending: { value, seen } };
   saveState();
-  return { ok: false, message: `${label} went back from ${guard.value} to ${value} (${seen}/${ROLLBACK_ACCEPT_AFTER}); not published until it persists` };
+  return { ok: false, message: `${label} ${change} from ${guard.value} to ${value} (${seen}/${ROLLBACK_ACCEPT_AFTER}); not published until it persists` };
 }
 
 export interface CoreVersions {
@@ -198,8 +222,10 @@ export interface CoreVersions {
   agpStable?: string;
 }
 
-const CORE_CHECKS: Array<{ field: keyof CoreVersions; source: 'ios' | 'android' | 'iosToolchain' | 'androidToolchain'; label: string; format: RegExp }> = [
-  { field: 'iosStable', source: 'ios', label: 'iOS stable', format: /^\d{2,}(?:\.\d+){0,2}$/ },
+const CORE_CHECKS: Array<{ field: keyof CoreVersions; source: 'ios' | 'android' | 'iosToolchain' | 'androidToolchain'; label: string; format: RegExp; key?: string }> = [
+  // Its own key since iOS stable became the release most iPhones get (ios.ts parseAppleAssetCatalog): the old
+  // guard held a one-model build (27.1 for one iPhone), which the correct 27.0.1 would have "gone back" from
+  { field: 'iosStable', key: 'iosGeneralRelease', source: 'ios', label: 'iOS stable', format: /^\d{2,}(?:\.\d+){0,2}$/ },
   { field: 'androidStable', source: 'android', label: 'Android stable', format: /^\d{2,}(?:\.\d+)?$/ },
   { field: 'xcodeStable', source: 'iosToolchain', label: 'Xcode stable', format: /^\d{2,}(?:\.\d+){0,2}$/ },
   { field: 'agpStable', source: 'androidToolchain', label: 'AGP stable', format: /^\d+\.\d+(?:\.\d+)?$/ },
@@ -209,12 +235,13 @@ const CORE_CHECKS: Array<{ field: keyof CoreVersions; source: 'ios' | 'android' 
  * Sanity checks on the versions everything else is derived from: each must look like a version and must
  * not be older than the last accepted one. Returns the sources whose data shouldn't be trusted this time.
  */
-export function coreVersionProblems(versions: CoreVersions): Array<{ source: string; message: string }> {
-  return CORE_CHECKS.flatMap(({ field, source, label, format }) => {
+export function coreVersionProblems(versions: CoreVersions, required: ReadonlyArray<keyof CoreVersions> = []): Array<{ source: string; message: string }> {
+  return CORE_CHECKS.flatMap(({ field, key = field, source, label, format }) => {
     const value = versions[field];
-    if (value === undefined) return [];
+    // A source that answered without the version it exists to give has changed its format
+    if (value === undefined) return required.includes(field) ? [{ source, message: `${label} is missing from a response that otherwise succeeded` }] : [];
     if (!format.test(value)) return [{ source, message: `${label} "${value}" doesn't look like a version` }];
-    const check = checkVersionNotOlder(field, label, value);
+    const check = checkVersionNotOlder(key, label, value);
     return check.ok ? [] : [{ source, message: check.message }];
   });
 }
@@ -223,27 +250,32 @@ export function coreVersionProblems(versions: CoreVersions): Array<{ source: str
 export const COUNT_MIN_BASELINE = 6;
 /** A list that suddenly returns fewer than half its usual items */
 export const COUNT_DROP_RATIO = 0.5;
+/** How many accepted counts make "usual" (about 5 days at two refreshes a day) */
+export const COUNT_WINDOW = 10;
 
 /**
- * Compares a list source's item count with the last accepted one. A drop below half is reported (the data is
- * still published; it's an alert, not a block) until it has been seen in ROLLBACK_ACCEPT_AFTER consecutive
- * refreshes, after which it's the new normal (a feed that really got shorter).
+ * Compares a list source's item count with the highest of its recent accepted counts (COUNT_WINDOW of them,
+ * so 100 → 60 → 40 → 25 is caught, not waved through one step at a time). A drop below half is reported
+ * until it has been seen in ROLLBACK_ACCEPT_AFTER consecutive refreshes, after which it's the new normal
+ * (a feed that really got shorter).
  */
 export function checkCountNotDropped(name: string, count: number): VersionCheck {
   const guard = state.counts[name];
-  if (!guard || guard.value < COUNT_MIN_BASELINE || count >= guard.value * COUNT_DROP_RATIO) {
-    state.counts[name] = { value: count };
+  const baseline = guard ? Math.max(guard.value, ...(guard.recent ?? [])) : 0;
+  if (!guard || baseline < COUNT_MIN_BASELINE || count >= baseline * COUNT_DROP_RATIO) {
+    state.counts[name] = { value: count, recent: [...(guard?.recent ?? []), count].slice(-COUNT_WINDOW) };
     saveState();
     return { ok: true };
   }
   const seen = (guard.low?.seen ?? 0) + 1;
   if (seen >= ROLLBACK_ACCEPT_AFTER) {
-    console.warn(`[history] ${name} has stayed at ${count} items (was ${guard.value}) for ${seen} refreshes; accepting it`);
-    state.counts[name] = { value: count };
+    console.warn(`[history] ${name} has stayed at ${count} items (was ${baseline}) for ${seen} refreshes; accepting it`);
+    // The new normal: the old highs no longer count
+    state.counts[name] = { value: count, recent: [count] };
     saveState();
     return { ok: true };
   }
   state.counts[name] = { ...guard, low: { value: count, seen } };
   saveState();
-  return { ok: false, message: `${name}：筆數從 ${guard.value} 掉到 ${count}（第 ${seen}/${ROLLBACK_ACCEPT_AFTER} 次；連續 ${ROLLBACK_ACCEPT_AFTER} 次就視為正常）` };
+  return { ok: false, message: `${name}：筆數從 ${baseline} 掉到 ${count}（第 ${seen}/${ROLLBACK_ACCEPT_AFTER} 次；連續 ${ROLLBACK_ACCEPT_AFTER} 次就視為正常）` };
 }

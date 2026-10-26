@@ -314,6 +314,16 @@ export const fetchBytes = readBody(async res => new Uint8Array(await res.arrayBu
  * malformed JSON is a parse error (SyntaxError) right away, never mistaken for a dropped connection. (A
  * truncated body shows up as a download error, since fetch checks the length the server announced.)
  */
+/**
+ * Headers for GitHub's REST API: its JSON media type, and GITHUB_TOKEN when set (in Actions, the run's own
+ * token: 1,000 requests an hour instead of 60, and 30 searches a minute instead of 10)
+ */
+export function githubHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
+  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  return headers;
+}
+
 export async function fetchJson<T>(url: string | URL, init: RequestInit = {}, timeoutMs = NETWORK_TIMEOUT_MS, error?: HttpErrorFormat): Promise<T> {
   return JSON.parse(await fetchText(url, init, timeoutMs, error)) as T;
 }

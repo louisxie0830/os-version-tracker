@@ -19,9 +19,17 @@ export function esc(value: string): string {
 export function externalLink(url: unknown, html: string, className = ''): string {
   const href = safeUrl(url);
   const cls = className ? ` class="${className}"` : '';
+  // An English title (most news and issue titles) says so, so a screen reader set to Chinese reads it in English
+  const lang = isEnglish(html) ? ' lang="en"' : '';
   return href
-    ? `<a${cls} href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>`
-    : `<span${cls}>${html}</span>`;
+    ? `<a${cls}${lang} href="${esc(href)}" target="_blank" rel="noopener noreferrer">${html}</a>`
+    : `<span${cls}${lang}>${html}</span>`;
+}
+
+/** Text (markup ignored) with Latin words and no Chinese, Japanese or Korean characters in it */
+export function isEnglish(html: string): boolean {
+  const text = html.replace(/<[^>]*>/g, '').replace(/&[#\w]+;/g, ' ');
+  return /[A-Za-z]{2,}/.test(text) && !/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(text);
 }
 
 const BASIS: Record<ActionBasis, { label: string; hint: string }> = {
@@ -59,7 +67,7 @@ export function renderActions(actions: ActionItem[], heading = '開發者須知'
       <span class="case-no">${heading}</span>
       <span class="case-count">共 ${actions.length} 項${urgent ? `，${urgent} 項需處理` : ''}</span>
     </div>
-  <ul class="actions">${actions.map(a => {
+  <ul class="actions" data-search-rows>${actions.map(a => {
     const title = externalLink(a.url, esc(displayDate(a.title)));
     return `<li class="action action-${a.status}"${trackNew ? ` data-key="action:${esc(a.title)}"` : ''}>
       <span class="status status-${a.status}">${STATUS_LABEL[a.status]}</span>

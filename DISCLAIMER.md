@@ -31,12 +31,12 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 
 每個來源的端點、擷取方式、條款、授權與風險評估，列在[資料來源合規清冊](SOURCES.md)；授權摘要見 [DATA_LICENSE.md](DATA_LICENSE.md)。
 
-本網站的擷取方式：只讀取公開、不需登入的頁面、feed 與 API，依排程每天兩次（程式更新或手動重建時會額外執行），並以可識別的 User-Agent 標示本專案；不規避任何登入、付費牆、技術保護措施或存取限制，也不重新發布原始網頁的完整內容。截至最後檢查日，除下述例外外，已檢查的列示路徑都未被各網站的 robots.txt 禁止；robots.txt 隨時可能改變，也不等於法律上的授權，每週會自動重新檢查並保存結果與快照。**例外**：dl.google.com（Google Maven 與 Android SDK repository）的 robots.txt 禁止所有程式讀取，本網站仍讀取其中少數固定的版本中繼資料檔（AGP、Compose BOM、Play Billing 與 Android SDK 平台版本），因為這些檔案是供 Gradle、Android Studio 等建置工具自動讀取的套件庫資料；清冊中標為高風險並說明理由，Google 如反對會停止讀取。**其中部分 Apple 來源**（上架規定、Xcode 支援表、App Store 使用率、安全性更新、隱私文件、release notes、開發者系統狀態與軟體更新目錄）是網頁或網頁背後的資料，Apple 的網站使用條款限制以自動方式取得「非刻意提供」的內容；本網站只從中擷取事實資訊並附原始連結，清冊中標為高風險。來源網站的權利人或經營者如不同意本網站擷取或引用，請依第 8 節聯絡，作者會停止擷取並移除相關內容。
+本網站的擷取方式：只讀取公開、不需登入的頁面、feed 與 API，依排程每天兩次（程式更新或手動重建時會額外執行），並以可識別的 User-Agent 標示本專案；不規避任何登入、付費牆、技術保護措施或存取限制，也不重新發布原始網頁的完整內容。截至最後檢查日，除下述例外外，已檢查的列示路徑都未被各網站的 robots.txt 禁止；robots.txt 隨時可能改變，也不等於法律上的授權，每週會自動重新檢查並保存結果與快照。**例外**：dl.google.com（Google Maven 與 Android SDK repository）的 robots.txt 禁止所有程式讀取，本網站仍讀取其中少數固定的版本中繼資料檔（AGP 與 Android SDK 平台、Build Tools 版本；Compose BOM 與 Play Billing 已改讀 developer.android.com 的文件頁），因為這些檔案是供 Gradle、Android Studio 等建置工具自動讀取的套件庫資料；清冊中標為高風險並說明理由，Google 如反對會停止讀取。**其中部分 Apple 來源**（上架規定、Xcode 支援表、App Store 使用率、安全性更新、隱私文件、release notes、開發者系統狀態與軟體更新目錄）是網頁或網頁背後的資料，Apple 的網站使用條款限制以自動方式取得「非刻意提供」的內容；本網站只從中擷取事實資訊並附原始連結，清冊中標為高風險。來源網站的權利人或經營者如不同意本網站擷取或引用，請依第 8 節聯絡，作者會停止擷取並移除相關內容。
 
 | 類別 | 來源 |
 |---|---|
 | Apple 官方 | developer.apple.com（Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 使用率、release notes、隱私清單文件、Xcode Cloud release notes）、www.apple.com（開發者系統狀態）、support.apple.com（安全性更新）、gdmf.apple.com（軟體更新目錄）、itunes.apple.com（iTunes Lookup API）、apps.apple.com（只提供連結） |
-| Google 官方 | developer.android.com（含 Android Developers Blog 與 AndroidX feed）、source.android.com（Android 安全性公告）、support.google.com（Play 政策）、play.google.com（商店頁）、dl.google.com（Google Maven、Android SDK repository）、storage.googleapis.com（Flutter 官方版本清單）、androidstudio.googleblog.com |
+| Google 官方 | developer.android.com（含 Android Developers Blog 與 AndroidX feed）、source.android.com（Android 安全性公告）、support.google.com（Play 政策與技術品質規定）、play.google.com（商店頁）、firebase.google.com（Firebase SDK 版本說明）、developers.google.com（Google Play services 版本說明）、dl.google.com（Google Maven、Android SDK repository）、storage.googleapis.com（Flutter 官方版本清單）、docs.flutter.dev（Flutter 破壞性變更清單）、androidstudio.googleblog.com |
 | 開發工具 | services.gradle.org、gradle.org、kotlinlang.org、repo1.maven.org、jb.gg（Android Studio 版本清單）、registry.npmjs.org（npm） |
 | 開發者新聞 | www.swift.org、blog.jetbrains.com（Kotlin Blog）、firebase.blog、cordova.apache.org，以及上列 Apple 與 Google 的官方 feed；新聞標題維持原文並連回原始文章 |
 | 資安 | www.cisa.gov（CISA KEV）、GitHub Advisory Database（api.github.com） |

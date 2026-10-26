@@ -83,3 +83,11 @@ test('compat parsers throw when the table header survives but rows are unreadabl
   );
   assert.throws(() => parseXcodeSupport(headerOnly(['Xcode', 'Requirements', 'SDKs', 'Deployment Targets'])), /without any iOS SDK/);
 });
+
+test('parseAgpTables: the API level table is still found by its rows when the sentence before it changes', () => {
+  const t = (rows: string[][], head = '') => `${head}<table>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
+  const html = `<table><tr><th>Plugin version</th><th>Minimum required Gradle version</th></tr><tr><td>9.4</td><td>9.6.0</td></tr></table>`
+    + `<table><tr><th>Android Studio version</th><th>Required AGP version</th></tr><tr><td>Rabbit | 2026.2.1</td><td>7.1-9.4</td></tr></table>`
+    + t([['37.0', 'Panda 3 | 2025.3.3', '9.1.1'], ['36', 'Meerkat | 2024.3.1', '8.9.1']], '<p>Each API level needs at least these versions.</p>');
+  assert.deepEqual(parseAgpTables(html).apiLevels.map(a => [a.api, a.minAgp]), [['37.0', '9.1.1'], ['36', '8.9.1']]);
+});

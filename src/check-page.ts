@@ -5,13 +5,14 @@
  * - layout: anything past the right edge (outside intentional horizontal scrollers), all sections expanded
  * - clicks: controls covered by another element; links that catch clicks outside their own row or card
  * - behaviour: script errors; every filter, sort, button, search and the theme toggle exercised; the custom
- *   elements defined, chip state (is-active / aria-pressed) in step, chart toggles and tooltips working
+ *   elements defined, chip state (is-active / aria-checked / tab stop) in step, chart toggles and tooltips working
  * - structure: duplicate ids, broken anchors and id references, controls without a name
  * - text contrast below WCAG AA
  *
  * and this side checks that every local file the page references exists. Exits 1 on any finding.
  *
- * Usage: node dist/check-page.js [siteDir]   (CHROME_PATH overrides the browser)
+ * Usage: node dist/check-page.js [siteDir]   (CHROME_PATH overrides the browser; CHECK_PAGES=index.html,…
+ * limits the pages, e.g. to the one page a scheduled data refresh changes)
  *
  * Headless Chrome won't make a window narrower than ~500px, so each run is a same-origin iframe; the
  * probe reports back through the parent page's title, read from --dump-dom.
@@ -23,12 +24,19 @@ import { LEGAL_PAGES } from './legal-pages.js';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export const WIDTHS = [390, 1100, 1440];
+// 320: the narrowest screen the page must work on without sideways scrolling (WCAG reflow)
+export const WIDTHS = [320, 390, 1100, 1440];
 export const THEMES = ['light', 'dark'] as const;
 const PROBE_PAGE = '__page-probe.html';
 const frameName = (width: number, theme: string) => `__page-frame-${width}-${theme}.html`;
 /** The main page and the legal documents published next to it */
 export const PAGES = ['index.html', ...LEGAL_PAGES.map(p => p.path)];
+/**
+ * A healthy run reports in a few seconds (a full pass of 24 takes ~30s), so a run still going after this has
+ * stalled; it's killed and tried again, up to ATTEMPTS runs in all
+ */
+export const ATTEMPT_TIMEOUT_MS = 90_000;
+export const ATTEMPTS = 3;
 // Works from both src/ (tsx) and dist/ (compiled)
 const PROBE_SCRIPT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'scripts', 'page-probe.js');
 
@@ -71,19 +79,35 @@ export function missingRefs(siteDir: string, refs: string[]): string[] {
   });
 }
 
-/** Runs Chrome and collects its output; a run that hangs is killed after `timeoutMs` */
-export function runChrome(chrome: string, args: string[], timeoutMs: number): Promise<{ status: number | null; stdout: string; stderr: string }> {
+export interface ChromeRun {
+  /** Exit code; null when the process ended by a signal (killed for hanging, or crashed) */
+  status: number | null;
+  stdout: string;
+  stderr: string;
+  /** How it ended when there's no exit code: "timeout" (killed here) or the signal it died of */
+  ended?: string;
+  ms?: number;
+}
+
+/**
+ * Runs Chrome and collects its output; a run that hangs is killed after `timeoutMs`. A run without an exit
+ * code is either that, or Chrome crashing on a signal (seen locally: SIGTRAP within milliseconds), and
+ * `ended` says which, so a failure report tells a stall from a crash
+ */
+export function runChrome(chrome: string, args: string[], timeoutMs: number): Promise<ChromeRun> {
   return new Promise(resolve => {
+    const started = Date.now();
     const child = spawn(chrome, args);
     let stdout = '';
     let stderr = '';
+    let timedOut = false;
     child.stdout.setEncoding('utf8').on('data', chunk => { stdout += chunk; });
     child.stderr.setEncoding('utf8').on('data', chunk => { stderr += chunk; });
-    const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs);
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, timeoutMs);
     child.on('error', err => { stderr += String(err); });
-    child.on('close', status => {
+    child.on('close', (status, signal) => {
       clearTimeout(timer);
-      resolve({ status, stdout, stderr });
+      resolve({ status, stdout, stderr, ms: Date.now() - started, ...(status === null ? { ended: timedOut ? 'timeout' : signal ?? 'unknown' } : {}) });
     });
   });
 }
@@ -115,17 +139,24 @@ export async function checkPage(
     const dir = path.join(root, path.dirname(page));
     writeFileSync(path.join(dir, frameName(width, theme)),
       `<!doctype html><title>pending</title><body style="margin:0"><iframe src="${PROBE_PAGE}?theme=${theme}" style="width:${width}px;height:900px;border:0"></iframe>`);
-    const out = await run(chrome, [
+    const attempt = (n: number) => run(chrome, [
       '--headless=new', '--disable-gpu', '--hide-scrollbars', '--allow-file-access-from-files',
-      `--user-data-dir=${path.join(profiles, `${page.replace(/\W/g, '_')}-${width}-${theme}`)}`,
+      // Its own profile per attempt: a killed Chrome can leave its profile locked
+      `--user-data-dir=${path.join(profiles, `${page.replace(/\W/g, '_')}-${width}-${theme}-${n}`)}`,
       // Ubuntu 24.04 runners block the sandbox's user namespaces
       ...(process.env.CI ? ['--no-sandbox'] : []),
       `--window-size=${width + 60},1000`, '--virtual-time-budget=120000', '--dump-dom',
       pathToFileURL(path.join(dir, frameName(width, theme))).href,
-    ], 300_000);
+    ], ATTEMPT_TIMEOUT_MS);
+    let out = await attempt(1);
+    // A run killed for hanging (no exit status, no report) is tried again: headless Chrome now and then
+    // stalls under a full load of parallel runs, even on pages with no script of their own. A page that
+    // hangs every time still fails; a crash (an exit status) is not retried
+    for (let n = 2; n <= ATTEMPTS && out.status === null && !out.stdout.includes('<title>PAGE:'); n++) out = await attempt(n);
     const title = out.stdout.match(/<title>PAGE:([^<]*)<\/title>/)?.[1];
     if (!title) {
-      return { page, width, theme, issues: {}, errors: [], fatal: `probe did not report (exit ${out.status}): ${out.stderr.trim().split('\n').at(-1) ?? ''}` };
+      const how = out.ended === 'timeout' ? `, stalled: killed after ${Math.round((out.ms ?? 0) / 1000)}s` : out.ended ? `, crashed: ${out.ended}` : '';
+      return { page, width, theme, issues: {}, errors: [], fatal: `probe did not report (exit ${out.status}${how}): ${out.stderr.trim().split('\n').at(-1) ?? ''}` };
     }
     let report: Omit<PageResult, 'theme'>;
     try {
@@ -181,7 +212,8 @@ export function formatResults(results: PageResult[]): { ok: boolean; text: strin
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  checkPage(process.argv[2] ?? 'site').then(results => {
+  const only = process.env.CHECK_PAGES?.split(',').map(p => p.trim()).filter(Boolean);
+  checkPage(process.argv[2] ?? 'site', WIDTHS, THEMES, only?.length ? only : PAGES).then(results => {
     const { ok, text } = formatResults(results);
     (ok ? console.log : console.error)(text);
     process.exit(ok ? 0 : 1);

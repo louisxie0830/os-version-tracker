@@ -24,7 +24,8 @@ test('parseAgpReleaseNotes: AGP 9.1 (KGP row, "supports Android API level X and 
     minBuildTools: '36.0.0',
     defaultNdk: '28.2.13676358',
     minKgp: '2.2.10',
-    maxApi: '37.0',
+    maxApi: '37', // "37.0" on the page: normalised like the other phrasing
+    maxApiFrom: '9.1.1', // "Android Gradle plugin 9.1.1 supports …": 9.1.0 doesn't
     released: 'April 2026',
     url,
   });

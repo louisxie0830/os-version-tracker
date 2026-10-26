@@ -103,3 +103,48 @@ test('pickVendorSeries keeps a brand\'s colour across regions and folds the rest
   assert.deepEqual(out.TW!.map(s => [s.name, s.slot]), [['Apple', 1], ['Samsung', 2], ['Xiaomi', 3], ['Oppo', 4], ['其他', 'other']]);
   assert.deepEqual(out.ww!.map(s => s.name), ['Apple', 'Samsung', 'Xiaomi', 'Oppo']);
 });
+
+test('renderLineChart: daily points are placed by date, the first tick clears the y axis, and the top tick names the unit', () => {
+  const svg = renderLineChart({ label: 'x', xLabels: ['2026-10-14', '2026-10-15', '2026-10-24'], series: [{ name: 'A', values: [1, 2, 3], slot: 1 }], unit: ' 個' });
+  const cx = [...svg.matchAll(/class="chart-hit" data-i="\d" data-cx="([\d.]+)"/g)].map(m => Number(m[1]));
+  assert.ok(Math.abs((cx[1] - cx[0]) * 9 - (cx[2] - cx[1])) < 0.01, 'one day apart vs nine days apart');
+  assert.match(svg, /text-anchor="start">10\/14</);
+  assert.match(svg, />4 個<\/text>/);
+  assert.doesNotMatch(svg, />0 個</, 'only the top tick');
+  assert.match(svg, /<th>日期<\/th>/);
+  const monthly = renderLineChart({ label: 'x', xLabels: ['2026-08', '2026-09', '2026-10'], series: [{ name: 'A', values: [1, 2, 3], slot: 1 }], unit: '%' });
+  const mx = [...monthly.matchAll(/data-cx="([\d.]+)"/g)].map(m => Number(m[1]));
+  assert.ok(Math.abs((mx[1] - mx[0]) - (mx[2] - mx[1])) < 0.01, 'months evenly spaced');
+  assert.match(monthly, /<th>月份<\/th>/);
+});
+
+test('thinSnapshots: every day for the last 90 days, one a week (Mondays) before that, and always the first', async () => {
+  const { thinSnapshots } = await import('../src/render-trends.ts');
+  const days = Array.from({ length: 400 }, (_, i) => ({ date: new Date(Date.parse('2026-01-01T00:00:00Z') + i * 86_400_000).toISOString().slice(0, 10) }));
+  const kept = thinSnapshots(days);
+  assert.equal(kept[0].date, '2026-01-01');
+  assert.equal(kept.at(-1)!.date, days.at(-1)!.date);
+  const cutoff = new Date(Date.parse(`${days.at(-1)!.date}T00:00:00Z`) - 90 * 86_400_000).toISOString().slice(0, 10);
+  assert.equal(kept.filter(d => d.date >= cutoff).length, 91, 'the last 90 days, every one');
+  assert.ok(kept.filter(d => d.date < cutoff).slice(1).every(d => new Date(`${d.date}T00:00:00Z`).getUTCDay() === 1), 'before that, Mondays');
+  assert.ok(kept.length < 150);
+  assert.deepEqual(thinSnapshots([]), []);
+});
+
+test('renderLineChart: date labels too close together are left out, never printed over each other; the first and the latest stay', () => {
+  const labels = ['2026-07-01', '2026-10-12', '2026-10-14', '2026-10-16', '2026-10-24'];
+  const svg = renderLineChart({ label: 'x', xLabels: labels, series: [{ name: 'A', values: [1, 2, 3, 4, 5], slot: 1 }], unit: ' 個' });
+  const ticks = [...svg.matchAll(/<text class="chart-axis[^"]*" x="([\d.]+)" y="[\d.]+" text-anchor="(?:start|middle)">([^<]+)<\/text>/g)].map(m => [Number(m[1]), m[2]] as const);
+  assert.equal(ticks[0][1], '7/1');
+  assert.equal(ticks.at(-1)![1], '10/24');
+  for (let i = 1; i < ticks.length; i++) assert.ok(ticks[i][0] - ticks[i - 1][0] >= 40, `${ticks[i - 1][1]} and ${ticks[i][1]} apart`);
+});
+
+test('renderLineChart: after thinning crowded dates, the ticks shown still alternate major / minor from the latest back', () => {
+  const labels = Array.from({ length: 31 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`);
+  const svg = renderLineChart({ label: 'x', xLabels: labels, series: [{ name: 'A', values: labels.map((_, i) => i), slot: 1 }], unit: ' 個' });
+  const ticks = [...svg.matchAll(/<text class="chart-axis( chart-tick-minor)?" x="[\d.]+" y="[\d.]+" text-anchor="(?:start|middle)">/g)].map(m => !!m[1]);
+  assert.ok(ticks.length >= 3);
+  assert.equal(ticks.at(-1), false, 'the latest always shows');
+  assert.ok(ticks.filter(minor => !minor).length >= ticks.length / 2 - 1, 'about half stay on phones, not just one');
+});

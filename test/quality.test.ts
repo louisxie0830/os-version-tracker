@@ -12,7 +12,7 @@ const entries: TaiwanBankAppEntry[] = Array.from({ length: 10 }, (_, i) => ({ ba
 const full = (i: number): TaiwanBankApp => ({
   bank: `b${i}`, app: `a${i}`, kind: 'personal',
   ios: { minOs: '15.0', version: '1.0', updated: '2026-10-01', url: `https://apps.apple.com/tw/app/id${100 + i}` },
-  android: { minOs: '8.0', version: '1.0', updated: '2026-10-01', url: `https://play.google.com/store/apps/details?id=com.bank${i}` },
+  android: { minOs: '8.0', version: '1.0', updated: '2026-10-01', targetSdk: 35, url: `https://play.google.com/store/apps/details?id=com.bank${i}` },
 });
 
 test('bankFieldGaps: complete data has no problems', () => {
@@ -32,11 +32,15 @@ test('bankFieldGaps: a field few apps have is not a gap, and android.version is 
   assert.deepEqual(bankFieldGaps(entries, apps), []);
 });
 
-test('bankFieldGaps: one store listing missing is reported; the whole store missing is left to the source alert', () => {
+test('bankFieldGaps: one store listing missing is reported; a whole store missing while the other works is reported too', () => {
   const apps = entries.map((_, i) => full(i));
   delete apps[7].ios;
   assert.deepEqual(bankFieldGaps(entries, apps), ['App Store 沒有抓到 1 個 App：id107']);
-  assert.deepEqual(bankFieldGaps(entries, entries.map((_, i) => ({ ...full(i), android: undefined }))), []);
+  assert.deepEqual(bankFieldGaps(entries, entries.map((_, i) => ({ ...full(i), android: undefined }))), ['Google Play 一個 App 都沒有抓到（10 個應有資料；另一個商店正常）'],
+    'the source "succeeded" on the App Store alone: only this says Play is gone');
+  assert.deepEqual(bankFieldGaps(entries, entries.map((_, i) => ({ ...full(i), ios: undefined, android: undefined }))), [], 'both gone: the source failure covers it');
+  const renamed = entries.map((_, i) => ({ ...full(i), ios: { ...full(i).ios!, minOs: '' } }));
+  assert.deepEqual(bankFieldGaps(entries, renamed), ['ios.minOs 所有 App 都缺值（10 個），來源格式可能改了']);
   // An app without a Play package isn't expected on Play
   const noPlay = entries.map((e, i) => (i === 0 ? { ...e, playPackage: undefined } : e));
   assert.deepEqual(bankFieldGaps(noPlay, entries.map((_, i) => (i === 0 ? { ...full(i), android: undefined } : full(i)))), []);
@@ -47,10 +51,15 @@ test('checkCountNotDropped: a drop below half is reported until it persists, the
   assert.equal(checkCountNotDropped('feed', 12).ok, true, 'a smaller dip is fine');
   const first = checkCountNotDropped('feed', 4);
   assert.equal(first.ok, false);
-  assert.match(!first.ok ? first.message : '', /feed：筆數從 12 掉到 4（第 1\/3 次/);
+  assert.match(!first.ok ? first.message : '', /feed：筆數從 20 掉到 4（第 1\/3 次/, 'measured from the recent high, not the last dip');
   for (let i = 2; i < ROLLBACK_ACCEPT_AFTER; i++) assert.equal(checkCountNotDropped('feed', 4).ok, false);
   assert.equal(checkCountNotDropped('feed', 4).ok, true, 'accepted as the new normal');
   assert.equal(checkCountNotDropped('feed', 4).ok, true);
+});
+
+test('checkCountNotDropped: a slide in small steps is caught (measured from the recent high)', () => {
+  for (const count of [100, 70, 55]) assert.equal(checkCountNotDropped('slide', count).ok, true, `${count}`);
+  assert.equal(checkCountNotDropped('slide', 40).ok, false, 'under half of the 100 a few refreshes ago');
 });
 
 test('checkCountNotDropped: small lists and recoveries', () => {

@@ -5,8 +5,9 @@ import type { OSVersionInfo } from '../types.js';
 import { APPLE_ROOT_CA } from './apple-root-ca.js';
 import { describe, fetchJson, NETWORK_TIMEOUT_MS, USER_AGENT } from '../net.js';
 import { fetchFeed } from './feed.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
 import { boundedGet, isTransient } from '../https-get.js';
+import { feedDay } from '../taipei-date.js';
 
 
 // gdmf.apple.com chains to "Apple Root CA", which isn't in Node's bundled
@@ -56,15 +57,27 @@ export interface PMVResponse {
   };
 }
 
-/** Newest iPhone build from Apple's software update catalog (falls back to all assets when none list an iPhone) */
+/**
+ * The newest iOS that iPhones in general get, from Apple's software update catalog. A build for one new model
+ * only (iOS 27.1 for the iPhone Duo while every other iPhone is on 27.0.1) is not the current release: only
+ * builds for at least half as many iPhones as the widest one count. Falls back to all assets when none list an
+ * iPhone.
+ */
 export function parseAppleAssetCatalog(data: PMVResponse): OSVersionInfo {
   const assets = data.PublicAssetSets?.iOS ?? data.AssetSets?.iOS;
   if (!assets || assets.length === 0) {
     throw new Error('No iOS versions found in ASLS response');
   }
-  const iphoneAssets = assets.filter(a => a.SupportedDevices?.some(d => d.startsWith('iPhone')));
-  const candidates = iphoneAssets.length > 0 ? iphoneAssets : assets;
+  const iphones = (a: AssetSet) => a.SupportedDevices?.filter(d => d.startsWith('iPhone')).length ?? 0;
+  const widest = Math.max(...assets.map(iphones));
+  // No asset naming an iPhone means the device list moved or was renamed: which build iPhones get can't be
+  // told (the highest version may be one model's), so the release feed answers instead
+  if (widest === 0) throw new Error('No iPhone devices listed in the ASLS response');
+  const candidates = assets.filter(a => iphones(a) > 0 && iphones(a) * 2 >= widest);
   const latest = [...candidates].sort((a, b) => compareVersions(b.ProductVersion, a.ProductVersion))[0];
+  if (typeof latest.ProductVersion !== 'string' || !/^\d+(?:\.\d+){0,2}$/.test(latest.ProductVersion)) {
+    throw new Error(`ASLS ProductVersion "${latest.ProductVersion}" doesn't look like a version`);
+  }
   return {
     platform: 'iOS',
     version: latest.ProductVersion,
@@ -79,7 +92,7 @@ interface ReleaseFeedItem {
   pubDate?: string;
 }
 
-const feedDate = (item: ReleaseFeedItem) => (item.pubDate ? new Date(item.pubDate).toISOString().slice(0, 10) : 'unknown');
+const feedDate = (item: ReleaseFeedItem) => feedDay(item.pubDate) ?? 'unknown';
 
 /**
  * Newest stable iOS in the Developer Releases feed. Takes the highest version, not the first item:
@@ -102,16 +115,34 @@ export function parseStableReleaseFeed(items: ReleaseFeedItem[]): OSVersionInfo 
  * candidate ("iOS 26.4 RC (23E5234a)"), which replaces the betas once it's out
  */
 export function parseBetaReleaseFeed(items: ReleaseFeedItem[]): OSVersionInfo | null {
-  const betaRelease = items.find(item => /^iOS\s/i.test(item.title ?? '') && /\bbeta\b|\bRC\b/i.test(item.title ?? ''));
+  // "iOS 27.2 beta 3", "iOS & iPadOS 27.2 beta 3", "iOS 27.2 developer beta 3", "iOS 27.2 RC 2"
+  const TITLE = /^iOS\b(?:\s*&\s*iPadOS)?\s+([\d.]+)\s+(?:developer\s+|public\s+)?(beta|RC)\s*(\d*)\s*(?:\((\w+)\))?/i;
+  const betaRelease = items.find(item => TITLE.test(item.title ?? ''));
   if (!betaRelease) return null;
-  const m = betaRelease.title?.match(/iOS\s+([\d.]+\s+(?:beta|RC)\s*\d*)\s*(?:\((\w+)\))?/i);
+  const m = betaRelease.title!.match(TITLE)!;
   return {
     platform: 'iOS',
-    version: m?.[1]?.trim() ?? 'unknown',
-    build: m?.[2],
+    version: `${m[1]} ${m[2].toLowerCase() === 'rc' ? 'RC' : 'beta'}${m[3] ? ` ${m[3]}` : ''}`,
+    build: m[4],
     releaseDate: feedDate(betaRelease),
     isBeta: true,
   };
+}
+
+/** The day the release feed posted "iOS <version> (<build>)" (the build too, when known), if it did */
+export function releaseDateIn(items: ReleaseFeedItem[], stable: OSVersionInfo): string | undefined {
+  const post = items.find(item => {
+    const m = item.title?.match(/^iOS\s+([\d.]+)\s*(?:\((\w+)\))?\s*$/i);
+    return m && m[1] === stable.version && (!stable.build || !m[2] || m[2] === stable.build);
+  });
+  const day = post ? feedDate(post) : undefined;
+  return day && day !== 'unknown' ? day : undefined;
+}
+
+/** A pre-release whose version is already out as a stable release ("27.2 RC" once iOS 27.2 has shipped) */
+export function iOSBetaShipped(beta: OSVersionInfo, stable: OSVersionInfo | null): boolean {
+  const base = beta.version.match(/^[\d.]+/)?.[0];
+  return !!(base && stable && compareVersions(base, stable.version) <= 0);
 }
 
 /** endoflife.date lists cycles newest first */
@@ -130,16 +161,34 @@ async function fetchStableFromEndOfLife(): Promise<OSVersionInfo> {
   return parseEndOfLifeiOS(await fetchJson<Array<{ cycle: string; releaseDate: string; latest: string }>>('https://endoflife.date/api/ios.json', {}, NETWORK_TIMEOUT_MS, status => `endoflife.date iOS request failed: ${status}`));
 }
 
-export async function fetchiOSVersions(): Promise<OSVersionInfo[]> {
+/** Where iOS versions come from, replaceable in tests */
+export interface iOSSources {
+  asls: () => Promise<OSVersionInfo>;
+  releaseFeed: () => Promise<{ items: ReleaseFeedItem[] }>;
+  endOfLife: () => Promise<OSVersionInfo>;
+}
+
+const IOS_SOURCES: iOSSources = {
+  asls: fetchStableFromASLS,
+  releaseFeed: () => fetchFeed(RELEASES_FEED) as Promise<RssParser.Output<Record<string, unknown>>>,
+  endOfLife: fetchStableFromEndOfLife,
+};
+
+/**
+ * Stable from Apple's update catalog, else the release feed, else endoflife.date; the beta from the release
+ * feed. Fails only when neither a stable nor a beta could be found.
+ */
+export async function fetchiOSVersions(sources: Partial<iOSSources> = {}): Promise<OSVersionInfo[]> {
+  const { asls, releaseFeed: downloadFeed, endOfLife } = { ...IOS_SOURCES, ...sources };
   const results: OSVersionInfo[] = [];
   // The release feed serves both the stable fallback and the beta; download it at most once
-  let releases: Promise<RssParser.Output<Record<string, unknown>>> | undefined;
-  const releaseFeed = () => (releases ??= fetchFeed(RELEASES_FEED));
+  let releases: Promise<{ items: ReleaseFeedItem[] }> | undefined;
+  const releaseFeed = () => (releases ??= downloadFeed());
 
   // Fetch stable version
   let stable: OSVersionInfo | null = null;
   try {
-    stable = await fetchStableFromASLS();
+    stable = await asls();
   } catch (err) {
     console.warn(`[iOS] ASLS failed (${(err as Error).message}), trying RSS fallback...`);
     try {
@@ -147,21 +196,25 @@ export async function fetchiOSVersions(): Promise<OSVersionInfo[]> {
     } catch (rssErr) {
       console.warn(`[iOS] RSS stable failed (${(rssErr as Error).message}), trying endoflife.date...`);
       try {
-        stable = await fetchStableFromEndOfLife();
+        stable = await endOfLife();
       } catch (eolErr) {
         console.warn(`[iOS] All stable sources failed (${(eolErr as Error).message})`);
       }
     }
   }
 
+  // The catalog's PostingDate moves when Apple re-posts an entry (adding a build for a new model), so the
+  // release feed's post for this exact version says when it really came out, when it has one
   if (stable) {
+    const posted = await releaseFeed().then(feed => releaseDateIn(feed.items, stable!), () => undefined);
+    if (posted) stable = { ...stable, releaseDate: posted };
     results.push(stable);
   }
 
-  // Fetch beta version from RSS
+  // Fetch beta version from RSS (left out once that version has shipped: "27.2 RC" after iOS 27.2)
   try {
     const beta = parseBetaReleaseFeed((await releaseFeed()).items);
-    if (beta) {
+    if (beta && !iOSBetaShipped(beta, stable)) {
       results.push(beta);
     }
   } catch (err) {

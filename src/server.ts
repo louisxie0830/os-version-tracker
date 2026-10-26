@@ -6,13 +6,13 @@ import { buildApiFiles, legacyApiJson } from './api.js';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { fetchAllVersions, peekAllVersions, SITE_URL, type AllVersions } from './fetch-all.js';
+import { fetchAllVersions, peekAllVersions, REFRESH_DEPS, SITE_URL, type AllVersions } from './fetch-all.js';
 import { publishDecision } from './publish-health.js';
 import { buildCalendar } from './calendar.js';
 import { buildAtomFeed, buildNotificationsJson } from './changes.js';
 import { renderHTML } from './render.js';
 import { PAGE_CSS, STYLE_VERSION } from './render-styles.js';
-import { isScript, PUBLIC_DIR, SCRIPT_VERSIONS, SCRIPTS, scriptPath } from './asset-versions.js';
+import { isScript, PUBLIC_DIR, readScript, SCRIPT_VERSIONS, SCRIPTS } from './asset-versions.js';
 import { SECURITY_HEADERS } from './security-headers.js';
 import { LEGAL_PAGES, renderLegalPage } from './legal-pages.js';
 
@@ -247,8 +247,8 @@ export function assetCacheControl(pathname: string, version: string | null): str
 }
 
 /**
- * Files served as they are: the page scripts (from SCRIPTS, so a new one can't be left out; scriptPath says where
- * each lives) and, from public/, the worker, manifest and image
+ * Files served as they are: the page scripts (from SCRIPTS, so a new one can't be left out; readScript says where
+ * each comes from) and, from public/, the worker, manifest and image
  */
 const STATIC_FILES = new Set(['/manifest.webmanifest', '/sw.js', '/og-image.png', ...SCRIPTS.map(name => `/${name}`)]);
 
@@ -257,7 +257,7 @@ async function serveStatic(req: http.IncomingMessage, pathname: string, version:
   if (!allowed) return false;
   try {
     const name = pathname.slice(1);
-    const cached = await cachedFile(pathname, () => readFile(isScript(name) ? scriptPath(name) : path.join(PUBLIC_DIR, pathname)));
+    const cached = await cachedFile(pathname, async () => isScript(name) ? readScript(name) : readFile(path.join(PUBLIC_DIR, pathname)));
     await send(req, res, {
       'Content-Type': STATIC_TYPES[path.extname(pathname)] ?? 'application/octet-stream',
       'Cache-Control': assetCacheControl(pathname, version),
@@ -267,6 +267,9 @@ async function serveStatic(req: http.IncomingMessage, pathname: string, version:
   }
   return true;
 }
+
+/** Paths serving data, readable from any origin */
+const DATA_PATHS = /^\/(?:api(?:\.json)?|api\/[\w-]+\.json|notifications\.json|feed\.xml|calendar\.ics|health(?:\.json)?)$/;
 
 /** The request handler, with the data source injectable for tests */
 /**
@@ -333,10 +336,31 @@ export function createHandler(
       reply(res, 400, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'Bad request' }));
       return;
     }
-    const { pathname } = url;
+    // The static site's paths work here too: /index.html is the page, /legal goes on to /legal/
+    let { pathname } = url;
+    if (pathname === '/index.html') pathname = '/';
+    // The legal pages by their file names too (/legal/en/index.html is /legal/en/)
+    if (/^\/legal\/(?:(?:en|sources)\/)?index\.html$/.test(pathname)) pathname = pathname.replace(/index\.html$/, '');
     const version = url.searchParams.get('v');
     // HEAD is answered like GET (Node leaves the body out), so monitors and link checkers see the real status
     const isGet = req.method === 'GET' || req.method === 'HEAD';
+    // A cross-origin preflight for the data is answered (GitHub Pages allows any origin to read it too)
+    if (req.method === 'OPTIONS' && DATA_PATHS.test(pathname)) {
+      res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, HEAD', 'Access-Control-Max-Age': '86400' });
+      res.end();
+      return;
+    }
+    if (!isGet) {
+      reply(res, 405, { 'Content-Type': 'application/json', Allow: 'GET, HEAD' }, JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+    // The data is readable from any origin, as on GitHub Pages, errors included (a client sees the 500, not a
+    // CORS failure)
+    if (DATA_PATHS.test(pathname)) res.setHeader('Access-Control-Allow-Origin', '*');
+    if (pathname === '/legal' || /^\/legal\/(?:en|sources)$/.test(pathname)) {
+      reply(res, 301, { Location: `${pathname}/`, 'Content-Type': 'text/plain; charset=utf-8' }, 'Moved');
+      return;
+    }
     if (isGet && await serveStatic(req, pathname, version, res)) {
       return;
     }
@@ -354,7 +378,7 @@ export function createHandler(
       return;
     }
 
-    if (isGet && pathname === '/health') {
+    if (isGet && (pathname === '/health' || pathname === '/health.json')) {
       reply(res, 200, { 'Content-Type': 'application/json' }, JSON.stringify(healthBody(peek())));
       return;
     }
@@ -368,7 +392,6 @@ export function createHandler(
         let files = apiFiles.get(data);
         if (!files) apiFiles.set(data, files = buildApiFiles(data, SITE_URL));
         const body = files.get(file);
-        res.setHeader('Access-Control-Allow-Origin', '*');
         if (!body) {
           reply(res, 404, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'Not found', index: '/api/index.json' }));
           return;
@@ -383,7 +406,7 @@ export function createHandler(
     if (isGet && (pathname === '/api' || pathname === '/api.json')) {
       try {
         const versions = await getData();
-        await send(req, res, { 'Content-Type': 'application/json' }, fromData(versions, 'api.json', () => JSON.stringify(legacyApiJson(versions, SITE_URL))));
+        await send(req, res, { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=300' }, fromData(versions, 'api.json', () => JSON.stringify(legacyApiJson(versions, SITE_URL))));
       } catch {
         reply(res, 500, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'Failed to fetch versions' }));
       }
@@ -399,7 +422,7 @@ export function createHandler(
           'Cache-Control': 'public, max-age=600',
         }, fromData(data, 'calendar.ics', () => buildCalendar(data.timeline, SITE_URL)));
       } catch {
-        reply(res, 500, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'Failed to build calendar' }));
+        reply(res, 500, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Failed to build calendar');
       }
       return;
     }
@@ -419,7 +442,7 @@ export function createHandler(
         const data = await getData();
         await send(req, res, { 'Content-Type': 'application/atom+xml; charset=utf-8', 'Cache-Control': 'public, max-age=600' }, fromData(data, 'feed.xml', () => buildAtomFeed(data.tracked, SITE_URL, data.cachedAt)));
       } catch {
-        reply(res, 500, { 'Content-Type': 'application/json' }, JSON.stringify({ error: 'Failed to build feed' }));
+        reply(res, 500, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Failed to build feed');
       }
       return;
     }
@@ -427,7 +450,8 @@ export function createHandler(
     if (isGet && pathname === '/') {
       try {
         const data = await getData();
-        await send(req, res, { 'Content-Type': 'text/html; charset=utf-8' }, fromData(data, 'index.html', () => renderHTML(data)));
+        // Revalidated each time: the page links versioned assets, so it must never outlive a deployment
+        await send(req, res, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache' }, fromData(data, 'index.html', () => renderHTML(data)));
       } catch {
         reply(res, 500, { 'Content-Type': 'text/html; charset=utf-8' }, '<h1>無法取得版本資料</h1>');
       }
@@ -440,6 +464,8 @@ export function createHandler(
 
 // Listen only when run directly (tests import createHandler without starting a server)
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  // Every refresh is served here (there's no publish step to hold one back), so its news goes out with it
+  REFRESH_DEPS.willPublish = () => true;
   http.createServer(createHandler()).listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
   });

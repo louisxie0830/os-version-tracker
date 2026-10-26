@@ -73,9 +73,18 @@ test('parseKev keeps recent phone / WebView entries, newest first', () => {
     entry('CVE-2026-4', 'Android', 'Framework', '2026-09-30'),
     entry('CVE-2026-5', 'Microsoft', 'Windows', '2026-09-30'),
     entry('CVE-2025-6', 'Apple', 'iOS', '2025-01-01'),
+    // The rest of the catalog (it has well over a thousand entries)
+    ...Array.from({ length: 600 }, (_, i) => entry(`CVE-2020-${i}`, 'Microsoft', 'Windows', '2020-01-01')),
   ] }, now);
   assert.deepEqual(items.map(i => [i.cve, i.platform]), [['CVE-2026-4', 'Android'], ['CVE-2026-1', 'iOS'], ['CVE-2026-3', '跨平台']]);
   assert.equal(items[0].url, 'https://nvd.nist.gov/vuln/detail/CVE-2026-4');
+});
+
+test('parseKev: a catalog that isn\'t the full catalog, or with dates in another format, fails instead of reading as "nothing exploited"', () => {
+  const entry = (dateAdded: string) => ({ cveID: 'CVE-1', vendorProject: 'Apple', product: 'iOS', dateAdded, vulnerabilityName: 'x', shortDescription: 'x' });
+  assert.throws(() => parseKev({}, now), /expected the full catalog, got no entries/);
+  assert.throws(() => parseKev({ vulnerabilities: [entry('2026-10-01')] }, now), /got 1 entries/);
+  assert.throws(() => parseKev({ vulnerabilities: Array.from({ length: 600 }, () => entry('10/01/2026')) }, now), /no longer YYYY-MM-DD/);
 });
 
 test('parseAdvisories keeps tracked packages, drops withdrawn ones and sorts newest first', () => {
@@ -150,4 +159,20 @@ test('parseAdvisories keeps the affected range and first fix per tracked package
     ],
   }]);
   assert.deepEqual(a.ranges, [{ package: 'cordova-plugin-inappbrowser', vulnerable: '< 6.0.1', patched: '6.0.1' }]);
+});
+
+test('parseAndroidBulletinIndex reads the table with a "Published" column, by its headers, not the first table on the page', () => {
+  const html = `<table><tr><th>Other</th></tr><tr><td><a href="/x">nav</a></td><td>a</td><td>October 1, 2026</td></tr></table>
+    <table><tr><th>Bulletin</th><th>Published</th><th>Languages</th><th>Security patch level</th></tr>
+    <tr><td><a href="/docs/security/bulletin/2026-10-01">October 2026</a></td><td>October 6, 2026</td><td>English</td><td>2026-10-01<br>2026-10-05</td></tr></table>`;
+  const [b] = parseAndroidBulletinIndex(html);
+  assert.equal(b.title, 'Android Security Bulletin October 2026');
+  assert.equal(b.published, '2026-10-06');
+  assert.deepEqual(b.patchLevels, ['2026-10-01', '2026-10-05']);
+});
+
+test('parseAndroidBulletinIndex: a header row without "Published" fails rather than reading another column as the date', () => {
+  const html = `<table><tr><th>Bulletin</th><th>Languages</th><th>Patch level</th></tr>
+    <tr><td><a href="/x">October 2026</a></td><td>English</td><td>2026-10-01</td></tr></table>`;
+  assert.throws(() => parseAndroidBulletinIndex(html), /no "Published" column/);
 });

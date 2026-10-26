@@ -1,6 +1,7 @@
 import { safeUrl } from '../safe-url.js';
 import { settleSources } from './settle.js';
 import { fetchFeed } from './feed.js';
+import { feedDay } from '../taipei-date.js';
 
 /**
  * Developer news from official feeds, merged into one timeline. Titles stay in their original
@@ -26,6 +27,8 @@ interface FeedItem {
   link?: string;
   isoDate?: string;
   pubDate?: string;
+  /** An Atom entry's <published> as written (feed.ts) */
+  published?: string;
   content?: string;
 }
 
@@ -81,8 +84,7 @@ export const NEWS_SOURCES: NewsSource[] = [
 ];
 
 const toDate = (item: FeedItem) => {
-  const d = new Date(item.isoDate ?? item.pubDate ?? '');
-  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+  return feedDay(item.published ?? item.pubDate ?? item.isoDate) ?? '';
 };
 
 export function parseSourceItems(source: NewsSource, items: FeedItem[]): DevNewsItem[] {

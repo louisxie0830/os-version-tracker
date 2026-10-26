@@ -2,6 +2,7 @@ import type { AllVersions, SourceKey } from './fetch-all.js';
 import { buildNowCards } from './now.js';
 import { inVersionRange } from './fetchers/security.js';
 import { REPO_BLOB, SOURCE_REGISTER, termsOf } from './source-registry.js';
+import type { SourceInfo } from './types.js';
 
 /**
  * The JSON API: one small file per topic under api/, plus api/index.json listing them. The static build
@@ -17,7 +18,7 @@ import { REPO_BLOB, SOURCE_REGISTER, termsOf } from './source-registry.js';
 export const API_LICENSE = '本站彙整與自行撰寫的內容保留所有權利；第三方內容依 attribution 所列各來源的授權或條款，引用時請保留來源與作者標示。StatCounter 衍生資料依 CC BY-SA 3.0。';
 
 /** Every source the feed's items can come from */
-const FEED_SOURCES: SourceKey[] = ['appleDeadline', 'googleDeadline', 'appleRequirements', 'playPolicy', 'playBilling', 'pageSize', 'appleNews', 'androidNews', 'devNews', 'iosToolchain', 'crashes', 'security', 'twBanks', 'appleStatus'];
+const FEED_SOURCES: SourceKey[] = ['appleDeadline', 'googleDeadline', 'appleRequirements', 'playPolicy', 'playBilling', 'pageSize', 'sdkReleases', 'appleNews', 'androidNews', 'devNews', 'iosToolchain', 'crashes', 'security', 'twBanks', 'appleStatus'];
 
 export const API_VERSION = 1;
 
@@ -51,7 +52,7 @@ export const API_ENDPOINTS: Endpoint[] = [
   {
     path: 'api/deadlines.json',
     description: '上架規定與期限時間軸，以及 App Store / Google Play 目前的提交期限',
-    sources: ['appleDeadline', 'googleDeadline', 'appleRequirements', 'playPolicy', 'playBilling', 'pageSize'],
+    sources: ['appleDeadline', 'googleDeadline', 'appleRequirements', 'playPolicy', 'playBilling', 'pageSize', 'sdkReleases'],
     build: d => ({ timeline: d.timeline, appleDeadline: d.appleDeadline, googleDeadline: d.googleDeadline }),
   },
   {
@@ -138,11 +139,19 @@ export function attributionFor(sources: SourceKey[]) {
   }));
 }
 
+/**
+ * A source as the API has always described it: { label, url, fetchedAt, ok }. Fields added for the page
+ * (staleFrom) stay out, so existing clients of api.json and api/* see exactly the shape they were built on.
+ */
+const publicSource = ({ label, url, fetchedAt, ok }: SourceInfo): SourceInfo => ({ label, url, fetchedAt, ok });
+const publicSources = (sources: Partial<Record<SourceKey, SourceInfo>>) =>
+  Object.fromEntries(Object.entries(sources).filter(([, s]) => s).map(([k, s]) => [k, publicSource(s!)]));
+
 function envelope(data: AllVersions, sources: SourceKey[], payload: unknown, siteUrl: string) {
   return {
     apiVersion: API_VERSION,
     updatedAt: data.cachedAt,
-    sources: Object.fromEntries(sources.filter(k => data.sources[k]).map(k => [k, data.sources[k]])),
+    sources: publicSources(Object.fromEntries(sources.filter(k => data.sources[k]).map(k => [k, data.sources[k]]))),
     license: API_LICENSE,
     termsUrl: `${siteUrl}/legal/`,
     attribution: attributionFor(sources),
@@ -155,7 +164,7 @@ function envelope(data: AllVersions, sources: SourceKey[], payload: unknown, sit
  * clients keep working); license, termsUrl and attribution are added next to it for every source
  */
 export function legacyApiJson(data: AllVersions, siteUrl: string) {
-  return { ...data, license: API_LICENSE, termsUrl: `${siteUrl}/legal/`, attribution: attributionFor(Object.keys(data.sources) as SourceKey[]) };
+  return { ...data, sources: publicSources(data.sources), license: API_LICENSE, termsUrl: `${siteUrl}/legal/`, attribution: attributionFor(Object.keys(data.sources) as SourceKey[]) };
 }
 
 /** api/index.json: what's available, with every source's health */
@@ -174,7 +183,7 @@ export function buildApiIndex(data: AllVersions, siteUrl: string) {
       { path: 'feed.xml', url: `${siteUrl}/feed.xml`, description: 'Atom feed：新的規定、公告與資安項目' },
       { path: 'calendar.ics', url: `${siteUrl}/calendar.ics`, description: '上架期限行事曆（iCalendar）' },
     ],
-    sources: data.sources,
+    sources: publicSources(data.sources),
   };
 }
 

@@ -1,6 +1,7 @@
 import type { AllVersions } from './fetch-all.js';
 import { isActive } from './fetchers/apple-status.js';
 import { safeUrl } from './safe-url.js';
+import { taipeiToday } from './taipei-date.js';
 
 /** One "待處理" card: shared by the page and api/now.json */
 export interface NowCard {
@@ -13,6 +14,8 @@ export interface NowCard {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** How far ahead an announced requirement counts as something to start on now (the red "urgent" stays at 60 days) */
+export const NOW_AHEAD_DAYS = 180;
 
 /**
  * In-page anchors stay as they are; anything else must be a safe external URL, since it comes from upstream
@@ -23,14 +26,24 @@ export function nowHref(href: string | undefined, fallback: string): string {
   return safeUrl(href) ?? fallback;
 }
 
-/** What needs action now: blocking requirements, exploited vulnerabilities, crash reports about the newest OS */
+/**
+ * What needs action now: requirements due within NOW_AHEAD_DAYS (urgent ones first), exploited vulnerabilities,
+ * Apple service problems, crash reports about the newest OS
+ */
 export function buildNowCards(data: AllVersions, now = new Date()): NowCard[] {
   const since = (days: number) => new Date(now.getTime() - days * DAY_MS).toISOString().slice(0, 10);
   const cards: NowCard[] = [];
-  for (const [platform, actions] of [['iOS', data.iosActions], ['Android', data.androidActions]] as const) {
-    for (const a of actions.filter(a => a.status === 'urgent')) {
-      cards.push({ type: '期限', platform, meta: '需要處理', title: a.title, body: a.detail, href: nowHref(a.url, `#${platform === 'iOS' ? 'ios' : 'android'}`) });
-    }
+  // Requirements: the urgent ones (due within 60 days, or in an extension window), then the announced ones due
+  // within NOW_AHEAD_DAYS, soonest first (an estimate of what might come is no announcement, and stays out)
+  const today = taipeiToday(now);
+  const aheadBy = new Date(Date.parse(`${today}T00:00:00Z`) + NOW_AHEAD_DAYS * DAY_MS).toISOString().slice(0, 10);
+  const required = (['iOS', 'Android'] as const).flatMap(platform => (platform === 'iOS' ? data.iosActions : data.androidActions)
+    .filter(a => a.status === 'urgent' || (a.status === 'upcoming' && !a.estimated && a.dueDate && a.dueDate <= aheadBy))
+    .map(a => ({ a, platform })));
+  required.sort((x, y) => Number(y.a.status === 'urgent') - Number(x.a.status === 'urgent') || (x.a.dueDate ?? '').localeCompare(y.a.dueDate ?? ''));
+  for (const { a, platform } of required) {
+    // How long is left is in the detail itself (a countdown, or that only the month was announced)
+    cards.push({ type: '期限', platform, meta: a.status === 'urgent' ? '需要處理' : '即將到來', title: a.title, body: a.detail, href: nowHref(a.url, `#${platform === 'iOS' ? 'ios' : 'android'}`) });
   }
   const s = data.security;
   for (const r of (s?.apple ?? []).filter(r => r.exploited.length && r.date >= since(45))) {

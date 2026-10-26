@@ -1,5 +1,5 @@
 import { fetchHtml, parseTables } from './html-table.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
 
 const BASE = 'https://developer.android.com';
 export const AGP_CURRENT_URL = `${BASE}/build/releases/gradle-plugin?hl=en`;
@@ -19,6 +19,8 @@ export interface AgpJdkRequirement {
   minKgp?: string;
   /** Highest compileSdk / API level this AGP line supports, e.g. "37" */
   maxApi?: string;
+  /** The patch that brought maxApi, when the page names one ("9.1.1 supports … API level 37"): earlier 9.1.x don't */
+  maxApiFrom?: string;
   /** Month in the page title (the latest patch on that page, e.g. 9.1.1), e.g. "July 2026" */
   released?: string;
   url: string;
@@ -71,7 +73,11 @@ export function parseAgpReleaseNotes(html: string, url: string): AgpJdkRequireme
     // Phrased either "The maximum API level that Android Gradle plugin 9.3 supports is API level 37."
     // or "Android Gradle plugin 9.1.1 supports Android API level 37.0 and below."
     maxApi: (table.context.match(/maximum API level that Android Gradle plugin [\d.]+ supports is API level ([\d.]+)/i)
-      ?? table.context.match(/Android Gradle plugin [\d.]+ supports (?:Android )?API level ([\d.]+) and below/i))?.[1]?.replace(/\.$/, ''),
+      ?? table.context.match(/Android Gradle plugin [\d.]+ supports (?:Android )?API level ([\d.]+) and below/i))?.[1]?.replace(/\.$/, '').replace(/\.0$/, ''),
+    ...(() => {
+      const from = table.context.match(/Android Gradle plugin (\d+\.\d+\.([1-9]\d*)) supports/i)?.[1];
+      return from ? { maxApiFrom: from } : {};
+    })(),
     released: title?.[3],
     url,
   };
@@ -81,11 +87,17 @@ export function parseAgpReleaseNotes(html: string, url: string): AgpJdkRequireme
  * JDK (plus Gradle / Build Tools) required by each of the latest `count` AGP minor lines.
  * Individual page failures are tolerated; throws only if nothing parses.
  */
+/** A page the rest can do without: logged, so a short table has a visible reason */
+const missing = (page: string, err: unknown): string => {
+  console.warn(`[agpJdk] ${page} failed (${(err as Error)?.message ?? err}); continuing without it`);
+  return '';
+};
+
 export async function fetchAgpJdk(count = DEFAULT_LINES): Promise<AgpJdkRequirement[]> {
   const [currentHtml, pastHtml] = await Promise.all([
     // gradle-plugin redirects to the latest agp-X-Y-0-release-notes page
-    fetchHtml(AGP_CURRENT_URL).catch(() => ''),
-    fetchHtml(AGP_PAST_RELEASES_URL).catch(() => ''),
+    fetchHtml(AGP_CURRENT_URL).catch(err => missing('current release notes', err)),
+    fetchHtml(AGP_PAST_RELEASES_URL).catch(err => missing('past releases index', err)),
   ]);
 
   const current = currentHtml ? parseAgpReleaseNotes(currentHtml, AGP_CURRENT_URL) : undefined;

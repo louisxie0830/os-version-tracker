@@ -89,3 +89,11 @@ test('pluginRequirements takes the highest entry not above the version, skipping
   assert.deepEqual(pluginRequirements(deps, '4.0.0'), {});
   assert.deepEqual(pluginRequirements(undefined, '1.0.0'), {});
 });
+
+test('release notes: "v8.1.1" and "[8.1.1](…)" headings read too; a file with no version sections fails', () => {
+  const md = (heading: string) => `## ${heading}\n\n**Breaking Changes:**\n\n* drop old API\n\n**Fixes:**\n\n* fix crash\n`;
+  assert.deepEqual(parseReleaseNotes(md('v8.0.0')).map(s => s.version), ['8.0.0']);
+  assert.deepEqual(parseReleaseNotes(md('[8.0.0](https://github.com/apache/cordova-ios/releases/tag/8.0.0) (Oct 1, 2026)')).map(s => s.version), ['8.0.0']);
+  assert.deepEqual(summarizeReleaseNotes(md('v8.0.0'), '8.0.0').breaking, ['drop old API']);
+  assert.throws(() => summarizeReleaseNotes('# Release Notes\n\nNothing here', '8.0.0'), /no version sections/);
+});

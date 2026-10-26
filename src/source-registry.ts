@@ -122,7 +122,7 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
   androidToolchain: {
     endpoints: [
       { url: 'https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml', method: 'XML 檔', terms: GOOGLE_TERMS, robotsException: DL_GOOGLE_EXCEPTION },
-      { url: 'https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/maven-metadata.xml', method: 'XML 檔', terms: GOOGLE_TERMS, robotsException: DL_GOOGLE_EXCEPTION },
+      { url: 'https://developer.android.com/develop/ui/compose/bom/bom-mapping', method: 'HTML 網頁', terms: GOOGLE_TERMS },
       { url: 'https://dl.google.com/android/repository/repository2-3.xml', method: 'XML 檔', terms: GOOGLE_TERMS, robotsException: DL_GOOGLE_EXCEPTION },
       { url: 'https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/maven-metadata.xml', method: 'XML 檔', terms: MAVEN_CENTRAL },
       { url: 'https://services.gradle.org/versions/current', method: 'API', terms: GRADLE_TERMS },
@@ -137,7 +137,7 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     ],
     licence: 'Google Maven 與 Android SDK repository（Google 服務條款）；Maven Central（使用條款）；Gradle（網站條款）；JetBrains 版本清單（JetBrains 網站條款）；Kotlin 文件（Apache 2.0）；Android 文件（Apache 2.0）',
     risk: 'high',
-    note: '只取版本號與發布日期，主要來自供建置工具讀取的套件庫中繼資料。dl.google.com 的三個檔案為 robots.txt 例外（見端點說明）',
+    note: '只取版本號與發布日期，主要來自供建置工具讀取的套件庫中繼資料。dl.google.com 的兩個檔案（AGP 版本、SDK Platform 與 Build Tools）為 robots.txt 例外，因為 developer.android.com 的文件只到小版本號或落後於實際發布（見端點說明）；Compose BOM 改讀文件頁',
   },
   adoption: {
     endpoints: [{ url: 'https://developer.apple.com/support/app-store/', method: 'HTML 網頁', terms: APPLE_TERMS }],
@@ -168,31 +168,39 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     note: '只取相容性表格中的版本對應（AGP、Gradle、Kotlin、Android Studio）',
   },
   xcodeSupport: {
-    endpoints: [{ url: 'https://developer.apple.com/support/xcode/', method: 'HTML 網頁', terms: APPLE_TERMS }],
+    endpoints: [{ url: 'https://developer.apple.com/xcode/system-requirements/', method: 'HTML 網頁', terms: APPLE_TERMS }],
     licence: 'Apple 網站使用條款',
     risk: 'high',
     note: `只取 Xcode、macOS 與 SDK 的版本對應。${APPLE_FACTS}`,
   },
   appleRequirements: {
-    endpoints: [{ url: 'https://developer.apple.com/news/upcoming-requirements/', method: 'HTML 網頁', terms: APPLE_TERMS }],
+    endpoints: [
+      { url: 'https://developer.apple.com/news/upcoming-requirements/', method: 'HTML 網頁', terms: APPLE_TERMS },
+      { url: 'https://developer.apple.com/help/app-store-connect/release-notes/', method: 'HTML 網頁', terms: APPLE_TERMS },
+    ],
     licence: 'Apple 網站使用條款',
     risk: 'high',
     note: `只取規定名稱與生效日期。${APPLE_FACTS}`,
   },
   playPolicy: {
-    endpoints: [{ url: 'https://support.google.com/googleplay/android-developer/table/12921780', method: 'HTML 網頁', terms: GOOGLE_TERMS }],
+    endpoints: [
+      { url: 'https://support.google.com/googleplay/android-developer/table/12921780', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+      { url: 'https://support.google.com/googleplay/android-developer/answer/17492799', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+      { url: 'https://developer.android.com/developer-verification/guides', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+    ],
     licence: 'Google 服務條款',
     risk: 'medium',
-    note: '只取政策名稱與期限日期',
+    note: '只取政策名稱與期限日期；Play Console 技術品質規定（程式碼混淆與最佳化、記憶體用量、登入還原）另取名稱、生效月份與門檻',
   },
   playBilling: {
     endpoints: [
       { url: 'https://developer.android.com/google/play/billing/deprecation-faq', method: 'HTML 網頁', terms: ANDROID_LEGAL },
-      { url: 'https://dl.google.com/dl/android/maven2/com/android/billingclient/billing/maven-metadata.xml', method: 'XML 檔', terms: GOOGLE_TERMS, robotsException: DL_GOOGLE_EXCEPTION },
+      { url: 'https://developer.android.com/google/play/billing/release-notes', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+      { url: 'https://developer.android.com/google/play/billing/play-developer-apis-deprecations', method: 'HTML 網頁', terms: GOOGLE_TERMS },
     ],
     licence: ANDROID_DOCS,
     risk: 'high',
-    note: '只取各版本的淘汰日期與最新版本號；dl.google.com 的版本檔為 robots.txt 例外（見端點說明）',
+    note: '只取各版本的淘汰日期與最新版本號（最新版本號取自 release notes 的標題）',
   },
   pageSize: {
     endpoints: [{ url: 'https://developer.android.com/guide/practices/page-sizes', method: 'HTML 網頁', terms: ANDROID_LEGAL }],
@@ -290,10 +298,36 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     risk: 'high',
     note: '只取服務名稱、事件類型、狀態與時間，不轉載 Apple 的說明文字',
   },
+  appleDeprecations: {
+    endpoints: [
+      { url: 'https://developer.apple.com/tutorials/data/documentation/appstorereceipts.json', method: 'JSON 檔', terms: APPLE_TERMS },
+      { url: 'https://developer.apple.com/tutorials/data/documentation/appstoreservernotifications/app-store-server-notifications-v1.json', method: 'JSON 檔', terms: APPLE_TERMS },
+    ],
+    licence: 'Apple 網站使用條款',
+    risk: 'high',
+    note: `只取文件是否標示淘汰與淘汰版本。${APPLE_FACTS}`,
+  },
+  behaviorChanges: {
+    endpoints: [{ url: 'https://developer.android.com/about/versions/17/behavior-changes-17', method: 'HTML 網頁', terms: GOOGLE_TERMS }],
+    licence: 'Google 服務條款',
+    risk: 'low',
+    note: '只取最新 Android 版本「以該版本為目標的 App」行為變更頁的各項標題，附原始連結（網址隨最新版本號改變）',
+  },
+  sdkReleases: {
+    endpoints: [
+      { url: 'https://firebase.google.com/support/release-notes/ios', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+      { url: 'https://firebase.google.com/support/release-notes/android', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+      { url: 'https://developers.google.com/android/guides/releases', method: 'HTML 網頁', terms: GOOGLE_TERMS },
+    ],
+    licence: 'Google 服務條款',
+    risk: 'medium',
+    note: '只取近半年版本中需要處理的項目（破壞性變更、最低版本調整、移除的 API、停止發布的管道）與停用日期，附原始連結',
+  },
   frameworks: {
     endpoints: [
-      { url: 'https://api.github.com/repos/facebook/react-native/releases', method: 'API', terms: GITHUB_TERMS },
+      { url: 'https://api.github.com/repos/react/react-native/releases', method: 'API', terms: GITHUB_TERMS },
       { url: 'https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json', method: 'JSON 檔', terms: GOOGLE_TERMS },
+      { url: 'https://docs.flutter.dev/release/breaking-changes', method: 'HTML 網頁', terms: GOOGLE_TERMS },
     ],
     licence: 'GitHub 服務條款；Flutter 官方版本清單（Flutter 工具本身讀取的公開資料）',
     risk: 'low',

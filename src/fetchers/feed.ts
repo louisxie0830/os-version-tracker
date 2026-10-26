@@ -16,7 +16,7 @@ type Feed = RssParser.Output<Record<string, unknown>>;
  * reports its own source's status. When the refresh ends the shared downloads are dropped, so the next
  * refresh always downloads afresh. Outside a scope nothing is shared.
  */
-const shared = new Map<string, Promise<Feed>>();
+const shared = new Map<string, Promise<unknown>>();
 let openScopes = 0;
 
 /** Opens a feed scope for one refresh; call the returned function when the refresh is done */
@@ -30,14 +30,22 @@ export function beginFeedScope(): () => void {
   };
 }
 
-export function fetchFeed(url: string): Promise<Feed> {
-  if (openScopes === 0) return downloadFeed(url);
-  let feed = shared.get(url);
-  if (!feed) {
-    feed = downloadFeed(url);
-    shared.set(url, feed);
+/**
+ * One download per key inside a scope, shared by every caller; outside a scope, a download per call. Pages
+ * as well as feeds: AGP's release notes page, for one, is read by both the compatibility and the JDK tables
+ */
+export function sharedDownload<T>(key: string, download: () => Promise<T>): Promise<T> {
+  if (openScopes === 0) return download();
+  let pending = shared.get(key) as Promise<T> | undefined;
+  if (!pending) {
+    pending = download();
+    shared.set(key, pending);
   }
-  return feed;
+  return pending;
+}
+
+export function fetchFeed(url: string): Promise<Feed> {
+  return sharedDownload(`feed ${url}`, () => downloadFeed(url));
 }
 
 /** For tests: forget shared downloads and scopes */
@@ -48,7 +56,9 @@ export function resetFeedCache(): void {
 
 async function downloadFeed(url: string): Promise<Feed> {
   const bytes = await fetchBytes(url, { headers: { Accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml' } }, NETWORK_TIMEOUT_MS, status => `HTTP ${status}`);
-  return new RssParser().parseString(decodeFeedBody(bytes));
+  // An Atom entry's <published> as written (rss-parser's pubDate / isoDate are converted to UTC, which moves an
+  // evening post in the publisher's time zone to the next day)
+  return new RssParser<Record<string, unknown>, Record<string, unknown>>({ customFields: { item: ['published'] } }).parseString(decodeFeedBody(bytes));
 }
 
 /** Some servers (e.g. swift.org) send gzip bytes without a Content-Encoding header */

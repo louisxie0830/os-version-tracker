@@ -155,3 +155,20 @@ test('bank Play listing: valid Taiwan data does not request the alternate locale
     globalThis.fetch = original;
   }
 });
+
+test('fetchTaiwanBankApps: both stores failing is the source failing; an empty iTunes answer with Play down too', async t => {
+  const { fetchTaiwanBankApps } = await import('../src/fetchers/tw-banks.ts');
+  const realFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = realFetch; });
+  t.mock.method(console, 'warn', () => {});
+  const apps = [{ bank: '測試銀行', app: '測試 App', appStoreId: 123, playPackage: 'com.example.bank' }];
+  let itunes = (): Response => new Response('oops', { status: 500 });
+  globalThis.fetch = (async (url: string | URL | Request) => (String(url).includes('itunes.apple.com') ? itunes() : new Response('<html>no app data</html>'))) as typeof fetch;
+  await assert.rejects(fetchTaiwanBankApps(apps), /both platforms failed \(iOS: .*500/);
+  itunes = () => Response.json({ results: [] });
+  await assert.rejects(fetchTaiwanBankApps(apps), /both platforms failed/, 'an empty answer is no answer');
+  itunes = () => Response.json({ results: [{ trackId: 123, minimumOsVersion: '15.0', version: '2.1', currentVersionReleaseDate: '2026-10-20T08:00:00Z', trackViewUrl: 'https://apps.apple.com/tw/app/x/id123' }] });
+  const [app] = await fetchTaiwanBankApps(apps);
+  assert.equal(app.ios?.minOs, '15.0');
+  assert.equal(app.android, undefined, 'Play down: that half is missing, not the app');
+});

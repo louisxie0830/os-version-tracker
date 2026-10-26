@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   CORDOVA_ISSUE_PATTERN,
   CRASH_PATTERN,
+  fetchSdkCrashes,
   parseAndroidReleaseNotes,
   parseAppleReleaseNotes,
   parseGithubIssues,
@@ -144,4 +145,48 @@ test('parseStackQuestions keeps mobile crash questions, classifies by tag and ra
   assert.deepEqual(items.map(i => [i.platform, i.newOs]), [['Android', false], ['iOS', true], ['跨平台', false]]);
   assert.equal(items[2].title, 'Expo Go app freezes & hangs on start', 'decodes HTML entities');
   assert.deepEqual(items[0].author, { name: 'Jane & Co', url: 'https://stackoverflow.com/users/1/jane' }, 'keeps the author for CC BY-SA attribution');
+});
+
+test('fetchSdkCrashes keeps at most three reports per repo, and a failed search group only costs its repos', async t => {
+  const realFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = realFetch; });
+  const warn = t.mock.method(console, 'warn', () => {});
+  const issue = (repo: string, n: number, reactions: number) => ({
+    title: `App crash on launch ${n}`, html_url: `https://github.com/${repo}/issues/${n}`, repository_url: `https://api.github.com/repos/${repo}`,
+    created_at: '2026-10-20T00:00:00Z', comments: 0, reactions: { total_count: reactions },
+  });
+  let call = 0;
+  globalThis.fetch = (async (url: string | URL | Request) => {
+    const q = decodeURIComponent(String(url));
+    call++;
+    if (q.includes('repo:Alamofire/Alamofire')) return new Response('nope', { status: 422 });
+    if (q.includes('repo:flutter/flutter')) {
+      return Response.json({ items: [...Array.from({ length: 10 }, (_, i) => issue('flutter/flutter', i, 100 - i)), issue('square/okhttp', 1, 1)] });
+    }
+    return Response.json({ items: [] });
+  }) as typeof fetch;
+  const items = await fetchSdkCrashes(undefined, 30, 12, new Date('2026-10-26T00:00:00Z'));
+  assert.ok(call >= 3);
+  assert.equal(items.filter(i => i.context === 'flutter/flutter').length, 3);
+  assert.ok(items.some(i => i.context === 'square/okhttp'), 'a quieter repo still makes the list');
+  assert.ok(warn.mock.calls.some(c => /SDK search group failed/.test(String(c.arguments[0]))));
+});
+
+test('the GitHub searches ask for open issues only (a closed report is nothing to check before upgrading)', async t => {
+  const { fetchCordovaCrashes } = await import('../src/fetchers/crashes.ts');
+  const realFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = realFetch; });
+  const queries: string[] = [];
+  globalThis.fetch = (async (url: string | URL | Request) => { queries.push(new URL(String(url)).searchParams.get('q') ?? ''); return Response.json({ items: [] }); }) as typeof fetch;
+  await fetchSdkCrashes();
+  await fetchCordovaCrashes();
+  assert.ok(queries.length >= 6);
+  assert.ok(queries.every(q => /\bis:open\b/.test(q)), queries.join('\n'));
+});
+
+test('fetchSdkCrashes fails only when every search group failed', async t => {
+  const realFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = realFetch; });
+  globalThis.fetch = (async () => new Response('nope', { status: 422 })) as typeof fetch;
+  await assert.rejects(fetchSdkCrashes(), /GitHub search failed/);
 });

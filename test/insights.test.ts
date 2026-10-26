@@ -136,7 +136,7 @@ test('new iPhones, and debugging on the current stable and beta iOS', () => {
     { platform: 'iOS', version: '27.2 beta 3', releaseDate: '2026-10-13', isBeta: true },
   ];
   const actions = buildiOSActions(ios, toolchain(RELEASES[3], { newestiPhones: [{ name: 'iPhone 18 Pro', releaseDate: '2026-09-18', shipsWithiOS: '27' }] }), null, {}, NOW);
-  assert.match(find(actions, /^支援 iPhone 18 Pro$/)!.detail, /出廠搭載 iOS 27（2026-09-18 上市）。需使用 Xcode 27\.0 以上/);
+  assert.match(find(actions, /^支援 iPhone 18 Pro$/)!.detail, /出廠搭載 iOS 27\.x（2026-09-18 上市；確切版本以 Apple 公告為準）。需使用 Xcode 27\.1 以上/, 'a major only: the newest stable Xcode of it, not its first');
   assert.match(find(actions, /^在 iOS 27\.1 實機上除錯$/)!.detail, /^需要 Xcode 27\.1 以上/);
   assert.equal(find(actions, /^測試 iOS 27\.2 beta 3$/)!.detail, '請使用 Xcode 27.2 beta 3 以上（需 macOS 26.6 以上）。', 'only a beta has the beta SDK');
 });
@@ -207,13 +207,14 @@ test('targetSdk before the deadline: urgency by days, the tools it needs, the ot
   const [target] = buildAndroidActions(ANDROID, playDeadline('November 15, 2026', 'December 31, 2026'), { compat: COMPAT }, NOW);
   assert.equal(target.title, 'Google Play：新 App 與更新須將 targetSdk 設為 36');
   assert.equal(target.status, 'urgent');
-  assert.equal(target.detail, '期限 2026 年 11 月 15 日（剩 29 天），可申請延長至 2026 年 12 月 31 日。需要 AGP 8.9.1 以上、Android Studio Meerkat 以上。其他裝置類型 / 既有 App — Wear OS 與 Android Automotive OS：API 35、既有 App：API 35。');
+  assert.equal(target.detail, '期限 2026 年 11 月 15 日（剩 29 天），可申請延長至 2026 年 12 月 31 日。需要 AGP 8.9.1 以上、Android Studio Meerkat 以上。其他裝置類型 / 既有 App — Wear OS 與 Android Automotive OS：API 35、既有 App：API 35。'
+    + '未達標的既有 App 對新使用者只提供給 Android 版本不高於其 targetSdk 的裝置（已安裝的使用者不受影響）；需要延長請在 Play Console 的延長申請表單提出；僅供內部發布的永久私人 App 不受此限。');
 });
 
 test('targetSdk: past the deadline but within the extension stays urgent; after both it is "ok"', () => {
   const extended = buildAndroidActions(ANDROID, playDeadline('August 31, 2026', 'November 1, 2026'), {}, NOW)[0];
   assert.equal(extended.status, 'urgent');
-  assert.match(extended.detail, /^原期限 2026 年 8 月 31 日 已過；延長期限至 2026 年 11 月 1 日（剩 15 天）。/);
+  assert.match(extended.detail, /^原期限 2026 年 8 月 31 日 已過；已申請延長者至 2026 年 11 月 1 日（剩 15 天）。/);
   const done = find(buildAndroidActions(ANDROID, playDeadline('August 31, 2026'), {}, NOW), /targetSdk 設為 36/)!;
   assert.equal(done.status, 'ok');
   assert.match(done.detail, /^自 2026 年 8 月 31 日 起生效。/);
@@ -242,7 +243,7 @@ test('Play Billing: the oldest version whose deadline or extension hasn\'t passe
   const item = find(actions, /Play Billing/)!;
   assert.equal(item.title, 'Play Billing Library 7 以下須升級（最新 9.1.0）');
   assert.equal(item.status, 'urgent');
-  assert.match(item.detail, /^原期限 2026 年 8 月 31 日 已過；延長期限至 2026 年 11 月 1 日（剩 15 天）。逾期後仍使用 PBL 7 以下/);
+  assert.match(item.detail, /^原期限 2026 年 8 月 31 日 已過；已申請延長者至 2026 年 11 月 1 日（剩 15 天）。逾期後仍使用 PBL 7 以下/);
 });
 
 test('16 KB page size and Play policies: only upcoming dates, policies grouped by date', () => {
@@ -254,7 +255,7 @@ test('16 KB page size and Play policies: only upcoming dates, policies grouped b
   assert.deepEqual(actions.filter(a => /16 KB/.test(a.title)).map(a => a.title), ['2027 年 5 月 1 日 起須支援 16 KB 記憶體分頁大小']);
   const policies = find(actions, /Google Play 政策/)!;
   assert.equal(policies.title, '2 項 Google Play 政策將於 2027 年 1 月 27 日 生效');
-  assert.match(policies.detail, /^剩 102 天。涉及：Permissions、Health apps。/);
+  assert.match(policies.detail, /^剩 102 天。Permissions；Health apps。/, 'each change named (in brief, with its replacement, when recognised)');
 });
 
 test('Kotlin compatibility warning only when AGP or Gradle is newer than the Kotlin release supports', () => {
@@ -302,4 +303,137 @@ test('day counts are Taiwan calendar days: the 05:43 build (21:43 UTC the day be
   }
   // A deadline that's today in Taipei is "today" at the morning build, not tomorrow
   assert.match(buildiOSActions([], toolchain(), appleDeadline('October 17, 2026'), {}, morningBuild)[0].detail, /就是今天/);
+});
+
+test('Play policy changes are summed up with what to use instead, and technical quality items are named as such', () => {
+  const policy = (title: string, detail: string, date = '2027-01-27') => ({ platform: 'Android', date, title, detail, source: 's', url: 'https://example.com/' });
+  const actions = buildAndroidActions([], null, { policies: [
+    policy('Play 政策：Use of SMS or call log permission groups', 'Our SMS and Call Log Permissions policy will no longer permit account verification via phone call as a use case for the READ_CALL_LOG permission. … use the Digital Credentials API instead, … or the SMS Retriever API.'),
+    policy('Play 政策：Permissions and APIs that Access Sensitive Information', 'Apps that don\'t need broad access must use the Android Contact Picker.'),
+    policy('Play 技術品質：程式碼混淆、最佳化與縮減門檻（R8 或其他工具）', 'Apps and games on Play will need to meet optimization thresholds.', '2027-02-01'),
+  ] }, NOW);
+  const jan = actions.find(a => /2027 年 1 月 27 日/.test(a.title))!;
+  assert.match(jan.detail, /通話紀錄：不再允許用來驗證帳號，改用 Digital Credentials API 或 SMS Retriever API/);
+  assert.match(jan.detail, /聯絡人：不需要完整通訊錄的 App 須改用 Android Contact Picker/);
+  const feb = actions.find(a => /2027 年 2 月 1 日/.test(a.title))!;
+  assert.equal(feb.title, '1 項 Google Play 技術品質要求將於 2027 年 2 月 1 日 生效');
+  assert.match(feb.detail, /程式碼混淆、最佳化與縮減門檻（R8 或其他工具）/);
+});
+
+test('the billing library action looks only at the library\'s deadlines, not the server API shutdowns in the same list', () => {
+  const actions = buildAndroidActions([], null, { billing: { latest: '9.1.0', deadlines: [
+    { platform: 'Android', date: '2026-11-10', title: 'Google Play Developer API：已淘汰的訂閱 API 停止服務', detail: 'x', source: 's', url: 'https://example.com/api' },
+    { platform: 'Android', date: '2027-08-31', title: 'Play Billing Library 8 停止支援', detail: 'y', source: 's', url: 'https://example.com/pbl' },
+  ] } }, NOW);
+  const billing = actions.find(a => /Billing Library/.test(a.title))!;
+  assert.equal(billing.title, 'Play Billing Library 8 以下須升級（最新 9.1.0）');
+});
+
+test('the next target API wave lists what targeting that Android version changes, when the page is for that version', () => {
+  const android = [{ platform: 'Android' as const, version: 'Android 17', apiLevel: '37', releaseDate: '2026-06-16' }];
+  const deadline = { source: 'google' as const, deadline: 'August 31, 2026', requirements: [{ platform: 'New apps and app updates', sdk: 'Android 16 (API level 36) or higher' }] };
+  const changes = { major: '17', changes: ['Static final fields are now unmodifiable', 'OTP protection for standard SMS messages'], url: 'https://developer.android.com/about/versions/17/behavior-changes-17' };
+  const next = (bc: typeof changes | null) => buildAndroidActions(android, deadline, { behaviorChanges: bc }, NOW).find(a => /預計下一波/.test(a.title))!;
+  assert.match(next(changes).detail, /Android 17 行為變更（2 項）：Static final fields are now unmodifiable、OTP protection for standard SMS messages。$/);
+  assert.match(next({ ...changes, major: '18' }).detail, /Android 17 行為變更。$/, 'another version\'s page: not listed');
+  assert.match(next(null).detail, /Android 17 行為變更。$/);
+});
+
+test('parseBehaviorChanges: the change headings, not code tabs or the footer; too few means the page changed', async () => {
+  const { parseBehaviorChanges } = await import('../src/fetchers/behavior-changes.ts');
+  const html = '<h2>Core functionality</h2><h3>New lock-free MessageQueue</h3><h3>Kotlin</h3><h3>Java</h3><h3>Static final fields are now unmodifiable</h3><h2>Privacy</h2><h3>OTP protection for standard SMS messages</h3><devsite-footer><h3>More Android</h3></devsite-footer>';
+  assert.deepEqual(parseBehaviorChanges(html, '17').changes, ['New lock-free MessageQueue', 'Static final fields are now unmodifiable', 'OTP protection for standard SMS messages']);
+  assert.throws(() => parseBehaviorChanges('<h3>Kotlin</h3>', '17'), /only 0 headings/);
+});
+
+test('Apple server APIs marked deprecated become info actions with their replacement, never a made-up date', async () => {
+  const { parseDeprecation, WATCHED } = await import('../src/fetchers/apple-deprecations.ts');
+  const receipts = parseDeprecation({ metadata: { title: 'App Store Receipts', platforms: [{ name: 'App Store Receipts', deprecatedAt: '1.7' }] } }, WATCHED[0])!;
+  assert.equal(parseDeprecation({ metadata: { platforms: [{ name: 'x' }] } }, WATCHED[0]), null, 'not marked: nothing');
+  assert.throws(() => parseDeprecation({}, WATCHED[0]), /no metadata/);
+  const action = buildiOSActions([], null, null, { deprecations: [receipts] }, NOW).find(a => /已被 Apple 標為淘汰/.test(a.title))!;
+  assert.equal(action.status, 'info');
+  assert.match(action.detail, /自 1\.7 版起.*尚未公布停止服務的日期；伺服器端改用 App Store Server API/);
+  assert.equal(action.url, 'https://developer.apple.com/documentation/appstorereceipts');
+});
+
+test('a requirement Google dated only by month or year is said so, with no day count; developer verification is named as such', () => {
+  const item = (title: string, detail: string, date: string) => ({ platform: 'Android', date, title, detail, source: 's', url: 'https://example.com/' });
+  const actions = buildAndroidActions([], null, { policies: [
+    item('Play 技術品質：記憶體用量門檻', 'Apps … thresholds.（Google 只公布月份：2027 年 2 月起）', '2027-02-01'),
+    item('Android 開發者驗證：擴大到全球所有認證 Android 裝置', 'Following … in 2027.（Google 只公布年份：2027 年，最早可能在年初）', '2027-01-01'),
+  ] }, NOW);
+  const feb = actions.find(a => /2027 年 2 月/.test(a.title))!;
+  assert.equal(feb.title, '1 項 Google Play 技術品質要求將自 2027 年 2 月起生效');
+  assert.match(feb.detail, /^Google 只公布月份，確切日期未定。/);
+  assert.doesNotMatch(feb.detail, /剩 \d+ 天/);
+  const year = actions.find(a => /開發者驗證/.test(a.title))!;
+  assert.equal(year.title, '1 項 Android 開發者驗證將於 2027 年內生效');
+  assert.match(year.detail, /^Google 只公布年份/);
+});
+
+test('an SDK minimum announced by month only: the month, no countdown, and pending until the month is over', () => {
+  const monthOnly = { ...appleDeadline('April 1, 2027', 'iOS 27 & iPadOS 27 SDK or later'), datePrecision: 'month' as const };
+  const [req] = buildiOSActions([], toolchain(), monthOnly, {}, NOW);
+  assert.equal(req.title, '上架 App Store 必須使用 iOS 27 SDK 建置');
+  assert.match(req.detail, /^2027 年 4 月起生效（Apple 只公布月份，確切日期未定）。請升級至 Xcode 27\.0 以上/);
+  assert.doesNotMatch(req.detail, /剩 \d+ 天/);
+  assert.equal(req.dueDate, '2027-04-01', 'due from the month\'s first day (待處理 counts from it)');
+  const midMonth = buildiOSActions([], toolchain(), monthOnly, {}, new Date('2027-04-15T04:00:00Z'))[0];
+  assert.equal(midMonth.status, 'urgent', 'still ahead on April 15th: Apple named no day');
+  assert.equal(buildiOSActions([], toolchain(), monthOnly, {}, new Date('2027-05-02T04:00:00Z'))[0].status, 'ok');
+});
+
+test('policy changes dated by year and by month on the same first day: grouped apart, urgency by the period\'s end', () => {
+  const policy = (detail: string, title = 'Play 政策：X') => ({ platform: 'Android' as const, date: '2027-01-01', title, detail, source: 'Google Play Policy Deadlines', url: 'https://support.google.com/a' });
+  const policies = [
+    policy('Expanding globally in 2027.（Google 只公布年份：2027 年，最早可能在年初）', 'Android 開發者驗證：擴大到全球所有認證 Android 裝置'),
+    policy('From January 2027, apps need to do Y.（Google 只公布月份：2027 年 1 月起）', 'Play 技術品質：Y'),
+  ];
+  const at = new Date('2026-12-01T04:00:00Z');
+  const actions = buildAndroidActions([], null, { policies }, at);
+  const year = find(actions, /於 2027 年內生效/)!;
+  const month = find(actions, /自 2027 年 1 月起生效/)!;
+  assert.match(year.title, /^1 項 Android 開發者驗證/);
+  assert.match(month.title, /^1 項 Google Play 技術品質要求/);
+  assert.equal(year.status, 'upcoming', 'a whole year ahead is not urgent a month before it starts');
+  assert.equal(month.status, 'urgent');
+});
+
+test('zhPlatform / zhSdk: existing apps of other device types, and a minimum given by API level only', async () => {
+  const { zhPlatform, zhSdk } = await import('../src/insights.ts');
+  assert.equal(zhPlatform('Existing Wear OS, Android TV, Android XR apps'), '既有 Wear OS、Android TV、Android XR App');
+  assert.equal(zhPlatform('Existing apps'), '既有 App');
+  assert.equal(zhSdk('API level 32 or higher'), 'API 32 或更高');
+});
+
+test('an earlier target API deadline still in its extension window when the next is posted: its own urgent action', () => {
+  const next: SubmissionDeadline = {
+    source: 'google', deadline: 'August 31, 2027',
+    requirements: [{ platform: 'New apps and app updates', sdk: 'Android 17 (API level 37) or higher' }],
+    earlier: [playDeadline('August 31, 2026', 'November 1, 2026')],
+  };
+  const actions = buildAndroidActions([], next, {}, NOW);
+  assert.ok(find(actions, /targetSdk 設為 37/), 'the newer deadline is still the main one');
+  const prior = find(actions, /targetSdk 36 的延長期即將結束/)!;
+  assert.equal(prior.status, 'urgent');
+  assert.match(prior.detail, /^原期限 2026 年 8 月 31 日 已過；已申請延長者至 2026 年 11 月 1 日/);
+  assert.equal(find(buildAndroidActions([], next, {}, new Date('2026-11-05T04:00:00Z')), /延長期即將結束/), undefined, 'gone once the extension is over');
+});
+
+test('Apple requirements: a month-only date as the month, an expiry as 到期, a passed "by" deadline dropped', () => {
+  const req = (date: string, title: string, detail: string) => ({ platform: 'iOS' as const, date, title, detail, source: 'S', url: 'https://developer.apple.com/news/' });
+  const actions = buildiOSActions([], toolchain(), null, { requirements: [
+    req('2027-04-01', 'App Store Connect：screenshots', 'Any apps will need to include screenshots.（Apple 只公布月份：2027 年 4 月起）'),
+    req('2027-02-01', 'Apple Developer News：macOS：Upcoming expiration of Developer ID', 'The Sub-CA expires on February 1, 2027.'),
+    req('2026-01-31', 'Age Rating Updates', 'Provide responses to the updated questions by January 31, 2026.'),
+  ] }, NOW);
+  const month = find(actions, /screenshots/)!;
+  assert.match(month.detail, /^2027 年 4 月起生效（Apple 只公布月份，確切日期未定）/);
+  const expiry = find(actions, /Developer ID/)!;
+  assert.equal(expiry.title, 'Apple 規定：macOS：Upcoming expiration of Developer ID');
+  assert.match(expiry.detail, /^2027 年 2 月 1 日 到期（剩 \d+ 天）/);
+  assert.equal(find(actions, /Age Rating/), undefined, 'a response deadline already past asks nothing more');
+  const midApril = buildiOSActions([], toolchain(), null, { requirements: [req('2027-04-01', 'App Store Connect：screenshots', 'x（Apple 只公布月份：2027 年 4 月起）')] }, new Date('2027-04-15T04:00:00Z'));
+  assert.equal(find(midApril, /screenshots/)!.status, 'urgent', 'still ahead within the month');
 });

@@ -62,7 +62,7 @@ test('timeline: upstream titles, details and sources are escaped; an unsafe link
   assert.ok(!html.includes('<img'), 'no markup from upstream');
   assert.equal((html.match(/&lt;img src=x onerror=alert\(1\)&gt;/g) ?? []).length, 3);
   assert.doesNotMatch(html, /href="javascript:/);
-  assert.match(html, /<span class="tl-title">&lt;img/);
+  assert.match(html, /<span class="tl-title"(?: lang="en")?>&lt;img/);
 });
 
 // ---------- compatibility tables ----------
@@ -105,11 +105,20 @@ test('compat section: absent without either table; Xcode rows translate "or late
   assert.match(html, /macOS Tahoe 26\.6 以上/);
   assert.match(html, /預覽版/);
   assert.match(html, /<td data-label="Swift">—<\/td>/, 'missing fields fall back to —');
-  assert.match(html, /<span class="badge badge-beta badge-sm">預覽<\/span>/);
+  assert.match(html, /<span class="badge badge-beta badge-sm">預覽版<\/span>/, "the same word as elsewhere");
   assert.match(html, /macos-latest/);
   assert.match(html, /20261010\.1/, 'image version when there is no date');
   assert.match(html, /<strong>—<\/strong>/, 'no default Xcode');
   assert.doesNotMatch(html, /Xcode Cloud：/, 'no Xcode Cloud note without data');
+});
+
+test('compat section: the Xcode Cloud note gives the date of Apple\'s last entry, and says when it has gone quiet', () => {
+  const ci = (date: string) => ({ githubActions: [{ label: 'macOS 26', status: 'ga', labels: ['macos-26'], arch: 'arm64', os: 'macOS 26', xcodes: ['27.0'] }],
+    xcodeCloud: { events: [{ date, added: ['Xcode 26.2 (17C52)'], removed: [] }], latestAnnouncedXcode: '26.2', url: 'https://developer.apple.com/documentation/xcode-release-notes/xcode-cloud-release-notes' } });
+  const recent = renderCompatSection(data({ xcodeSupport: [{ xcode: '27.0' }] as never, cachedAt: '2026-03-01T00:00:00.000Z', ciImages: ci('February 10, 2026') as never }));
+  assert.match(recent, /最近一次公告（2026 年 2 月 10 日）提供的版本為 Xcode 26\.2/);
+  const quiet = renderCompatSection(data({ xcodeSupport: [{ xcode: '27.0' }] as never, cachedAt: '2026-10-26T00:00:00.000Z', ciImages: ci('February 10, 2026') as never }));
+  assert.match(quiet, /（2026 年 2 月 10 日，已 258 天沒有更新）/);
 });
 
 // ---------- bank apps ----------
@@ -235,4 +244,43 @@ test('bank trend: two or more days chart each platform, the top four minimum ver
   assert.match(html, /銀行 App 最低 iOS 要求的分布，2026\/10\/15 至 2026\/10\/16/);
   assert.match(html, /<th>其他<\/th>/, 'a fifth version folds into 其他');
   assert.match(html, /data-value="Android" hidden|hidden[^>]*data-value="Android"/, 'Android chart starts hidden');
+});
+
+test('Apple developer status: Taiwan times, ongoing / upcoming / ended states, an empty week, escaped names', async () => {
+  const { renderAppleStatus } = await import('../src/render-platforms.ts');
+  assert.equal(renderAppleStatus({ ...base, appleStatus: undefined }), '');
+  const html = renderAppleStatus({ ...base, appleStatus: { services: 51, url: 'https://developer.apple.com/system-status/', events: [
+    { id: '1', service: 'TestFlight', type: 'Outage', state: 'ongoing', start: '2026-12-31T16:30:00Z' },
+    { id: '2', service: 'Xcode Cloud', type: 'Maintenance', state: 'upcoming', start: '2099-01-01T01:00:00Z', end: '2099-01-01T03:00:00Z' },
+    { id: '3', service: 'APNs <script>', type: 'Issue', state: 'resolved', start: '2026-10-20T00:00:00Z', end: '2026-10-20T01:00:00Z' },
+  ] } } as AllVersions);
+  assert.match(html, /status-urgent">進行中<\/span>\s*<span class="crash-context">01\/01 00:30（台灣時間）/);
+  assert.match(html, /TestFlight 中斷/);
+  assert.match(html, /status-upcoming">即將</);
+  assert.match(html, /status-ok">已結束</);
+  assert.match(html, /APNs &lt;script&gt; 異常/);
+  assert.match(html, /近 7 天 3 件/);
+  const quiet = renderAppleStatus({ ...base, appleStatus: { services: 51, url: 'https://developer.apple.com/system-status/', events: [] } } as AllVersions);
+  assert.match(quiet, /51 項服務，近 7 天沒有事件/);
+  assert.doesNotMatch(quiet, /<ul/);
+});
+
+test('tableSemantics: column headers scoped, row titles as row headers, stacked tables with explicit roles', async () => {
+  const { tableSemantics } = await import('../src/render-common.ts');
+  const html = tableSemantics(`<table class="compat-table"><thead><tr><th>A</th><th scope="row">B</th></tr></thead><tbody><tr><td class="row-title">x</td><td>y</td></tr></tbody></table>
+    <table class="compat-table stack-on-mobile"><thead><tr><th>A</th></tr></thead><tbody data-search-rows><tr data-index="0"><td class="row-title" data-label="A">x</td><td data-label="B">y</td></tr></tbody></table>`);
+  const [plain, stacked] = html.split('\n');
+  assert.match(plain, /<th scope="col">A<\/th><th scope="row">B<\/th>/, 'an existing scope is kept');
+  assert.match(plain, /<td role="rowheader" class="row-title">x<\/td><td>y<\/td>/);
+  assert.doesNotMatch(plain, /role="(?:table|row|cell)"/, 'a table that stays a table needs no explicit roles');
+  assert.match(stacked, /^\s*<table role="table" class="compat-table stack-on-mobile"><thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">A<\/th>/);
+  assert.match(stacked, /<tbody role="rowgroup" data-search-rows><tr role="row" data-index="0"><td role="rowheader" class="row-title" data-label="A">x<\/td><td role="cell" data-label="B">y<\/td>/);
+});
+
+test('a section that throws is left out of the page (and reported) instead of failing the whole page', async t => {
+  const { section } = await import('../src/render.ts');
+  const error = t.mock.method(console, 'error', () => {});
+  assert.equal(section('Banks', () => { throw new TypeError('x.map is not a function'); }), '');
+  assert.match(String(error.mock.calls[0].arguments[0]), /::warning::The Banks section failed to render.*x\.map is not a function/);
+  assert.equal(section('Ok', () => '<section>ok</section>'), '<section>ok</section>');
 });

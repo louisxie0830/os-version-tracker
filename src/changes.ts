@@ -7,7 +7,9 @@ import type { SecurityReport } from './fetchers/security.js';
 import type { DeveloperStatus } from './fetchers/apple-status.js';
 import type { BankChange } from './history.js';
 import { safeUrl } from './safe-url.js';
-import { compareVersions } from './fetchers/ios-toolchain.js';
+import { datePrecision } from './deadline-dates.js';
+import { platformClass } from './platform.js';
+import { compareVersions } from './versions.js';
 import { USER_AGENT, WEBHOOK_TIMEOUT_MS } from './net.js';
 
 export interface TrackedItem {
@@ -19,11 +21,31 @@ export interface TrackedItem {
   url: string;
   /** The item's own date: deadline date, or publication date for news */
   date: string;
+  /** A deadline announced by month or year only: `date` is then that period's first day */
+  datePrecision?: 'month' | 'year';
   /** When this server first saw the item; undefined for the initial baseline */
   firstSeen?: string;
   /** Who wrote the title, when it's someone's own writing (GitHub issues): credited wherever it's shown */
   author?: { name: string; url?: string };
 }
+
+/** A deadline's date as announced: "2027-02-01", or by month / year only "2027-04（月份）" / "2027 年內" */
+export function dueLabel(item: Pick<TrackedItem, 'date' | 'datePrecision'>): string {
+  return item.datePrecision === 'year' ? `${item.date.slice(0, 4)} 年內` : item.datePrecision === 'month' ? `${item.date.slice(0, 7)}（月份）` : item.date;
+}
+
+/** How each kind of tracked item is named to readers (the feed, the API docs, the notification center) */
+export const KIND_LABEL: Record<TrackedItem['kind'], string> = {
+  deadline: '期限',
+  'apple-news': 'Apple 公告',
+  'android-news': 'Android 公告',
+  'dev-news': '開發者新聞',
+  device: '新機型',
+  crash: 'SDK 閃退',
+  security: '資安',
+  bank: '銀行 App',
+  status: '服務狀態',
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -114,6 +136,7 @@ export function toTrackedItems(input: {
       detail: d.detail,
       url: d.url,
       date: d.date,
+      ...(datePrecision(d) !== 'day' ? { datePrecision: datePrecision(d) as 'month' | 'year' } : {}),
     })),
     ...input.appleNews.filter(n => n.important).map(n => ({
       id: `apple-news:${n.url}`,
@@ -229,7 +252,7 @@ export function toTrackedItems(input: {
  * Records items and returns the ones that appeared since the previous refresh.
  * The very first run only establishes a baseline, so a fresh deploy doesn't announce everything.
  */
-export function recordItems(items: TrackedItem[], now = new Date()): { items: TrackedItem[]; added: TrackedItem[] } {
+export function recordItems(items: TrackedItem[], now = new Date(), { prune = false }: { prune?: boolean | ((id: string) => boolean) } = {}): { items: TrackedItem[]; added: TrackedItem[] } {
   const isBaseline = !state.baselineAt;
   const nowIso = now.toISOString();
   const added: TrackedItem[] = [];
@@ -241,6 +264,7 @@ export function recordItems(items: TrackedItem[], now = new Date()): { items: Tr
     }
   }
   if (isBaseline) state.baselineAt = nowIso;
+  if (prune) pruneSeen(items, now, prune === true ? () => true : prune);
   saveState();
 
   return {
@@ -249,12 +273,73 @@ export function recordItems(items: TrackedItem[], now = new Date()): { items: Tr
   };
 }
 
-/** Items that are new to readers recently: first seen within `days`, or (for dated news) published within it */
+/** An item first seen longer ago than this, and no longer listed anywhere, is forgotten */
+export const FORGET_AFTER_DAYS = 2 * 365;
+
+/**
+ * Keeps the seen list from growing forever. Only ids `prunable` allows are considered: those whose source
+ * answered this time. An item missing because its source failed would otherwise be forgotten, then announced
+ * again as new when the source comes back.
+ */
+function pruneSeen(current: TrackedItem[], now: Date, prunable: (id: string) => boolean): void {
+  const listed = new Set(current.map(item => item.id));
+  const cutoff = now.getTime() - FORGET_AFTER_DAYS * DAY_MS;
+  for (const [id, firstSeen] of Object.entries(state.seen)) {
+    const at = Date.parse(firstSeen ?? state.baselineAt ?? '');
+    if (!listed.has(id) && at < cutoff && prunable(id)) delete state.seen[id];
+  }
+}
+
+/** The sources each kind of tracked item comes from (its id starts with the kind): what must have answered to forget one */
+export const ITEM_SOURCES: Record<string, readonly string[]> = {
+  deadline: ['appleDeadline', 'googleDeadline', 'appleRequirements', 'playPolicy', 'playBilling', 'pageSize', 'sdkReleases'],
+  'apple-news': ['appleNews'],
+  'android-news': ['androidNews'],
+  device: ['appleNews', 'iosToolchain'],
+  'dev-news': ['devNews'],
+  crash: ['crashes'],
+  security: ['security'],
+  bank: ['twBanks'],
+  status: ['appleStatus'],
+};
+
+/** Which seen ids may be forgotten, given the sources that answered this refresh (an unknown kind: never) */
+export function prunableWhen(ok: (source: string) => boolean): (id: string) => boolean {
+  return id => {
+    const sources = ITEM_SOURCES[id.slice(0, id.indexOf(':'))];
+    return !!sources && sources.every(ok);
+  };
+}
+
+/**
+ * Kinds whose `date` is when the item was published (a post, a report, an advisory). The others carry a date
+ * that says something else: when a deadline takes effect, the day a bank change was seen, an incident's start.
+ */
+export const PUBLISHED_KINDS: ReadonlySet<TrackedItem['kind']> = new Set(['apple-news', 'android-news', 'dev-news', 'device', 'crash', 'security']);
+/** A published item older than this is never "new", however recently the site first saw it */
+export const NEW_MAX_AGE_DAYS = 30;
+
+/**
+ * The date to show and sort an item by: when it was published for the kinds that have that, otherwise when the
+ * site first saw it (a source added later, or a backfill, sees old posts for the first time today)
+ */
+export function shownDate(item: TrackedItem): string {
+  // A post whose date couldn't be read falls back to when it was seen, rather than to no date at all
+  return PUBLISHED_KINDS.has(item.kind) && item.date ? item.date : item.firstSeen ?? (item.kind === 'deadline' ? '' : item.date);
+}
+
+/**
+ * Items that are new to readers recently: first seen within `days`, or (for dated news) published within it.
+ * A published item must also be recent itself (NEW_MAX_AGE_DAYS): a month-old post the site only now
+ * picked up is not news.
+ */
 export function recentItems(items: TrackedItem[], days = 7, now = new Date()): TrackedItem[] {
   const since = now.getTime() - days * DAY_MS;
   const today = now.toISOString().slice(0, 10);
+  const oldest = new Date(now.getTime() - NEW_MAX_AGE_DAYS * DAY_MS).toISOString().slice(0, 10);
   return items
     .filter(item => {
+      if (PUBLISHED_KINDS.has(item.kind) && /^\d{4}-\d{2}-\d{2}/.test(item.date) && item.date.slice(0, 10) < oldest) return false;
       if (item.firstSeen) return new Date(item.firstSeen).getTime() >= since;
       // Deadlines carry their effective date, not an announcement date, so only news/devices qualify here
       return item.kind !== 'deadline' && item.date <= today && new Date(item.date).getTime() >= since;
@@ -267,6 +352,21 @@ const inFlight = new Set<Promise<void>>();
 /** Resolves once every webhook notification started so far has finished */
 export async function flushNotifications(): Promise<void> {
   await Promise.all([...inFlight]);
+}
+
+/** How many new items wait to be sent */
+export function pendingCount(): number {
+  return state.pending?.length ?? 0;
+}
+
+/**
+ * Keeps new items for the next notification instead of sending one now (a refresh that won't be published):
+ * they join the queue of undelivered items, which goes out with the next notifyWebhook
+ */
+export function deferNotifications(added: TrackedItem[]): void {
+  if (!added.length || !process.env.NOTIFY_WEBHOOK_URL) return;
+  state.pending = [...new Map([...(state.pending ?? []), ...added].map(item => [item.id, item])).values()].slice(-MAX_PENDING);
+  saveState();
 }
 
 export function notifyWebhook(added: TrackedItem[], siteUrl: string): Promise<void> {
@@ -283,13 +383,16 @@ async function postNotification(added: TrackedItem[], siteUrl: string): Promise<
   const queue = [...new Map([...(state.pending ?? []), ...added].map(item => [item.id, item])).values()];
   if (!queue.length) return;
 
-  const lines = queue.slice(0, 15).map(item => `• [${item.platform}] ${item.title}${item.kind === 'deadline' ? `（${item.date}）` : ''}${safeUrl(item.url) ? `\n  ${safeUrl(item.url)}` : ''}`);
+  const lines = queue.slice(0, 15).map(item => `• [${item.platform}] ${item.title}${item.kind === 'deadline' ? `（${dueLabel(item)}）` : ''}${safeUrl(item.url) ? `\n  ${safeUrl(item.url)}` : ''}`);
   const text = `📡 OS Version Tracker：${queue.length} 項新的規定／公告\n${lines.join('\n')}${queue.length > 15 ? `\n…還有 ${queue.length - 15} 項` : ''}\n${siteUrl}`;
 
   const outcome = await postWithRetry(url, text);
   // Delivered, or rejected for good (a 4xx other than 429 won't succeed on retry): drop the queue.
   // Temporary failures keep it so the next refresh tries again.
-  state.pending = outcome === 'retry' ? queue.slice(-MAX_PENDING) : [];
+  // Only this send's items: anything queued while it was in flight stays for the next one
+  const handled = new Set(queue.map(item => item.id));
+  const queuedMeanwhile = (state.pending ?? []).filter(item => !handled.has(item.id));
+  state.pending = [...(outcome === 'retry' ? queue : []), ...queuedMeanwhile].slice(-MAX_PENDING);
   saveState();
 }
 
@@ -328,22 +431,28 @@ function xml(value: string): string {
 
 /** Atom feed so RSS readers / Slack's RSS app can subscribe to new requirements and announcements */
 export function buildAtomFeed(items: TrackedItem[], siteUrl: string, updated: string): string {
-  // Items from the initial baseline have no first-seen time; use their own date, capped at "now"
-  // so future deadlines don't appear as if published in the future
-  const publishedAt = (item: TrackedItem) => item.firstSeen
-    ?? (`${item.date}T00:00:00Z` < updated ? `${item.date}T00:00:00Z` : updated);
-  const entries = [...items]
-    .sort((a, b) => publishedAt(b).localeCompare(publishedAt(a)))
-    .slice(0, 50)
+  // Items from the initial baseline have no first-seen time: their own date, capped at the baseline (a fixed
+  // time, so a future deadline doesn't get a new timestamp, and move to the top, on every build)
+  const cap = state.baselineAt && state.baselineAt < updated ? state.baselineAt : updated;
+  const seenAt = (item: TrackedItem) => item.firstSeen
+    ?? (`${item.date}T00:00:00Z` < cap ? `${item.date}T00:00:00Z` : cap);
+  // A post's <published> is when its author published it; <updated> when it appeared here
+  const publishedAt = (item: TrackedItem) => (PUBLISHED_KINDS.has(item.kind) && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && `${item.date}T00:00:00Z` <= seenAt(item)
+    ? `${item.date}T00:00:00Z` : seenAt(item));
+  const titleOf = (item: TrackedItem) => (item.kind === 'deadline' ? `[${item.platform}] ${dueLabel(item)} ` : `[${item.platform}] `) + item.title;
+  const chosen = [...items].sort((a, b) => seenAt(b).localeCompare(seenAt(a))).slice(0, 50);
+  // Entries that would read the same (several Play policies share a title and a date) say what sets them apart
+  const repeated = new Set(chosen.map(titleOf).filter((t, i, all) => all.indexOf(t) !== i));
+  const entries = chosen
     .map(item => {
-      const published = publishedAt(item);
-      const prefix = item.kind === 'deadline' ? `[${item.platform}] ${item.date} ` : `[${item.platform}] `;
+      const link = safeUrl(item.url);
+      const title = repeated.has(titleOf(item)) && item.detail ? `${titleOf(item)}（${item.detail.slice(0, 40)}${item.detail.length > 40 ? '…' : ''}）` : titleOf(item);
       return `  <entry>
     <id>urn:os-version-tracker:${xml(item.id)}</id>
-    <title>${xml(prefix + item.title)}</title>
-    ${safeUrl(item.url) ? `<link href="${xml(safeUrl(item.url)!)}"/>` : ''}
-    <updated>${published}</updated>
-    <published>${published}</published>
+    <title>${xml(title)}</title>
+    ${link ? `<link href="${xml(link)}"/>` : `<content type="text">${xml(item.detail || item.title)}</content>`}
+    <updated>${seenAt(item)}</updated>
+    <published>${publishedAt(item)}</published>
     <summary>${xml(item.detail)}</summary>${item.author ? `
     <author><name>${xml(item.author.name)}</name>${safeUrl(item.author.url) ? `<uri>${xml(safeUrl(item.author.url)!)}</uri>` : ''}</author>` : ''}
   </entry>`;
@@ -355,7 +464,7 @@ export function buildAtomFeed(items: TrackedItem[], siteUrl: string, updated: st
   <subtitle>iOS / Android 上架期限、政策變更、重要開發者公告與新機型</subtitle>
   <id>${xml(siteUrl)}/feed.xml</id>
   <link rel="self" href="${xml(siteUrl)}/feed.xml"/>
-  <link href="${xml(siteUrl)}"/>
+  <link href="${xml(siteUrl)}/"/>
   <link rel="related" href="${xml(siteUrl)}/legal/" title="免責聲明、資料來源與授權"/>
   <author><name>OS Version Tracker</name><uri>${xml(siteUrl)}/</uri></author>
   <rights>標題與摘要取自各資料來源（官方公告、開源專案的 GitHub issue、CISA 等）並連回原文，著作權屬於原權利人或原作者；有作者的項目另附作者。本站彙整保留所有權利。各來源的授權與免責聲明：${xml(siteUrl)}/legal/</rights>
@@ -377,6 +486,7 @@ export function buildNotificationsJson(items: TrackedItem[], cachedAt: string, l
     .sort((a, b) => rank(b) - rank(a)
       || (rank(a) === 0 ? a.date.localeCompare(b.date) : (b.firstSeen ?? b.date).localeCompare(a.firstSeen ?? a.date)))
     .slice(0, limit)
-    .map(({ id, kind, platform, title, detail, url, date, firstSeen, author }) => ({ id, kind, platform, title, detail, url: safeUrl(url) ?? '', date, firstSeen, ...(author ? { author: { name: author.name, url: safeUrl(author.url) } } : {}) }));
+    // kindLabel and platformClass: how the center shows the item, so the browser keeps no copy of the names
+    .map(({ id, kind, platform, title, detail, url, date, datePrecision, firstSeen, author }) => ({ id, kind, kindLabel: KIND_LABEL[kind], platform, platformClass: platformClass(platform), title, detail, url: safeUrl(url) ?? '', date, ...(datePrecision ? { datePrecision } : {}), firstSeen, ...(author ? { author: { name: author.name, url: safeUrl(author.url) } } : {}) }));
   return JSON.stringify({ cachedAt, items: sorted });
 }

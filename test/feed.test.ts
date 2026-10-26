@@ -1,7 +1,7 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
-import { beginFeedScope, fetchFeed, resetFeedCache } from '../src/fetchers/feed.ts';
+import { beginFeedScope, fetchFeed, resetFeedCache, sharedDownload } from '../src/fetchers/feed.ts';
 
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; resetFeedCache(); });
@@ -64,4 +64,18 @@ test('a failed shared download fails every reader in that refresh alike, and the
   assert.equal((await fetchFeed('https://example.com/flaky')).items.length, 1);
   endNext();
   assert.equal(again.length, 1);
+});
+
+test('sharedDownload: one download per key inside a scope, none shared outside it', async () => {
+  resetFeedCache();
+  let downloads = 0;
+  const download = async () => ++downloads;
+  assert.equal(await sharedDownload('html a', download), 1);
+  assert.equal(await sharedDownload('html a', download), 2, 'no scope: each call downloads');
+  const end = beginFeedScope();
+  const [x, y] = await Promise.all([sharedDownload('html a', download), sharedDownload('html a', download)]);
+  assert.equal(x, y, 'both callers got the one download');
+  assert.equal(await sharedDownload('html b', download), 4, 'another key is its own download');
+  end();
+  assert.equal(await sharedDownload('html a', download), 5, 'a new refresh downloads afresh');
 });

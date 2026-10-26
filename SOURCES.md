@@ -2,7 +2,7 @@
 
 <!-- 由 src/source-registry.ts 產生：npm run sources:doc。請改那個檔案，不要直接編輯本檔。 -->
 
-最後檢查：2026-10-17 · 共 26 個來源（風險低 8、中 7、高 11）
+最後檢查：2026-10-17 · 共 29 個來源（風險低 9、中 8、高 12）
 
 共同做法：每天兩次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。
 
@@ -19,7 +19,7 @@
 | `appleDeadline` | Apple Developer News | 低 | RSS / Atom | Apple Developer News RSS（官方提供） |
 | `googleDeadline` | Google Play 目標 API 等級規定 | 中 | HTML 網頁 | Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
 | `iosToolchain` | xcodereleases.com · endoflife.date | 中 | JSON 檔、API | xcodereleases.com 未標示使用條款；endoflife.date（MIT） |
-| `androidToolchain` | Google Maven · Gradle · Android SDK repository | 高 | XML 檔、API、HTML 網頁、JSON 檔 | Google Maven 與 Android SDK repository（Google 服務條款）；Maven Central（使用條款）；Gradle（網站條款）；JetBrains 版本清單（JetBrains 網站條款）；Kotlin 文件（Apache 2.0）；Android 文件（Apache 2.0） |
+| `androidToolchain` | Google Maven · Gradle · Android SDK repository | 高 | XML 檔、HTML 網頁、API、JSON 檔 | Google Maven 與 Android SDK repository（Google 服務條款）；Maven Central（使用條款）；Gradle（網站條款）；JetBrains 版本清單（JetBrains 網站條款）；Kotlin 文件（Apache 2.0）；Android 文件（Apache 2.0） |
 | `adoption` | Apple App Store 使用率 | 高 | HTML 網頁 | Apple 網站使用條款 |
 | `appleNews` | Apple Developer News | 低 | RSS / Atom | Apple Developer News RSS（官方提供） |
 | `androidNews` | Android Developers Blog | 低 | RSS / Atom | Android Developers Blog feed（官方提供） |
@@ -27,7 +27,7 @@
 | `xcodeSupport` | Apple Xcode 支援表 | 高 | HTML 網頁 | Apple 網站使用條款 |
 | `appleRequirements` | Apple Upcoming Requirements | 高 | HTML 網頁 | Apple 網站使用條款 |
 | `playPolicy` | Google Play 政策期限 | 中 | HTML 網頁 | Google 服務條款 |
-| `playBilling` | Play Billing Library 淘汰時程 | 高 | HTML 網頁、XML 檔 | Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
+| `playBilling` | Play Billing Library 淘汰時程 | 高 | HTML 網頁 | Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
 | `pageSize` | Android 16 KB 分頁大小指南 | 中 | HTML 網頁 | Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
 | `ciImages` | GitHub Actions runner images · Xcode Cloud | 高 | Markdown 檔、HTML 網頁 | actions/runner-images（MIT）；Xcode Cloud release notes 依 Apple 網站使用條款 |
 | `agpJdk` | AGP 各版本 release notes | 中 | HTML 網頁 | Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
@@ -39,7 +39,10 @@
 | `security` | Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database | 高 | JSON 檔、API、HTML 網頁 | CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款） |
 | `crashes` | Apple / Android release notes · GitHub SDK 與 Cordova issues | 高 | API、JSON 檔、HTML 網頁 | GitHub 服務條款；Stack Overflow 使用者內容依 CC BY-SA（Stack Exchange API 條款要求標示來源與作者）；Apple release notes 依 Apple 網站使用條款 |
 | `appleStatus` | Apple Developer System Status | 高 | JSON 檔 | Apple 網站使用條款；狀態頁背後的資料檔不是公開提供的資料介面 |
-| `frameworks` | GitHub facebook/react-native releases · Flutter release index | 低 | API、JSON 檔 | GitHub 服務條款；Flutter 官方版本清單（Flutter 工具本身讀取的公開資料） |
+| `appleDeprecations` | Apple 文件的淘汰標記（收據驗證、伺服器通知） | 高 | JSON 檔 | Apple 網站使用條款 |
+| `behaviorChanges` | Android 行為變更（以新版本為目標的 App） | 低 | HTML 網頁 | Google 服務條款 |
+| `sdkReleases` | Firebase（Apple / Android）與 Google Play services 版本說明 | 中 | HTML 網頁 | Google 服務條款 |
+| `frameworks` | GitHub react/react-native releases · Flutter release index | 低 | API、JSON 檔、HTML 網頁 | GitHub 服務條款；Flutter 官方版本清單（Flutter 工具本身讀取的公開資料） |
 
 ## 各來源細節
 
@@ -94,8 +97,7 @@
 - 端點：
   - XML 檔 `https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml`（條款：<https://policies.google.com/terms>）
     - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
-  - XML 檔 `https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/maven-metadata.xml`（條款：<https://policies.google.com/terms>）
-    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
+  - HTML 網頁 `https://developer.android.com/develop/ui/compose/bom/bom-mapping`（條款：<https://policies.google.com/terms>）
   - XML 檔 `https://dl.google.com/android/repository/repository2-3.xml`（條款：<https://policies.google.com/terms>）
     - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
   - XML 檔 `https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/maven-metadata.xml`（條款：<https://repo1.maven.org/terms.html>）
@@ -108,7 +110,7 @@
   - HTML 網頁 `https://developer.android.com/tools/releases/platforms`（條款：<https://developer.android.com/legal>）
   - HTML 網頁 `https://developer.android.com/tools/releases/build-tools`（條款：<https://developer.android.com/legal>）
   - HTML 網頁 `https://developer.android.com/develop/ui/compose/bom/bom-mapping`（條款：<https://developer.android.com/legal>）
-- 說明：只取版本號與發布日期，主要來自供建置工具讀取的套件庫中繼資料。dl.google.com 的三個檔案為 robots.txt 例外（見端點說明）
+- 說明：只取版本號與發布日期，主要來自供建置工具讀取的套件庫中繼資料。dl.google.com 的兩個檔案（AGP 版本、SDK Platform 與 Build Tools）為 robots.txt 例外，因為 developer.android.com 的文件只到小版本號或落後於實際發布（見端點說明）；Compose BOM 改讀文件頁
 
 ### `adoption`：Apple App Store 使用率
 
@@ -149,7 +151,7 @@
 - 風險：高
 - 授權或條款：Apple 網站使用條款
 - 端點：
-  - HTML 網頁 `https://developer.apple.com/support/xcode/`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
+  - HTML 網頁 `https://developer.apple.com/xcode/system-requirements/`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
 - 說明：只取 Xcode、macOS 與 SDK 的版本對應。只取版本、日期與規定名稱等事實資訊並附原始連結
 
 ### `appleRequirements`：Apple Upcoming Requirements
@@ -158,6 +160,7 @@
 - 授權或條款：Apple 網站使用條款
 - 端點：
   - HTML 網頁 `https://developer.apple.com/news/upcoming-requirements/`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
+  - HTML 網頁 `https://developer.apple.com/help/app-store-connect/release-notes/`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
 - 說明：只取規定名稱與生效日期。只取版本、日期與規定名稱等事實資訊並附原始連結
 
 ### `playPolicy`：Google Play 政策期限
@@ -166,7 +169,9 @@
 - 授權或條款：Google 服務條款
 - 端點：
   - HTML 網頁 `https://support.google.com/googleplay/android-developer/table/12921780`（條款：<https://policies.google.com/terms>）
-- 說明：只取政策名稱與期限日期
+  - HTML 網頁 `https://support.google.com/googleplay/android-developer/answer/17492799`（條款：<https://policies.google.com/terms>）
+  - HTML 網頁 `https://developer.android.com/developer-verification/guides`（條款：<https://policies.google.com/terms>）
+- 說明：只取政策名稱與期限日期；Play Console 技術品質規定（程式碼混淆與最佳化、記憶體用量、登入還原）另取名稱、生效月份與門檻
 
 ### `playBilling`：Play Billing Library 淘汰時程
 
@@ -174,9 +179,9 @@
 - 授權或條款：Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款
 - 端點：
   - HTML 網頁 `https://developer.android.com/google/play/billing/deprecation-faq`（條款：<https://developer.android.com/legal>）
-  - XML 檔 `https://dl.google.com/dl/android/maven2/com/android/billingclient/billing/maven-metadata.xml`（條款：<https://policies.google.com/terms>）
-    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
-- 說明：只取各版本的淘汰日期與最新版本號；dl.google.com 的版本檔為 robots.txt 例外（見端點說明）
+  - HTML 網頁 `https://developer.android.com/google/play/billing/release-notes`（條款：<https://policies.google.com/terms>）
+  - HTML 網頁 `https://developer.android.com/google/play/billing/play-developer-apis-deprecations`（條款：<https://policies.google.com/terms>）
+- 說明：只取各版本的淘汰日期與最新版本號（最新版本號取自 release notes 的標題）
 
 ### `pageSize`：Android 16 KB 分頁大小指南
 
@@ -289,11 +294,39 @@
   - JSON 檔 `https://www.apple.com/support/systemstatus/data/developer/system_status_en_US.js`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
 - 說明：只取服務名稱、事件類型、狀態與時間，不轉載 Apple 的說明文字
 
-### `frameworks`：GitHub facebook/react-native releases · Flutter release index
+### `appleDeprecations`：Apple 文件的淘汰標記（收據驗證、伺服器通知）
+
+- 風險：高
+- 授權或條款：Apple 網站使用條款
+- 端點：
+  - JSON 檔 `https://developer.apple.com/tutorials/data/documentation/appstorereceipts.json`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
+  - JSON 檔 `https://developer.apple.com/tutorials/data/documentation/appstoreservernotifications/app-store-server-notifications-v1.json`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
+- 說明：只取文件是否標示淘汰與淘汰版本。只取版本、日期與規定名稱等事實資訊並附原始連結
+
+### `behaviorChanges`：Android 行為變更（以新版本為目標的 App）
+
+- 風險：低
+- 授權或條款：Google 服務條款
+- 端點：
+  - HTML 網頁 `https://developer.android.com/about/versions/17/behavior-changes-17`（條款：<https://policies.google.com/terms>）
+- 說明：只取最新 Android 版本「以該版本為目標的 App」行為變更頁的各項標題，附原始連結（網址隨最新版本號改變）
+
+### `sdkReleases`：Firebase（Apple / Android）與 Google Play services 版本說明
+
+- 風險：中
+- 授權或條款：Google 服務條款
+- 端點：
+  - HTML 網頁 `https://firebase.google.com/support/release-notes/ios`（條款：<https://policies.google.com/terms>）
+  - HTML 網頁 `https://firebase.google.com/support/release-notes/android`（條款：<https://policies.google.com/terms>）
+  - HTML 網頁 `https://developers.google.com/android/guides/releases`（條款：<https://policies.google.com/terms>）
+- 說明：只取近半年版本中需要處理的項目（破壞性變更、最低版本調整、移除的 API、停止發布的管道）與停用日期，附原始連結
+
+### `frameworks`：GitHub react/react-native releases · Flutter release index
 
 - 風險：低
 - 授權或條款：GitHub 服務條款；Flutter 官方版本清單（Flutter 工具本身讀取的公開資料）
 - 端點：
-  - API `https://api.github.com/repos/facebook/react-native/releases`（條款：<https://docs.github.com/site-policy/github-terms/github-terms-of-service>）
+  - API `https://api.github.com/repos/react/react-native/releases`（條款：<https://docs.github.com/site-policy/github-terms/github-terms-of-service>）
   - JSON 檔 `https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json`（條款：<https://policies.google.com/terms>）
+  - HTML 網頁 `https://docs.flutter.dev/release/breaking-changes`（條款：<https://policies.google.com/terms>）
 - 說明：只取版本號、日期與連結；React Native release notes 只計算段落項目數，不轉載內容

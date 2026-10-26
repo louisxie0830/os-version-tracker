@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { calendarSubscriptionUrl, safeUrl } from '../src/safe-url.ts';
 import { externalLink } from '../src/render-actions.ts';
-import { buildCalendar } from '../src/calendar.ts';
+import { buildCalendar, deadlineId } from '../src/calendar.ts';
 import { buildAtomFeed, buildNotificationsJson, type TrackedItem } from '../src/changes.ts';
 import type { Deadline } from '../src/types.ts';
 
@@ -31,9 +31,12 @@ test('calendarSubscriptionUrl only derives webcal from an https site URL', () =>
 });
 
 test('externalLink renders unsafe URLs as plain text', () => {
-  assert.equal(externalLink('https://example.com/', 'Ok'), '<a href="https://example.com/" target="_blank" rel="noopener noreferrer">Ok</a>');
-  assert.equal(externalLink('javascript:alert(1)', 'Click', 'x'), '<span class="x">Click</span>');
-  assert.equal(externalLink(undefined, 'None'), '<span>None</span>');
+  assert.equal(externalLink('https://example.com/', '好'), '<a href="https://example.com/" target="_blank" rel="noopener noreferrer">好</a>');
+  assert.equal(externalLink('javascript:alert(1)', '點我', 'x'), '<span class="x">點我</span>');
+  assert.equal(externalLink(undefined, '沒有'), '<span>沒有</span>');
+  assert.equal(externalLink('https://example.com/', 'Swift 6.4 Released'), '<a lang="en" href="https://example.com/" target="_blank" rel="noopener noreferrer">Swift 6.4 Released</a>', 'an English title says so');
+  assert.equal(externalLink('https://example.com/', 'Swift 6.4 發布'), '<a href="https://example.com/" target="_blank" rel="noopener noreferrer">Swift 6.4 發布</a>', 'mixed with Chinese: the page\'s language');
+  assert.equal(externalLink('https://example.com/', '<code>27.0</code> 1'), '<a href="https://example.com/" target="_blank" rel="noopener noreferrer"><code>27.0</code> 1</a>', 'no words, no language');
   assert.match(externalLink('https://example.com/?a="b"&c=<d>', 'q'), /href="https:\/\/example\.com\/\?a=%22b%22&amp;c=%3Cd%3E"/);
 });
 
@@ -68,4 +71,12 @@ test('feed and notifications only publish safe links', () => {
   assert.match(feed, /<link href="https:\/\/ok\.example\/"\/>/);
   const notifications = JSON.parse(buildNotificationsJson([tracked('data:text/html,x'), tracked('https://ok.example/')], '2026-10-11T00:00:00Z'));
   assert.deepEqual(notifications.items.map((i: { url: string }) => i.url).sort(), ['', 'https://ok.example/']);
+});
+
+test('deadlineId: the latest library version in a billing detail never changes the id; the rest of the detail does', () => {
+  const pbl = (latest: string) => ({ platform: 'Android', date: '2026-08-31', title: 'Play Billing Library 7 停止支援', detail: `仍使用 PBL 7 的新 App 與更新將無法上架。${latest}` });
+  const id = deadlineId(pbl('最新版本為 9.1.0。'));
+  assert.equal(deadlineId(pbl('最新版本為 10.0.0。')), id, 'a library release');
+  assert.equal(deadlineId(pbl('')), id, 'the release notes unavailable this time');
+  assert.notEqual(deadlineId({ ...pbl(''), detail: 'Another policy on the same day' }), id, 'two policies sharing a title and date stay apart');
 });

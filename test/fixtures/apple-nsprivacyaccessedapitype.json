@@ -337,7 +337,7 @@
             "inlineContent": [
              {
               "type": "text",
-              "text": "Second paragraph, ignored."
+              "text": "Second paragraph, kept."
              }
             ]
            }
@@ -624,7 +624,7 @@
             "inlineContent": [
              {
               "type": "text",
-              "text": "Second paragraph, ignored."
+              "text": "Second paragraph, kept."
              }
             ]
            }

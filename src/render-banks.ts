@@ -1,9 +1,9 @@
 import { androidApiLevel } from './android-api.js';
 import type { AllVersions } from './fetch-all.js';
-import { compareVersions } from './fetchers/ios-toolchain.js';
+import { compareVersions } from './versions.js';
 import { bankAppKey, type BankChange } from './history.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
-import { renderSources } from './render-common.js';
+import { renderChoiceChips, renderSources } from './render-common.js';
 
 /** Taiwan bank App minimum versions, with filters, sort and change badges. */
 
@@ -38,10 +38,7 @@ function renderBankFilters(banks: AllVersions['twBanks'], hasChanges: boolean, r
   const majors = (values: Array<string | undefined>) => [...new Set(values.flatMap(v => v?.match(/^\d+/)?.[0] ?? []))].sort((a, b) => Number(a) - Number(b));
   const chips = (group: string, label: string, options: Array<[string, string]>) => `<div class="bank-filter">
       <span class="rail-label">${label}</span>
-      <choice-chips name="${group}"><div class="chips" role="group" aria-label="${label}" data-bank-filter="${group}">
-        <button type="button" class="chip is-active" data-value="all" aria-pressed="true">全部</button>
-        ${options.map(([value, text]) => `<button type="button" class="chip" data-value="${esc(value)}" aria-pressed="false">${esc(text)}</button>`).join('')}
-      </div></choice-chips>
+      ${renderChoiceChips(group, label, [['all', '全部'], ...options], { attrs: `data-bank-filter="${group}"` })}
     </div>`;
   const hasOthers = banks.some(b => (b.kind ?? 'personal') !== 'personal');
   return `<div class="bank-filters">
@@ -100,8 +97,8 @@ export function renderBanksSection(data: AllVersions): string {
     const below = !!(target && requiredTarget && target < requiredTarget);
     return `<tr data-index="${i}" data-kind="${kind}" data-target="${below ? 'below' : 'ok'}" data-target-sort="${target ?? 999}" data-changed="${changedApps.has(bankAppKey(b)) ? 'recent' : 'none'}" data-ios="${esc(majorOf(b.ios?.minOs) ?? '')}" data-android="${esc(majorOf(b.android?.minOs) ?? '')}" data-ios-sort="${sortValue(b.ios?.minOs)}" data-android-sort="${sortValue(b.android?.minOs)}">
       <td class="row-title" data-label="銀行"><strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}${b.kind && BANK_APP_KIND[b.kind] ? ` <span class="badge badge-sm bank-kind">${BANK_APP_KIND[b.kind]}</span>` : ''}</div></td>
-      <td data-label="最低 iOS">${b.ios ? `<span>${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`)}${changeNote(changeOf(b, 'iOS'))}</span>` : '—'}</td>
-      <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`)}${api ? ` <span class="tl-source">API ${api}</span>` : ''}${changeNote(changeOf(b, 'Android'))}</span>` : '—'}</td>
+      <td data-label="最低 iOS">${b.ios ? `<span>${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`, 'nowrap')}${changeNote(changeOf(b, 'iOS'))}</span>` : '—'}</td>
+      <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`, 'nowrap')}${api ? ` <span class="tl-source nowrap">API ${api}</span>` : ''}${changeNote(changeOf(b, 'Android'))}</span>` : '—'}</td>
       <td data-label="targetSdk">${target ? `<span>${target}${below ? ` <span class="bank-change is-up" title="Google Play 規定新 App 與更新須 target ${requiredTarget} 以上；在期限前送出的版本可能仍是舊值">低於 ${requiredTarget}</span>` : ''}</span>` : '—'}</td>
       <td class="bank-updated" data-label="最近更新">${esc(displayDate([b.ios?.updated && `iOS ${b.ios.updated}`, b.android?.updated && `Android ${b.android.updated}`].filter(Boolean).join(' · ')) || '—')}</td>
     </tr>`;
@@ -114,11 +111,11 @@ export function renderBanksSection(data: AllVersions): string {
       <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>
       <div class="tl-source">共 ${banks.length} 個 App${others ? `（個人行動銀行 ${personal.length} 個、企業／收款／認證 ${others} 個）` : ''}；要求最高：iOS ${esc(strictestIos ?? '—')}、Android ${esc(strictestAndroid ?? '—')}；${changedApps.size ? `<strong>近 90 天有 ${changedApps.size} 個 App 調整最低版本</strong>` : '近 90 天沒有 App 調整最低版本'}${requiredTarget ? `；Google Play 目前規定 targetSdk ${requiredTarget}，${belowTarget ? `<strong>${belowTarget} 個 App 的最新版還低於這個值</strong>` : '所有 App 都已達到'}` : ''}</div>
     </div>
-    <bank-table>
+    <bank-table filters="kind ios android changed target">
     ${renderBankFilters(banks, changedApps.size > 0, requiredTarget)}
     <div class="table-wrap"><table class="compat-table stack-on-mobile bank-table">
       <thead><tr><th>銀行 / App</th><th>最低 iOS</th><th>最低 Android</th><th>targetSdk</th><th>最近更新</th></tr></thead>
-      <tbody id="bank-rows">${rows}</tbody>
+      <tbody id="bank-rows" data-search-rows>${rows}</tbody>
     </table></div>
     <p class="feed-empty" id="bank-empty" data-bank-empty hidden>沒有符合篩選的 App。</p>
     </bank-table>

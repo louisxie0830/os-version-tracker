@@ -27,19 +27,20 @@
 ## 運作方式
 
 ```
-push 到 master、手動觸發：驗證（Node 24＋覆蓋率門檻、Node 26）→ 抓取所有來源 → 產生網站 → 頁面檢查 → 部署
+push 到 master、手動觸發：驗證（Node 24＋覆蓋率門檻、瀏覽器 e2e）→ 抓取所有來源 → 產生網站 → 頁面檢查 → 部署
 每天兩次的排程：             抓取所有來源 → 產生網站 → 頁面檢查（只警告）→ 部署
-pull request：            驗證（Node 24＋覆蓋率門檻、Node 26）
+pull request：            驗證（Node 24＋覆蓋率門檻、瀏覽器 e2e）
 ```
 
 驗證是同一份 `.github/workflows/ci.yml`：PR 直接執行，push 與手動觸發時由 `pages.yml` 呼叫，驗證沒過就不會建置與部署；每個 commit 只測一次。排程更新的程式碼已經驗證過，只跑建置與頁面檢查。
 
 - 網站是純靜態檔案，不會休眠。
-- 「首次出現時間」、未送達的通知與警報狀態存在 Actions cache，在各次執行之間延續（建置失敗也會保存）。
-- 超過 40% 的來源抓取失敗時不發布，線上保留上一版。
+- 「首次出現時間」、未送達的通知與警報狀態存在 Actions cache，在各次執行之間延續（建置失敗也會保存）。cache 沒有時改從線上網站的 `state/` 取回；兩邊都沒有、但網站已經上線時，建置會停下來（線上保留上一版），不會默默從頭開始而遺失首次出現時間與銀行 App 歷史。確定要重新開始時，手動執行 workflow 並勾選「new baseline」。
+- 每個來源最後一次成功的資料另存在 Actions cache（含未遮罩的原始資料，所以不放進網站）。某個來源這次失敗、版本號不合理，或筆數突然少於近期最高的一半時，改顯示上次成功的資料，資料來源清單標示「本次抓取失敗，顯示 MM/DD HH:MM 的資料」；超過 7 天的舊資料不再使用。`api.json` 與 `api/*.json` 的格式不變，`sources` 每個來源仍只有 `label`、`url`、`fetchedAt`、`ok`。
+- 超過 40% 的來源抓取失敗時不發布，線上保留上一版；iOS 或 Android 失敗但有 7 天內的舊資料可用時照常發布。新項目的通知不在建置時送出，而是排進狀態裡的佇列，等部署成功後由 workflow 的 notify job 送出（`src/notify.ts`）；部署失敗就不送，留到下一次成功部署時一起送出，所以通知不會指向網站上還沒有的內容。
 - 網站先寫到 `site/` 旁邊的暫存資料夾，檢查必要檔案都在之後才替換 `site/`；建置中途失敗時原本的 `site/` 完整保留。替換時先把舊版改名為備份、新版改名進來、再刪備份，任何一步失敗都會把舊版放回；萬一中途當掉，下次建置會先從備份復原。暫存與備份資料夾的名稱記錄建立它的程序與時間；只有該程序還在、且建立不到 1 小時的才視為進行中（建置 job 上限 15 分鐘），所以 PID 被重複使用也不會讓舊資料夾一直留著。
-- 頁面引用的 `style.css`、`theme.js`、`notifications.js`、元件腳本（`choice-chips.js`、`bank-table.js`、`news-list.js`、`trend-charts.js`）與 `app.js` 都帶 `?v=<檔案內容雜湊>`，內容一改網址就變，不會被舊快取擋住；service worker 對同一檔案的不同版本只保留最新一份離線副本。
-- 所有對外請求都經過 `src/net.ts`：專案的 User-Agent、涵蓋內容下載的逾時、同一網站同時最多 4 個請求（名額保留到內容讀完、取消、出錯或逾時才釋放，釋放時直接交給排隊中的下一個）、遇到 429／502–504 或網路錯誤時重試一次（依 Retry-After 的秒數或日期等待，最多 10 秒）。`fetchText`／`fetchJson`／`fetchBytes` 把「請求＋讀完內容」當成一次嘗試，內容下載到一半斷線也會重試；JSON 格式錯誤、逾時、POST 不重試，所以單一來源最多等一次完整逾時。呼叫端可傳 `signal` 取消，排隊、等待重試或下載中都會立刻停止，錯誤維持 AbortError，與逾時錯誤不同。錯誤訊息只寫主機與路徑，不含 query string。例外（各有原因，測試會檢查清單）：webhook 與 GitHub issues API（網址或權杖是機密，且有自己的重試方式）、gdmf.apple.com 與 robots.txt 檢查（需要 Apple 根憑證，改用 `src/https-get.ts`：一個涵蓋 DNS、連線、標頭與完整內容的總期限、內容大小上限；gdmf 只對暫時性連線錯誤在同一個期限內重試一次）。同一個 feed 在一次更新中只下載一次，更新結束就不再共用。
+- 頁面只引用 `style.css`、`theme.js` 與 `app.js`（所有元件與頁面行為依序串成的單一腳本），都帶 `?v=<檔案內容雜湊>`，內容一改網址就變，不會被舊快取擋住；service worker 對同一檔案的不同版本只保留最新一份離線副本。
+- 所有對外請求都經過 `src/net.ts`：專案的 User-Agent、涵蓋內容下載的逾時、同一網站同時最多 4 個請求（名額保留到內容讀完、取消、出錯或逾時才釋放，釋放時直接交給排隊中的下一個）、遇到 429／502–504 或網路錯誤時重試一次（依 Retry-After 的秒數或日期等待，最多 10 秒）。`fetchText`／`fetchJson`／`fetchBytes` 把「請求＋讀完內容」當成一次嘗試，內容下載到一半斷線也會重試；JSON 格式錯誤、逾時、POST 不重試，所以單一來源最多等一次完整逾時。呼叫端可傳 `signal` 取消，排隊、等待重試或下載中都會立刻停止，錯誤維持 AbortError，與逾時錯誤不同。錯誤訊息只寫主機與路徑，不含 query string。例外（各有原因，測試會檢查清單）：webhook 與 GitHub issues API（網址或權杖是機密，且有自己的重試方式）、gdmf.apple.com 與 robots.txt 檢查（需要 Apple 根憑證，改用 `src/https-get.ts`：一個涵蓋 DNS、連線、標頭與完整內容的總期限、內容大小上限；gdmf 只對暫時性連線錯誤在同一個期限內重試一次）。同一個 feed 或網頁在一次更新中只下載一次，更新結束就不再共用；每個來源整體另有 120 秒的期限，一個來源卡住不會拖住整次更新。
 - 跨次保存的狀態檔以原子方式寫入（先寫暫存檔、同步到磁碟、改名，再同步所在目錄；任何一步失敗都會清掉暫存檔、保留原檔）。讀取時會檢查結構：舊版缺少的欄位補預設值、型別錯誤的欄位或項目重設並在 log 列出欄位名稱（不含內容）；整個檔案無法使用時改名為 `.corrupt-` 備份並從空白開始。
 - 每次建置的 Actions 執行頁面上有「資料來源」摘要表：每個來源的狀態（正常／不完整／失敗）、筆數、抓取時間與失敗原因，問題排在最前面。
 - 資料來源失敗會自動開 issue「[資料來源失敗]」；抓取成功但資料不完整（例如某個欄位在少數 App 缺值、筆數比平常少一半以上）會開「[資料不完整]」，恢復後都會自動關閉。
@@ -101,7 +102,7 @@ image 基於 Node 26 alpine（鎖定 digest）、以非 root 使用者執行、�
 
 ### 頁面檢查
 
-每次建置後，CI 會用無頭 Chrome 在 390、1100、1440px 三種寬度、淺色與深色模式，各載入一次首頁與 `legal/` 底下的三份法律文件，檢查：
+每次建置後，CI 會用無頭 Chrome 在 320、390、1100、1440px 四種寬度、淺色與深色模式，各載入一次首頁與 `legal/` 底下的三份法律文件，檢查：
 
 - 版面：展開所有收合內容後，沒有元素超出畫面右緣
 - 點擊：按鈕與連結沒有被其他元素蓋住，連結不會吃到所在列或卡片以外的點擊
@@ -109,8 +110,10 @@ image 基於 Node 26 alpine（鎖定 digest）、以非 root 使用者執行、�
 - 結構：沒有重複 id、失效的頁內錨點或 id 參照、缺少名稱的控制項、指向不存在檔案的連結
 - 文字對比符合 WCAG AA
 - 卡片裡的文字沒有貼著卡片邊緣（內容漏放在有內距的區塊外）
+- 沒有內容被卡片裁掉（表格比卡片寬、標題把欄位擠出去），表格沒有被擠到一行只剩一兩個字
+- 跳到各區塊的連結停在區塊開頭；通知面板打開後完整在畫面內；頂部列的按鈕不會被擠到第二行；釘住的區塊導覽不會被頂部列蓋住
 
-有任何問題就讓建置失敗，程式修改不會被部署；排程更新只會警告，不擋資料更新。檢查腳本在 `scripts/page-probe.js`。本機可執行：
+有任何問題就讓建置失敗，程式修改不會被部署；排程更新只會警告，不擋資料更新，而且只檢查首頁（法律文件不隨資料變動）。無頭 Chrome 偶爾會卡住：單次超過 90 秒就中止重試，最多 3 次；整個檢查步驟上限 8 分鐘，卡住也不會拖垮整個建置。`CHECK_PAGES=index.html` 可只檢查指定頁面。檢查腳本在 `scripts/page-probe.js`。本機可執行：
 
 ```bash
 npm run build:static && npm run check:page   # 需要 Chrome，可用 CHROME_PATH 指定
@@ -172,10 +175,12 @@ src/
   check-robots.ts  每週 robots.txt 檢查（所有資料來源端點）
   server.ts        Node 伺服器模式
   build-static.ts  靜態網站建置；publish-dir.ts 暫存資料夾建置與替換、復原
-  asset-versions.ts 前端腳本的位置（唯一的解析器：元件來自 dist/browser/，其餘來自 public/）與內容版本（?v=）
-  browser/         前端元件（choice-chips、bank-table、news-list、trend-charts，Light DOM custom elements）的 TypeScript 原始碼；
-                   tsc 編譯成 dist/browser/*.js（一般 <script defer>，非 module），伺服器與靜態建置以網站根目錄的同名 .js 提供
-public/            PWA manifest、service worker、圖示、手寫的前端腳本（theme.js、notifications.js、app.js）
+  asset-versions.ts 前端腳本的來源（唯一的讀取點：app.js 由 dist/browser/ 的各部分依 APP_PARTS 順序串接，theme.js 來自 public/）與內容版本（?v=）
+  component-tags.ts 所有 custom element 的名稱（樣式與測試共用）
+  browser/         app.js 各部分的 TypeScript 原始碼：light-element（共用基底）、toasts，Light DOM custom elements
+                   （choice-chips、activity-filter、bank-table、news-list、trend-charts、page-search、section-nav、notif-center），
+                   以及 page.ts（其餘頁面行為）；tsc 編譯成 dist/browser/*.js（共用全域範圍的一般 script，非 module），串成網站根目錄的 app.js
+public/            PWA manifest、service worker、圖示、手寫的 theme.js（在 <head> 同步載入）
 scripts/           頁面檢查在瀏覽器裡執行的腳本
 design/            分享預覽圖範本（og-image.html，不會部署）
 test/              單元測試與 fixtures（存下來的官方頁面）
@@ -194,7 +199,7 @@ Slack、LINE、Facebook 會快取預覽圖，已分享過的連結要等它們�
 
 ## 資料來源
 
-共 26 個資料來源，每次建置的摘要表會逐一列出：StatCounter Global Stats（版本與手機品牌占比，CC BY-SA 3.0）、App Store / Google Play（台灣區）、Stack Exchange API、Apple（軟體更新目錄、Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 採用率、release notes、安全性更新、隱私文件、開發者系統狀態）、Google（Android Developers Blog、Play 目標 API 等級、Play 政策期限、Play Billing 淘汰時程、16 KB 分頁指南、Android 安全性公告、AGP 相容性與 release notes、Android SDK repository、Google Maven、Flutter 官方版本清單）、CISA KEV、xcodereleases.com、endoflife.date、Gradle、Kotlin、npm registry、Swift.org、Firebase Blog、Apache Cordova、GitHub（actions/runner-images、熱門 SDK 與 Cordova issues、React Native releases、GitHub Advisory Database）。
+共 26 個資料來源，每次建置的摘要表會逐一列出：StatCounter Global Stats（版本與手機品牌占比，CC BY-SA 3.0）、App Store / Google Play（台灣區）、Stack Exchange API、Apple（軟體更新目錄、Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 採用率、release notes、安全性更新、隱私文件、開發者系統狀態）、Google（Android Developers Blog、Play 目標 API 等級、Play 政策期限、Play Console 技術品質規定（程式碼混淆與最佳化、記憶體用量、登入還原）、Play Billing 淘汰時程、16 KB 分頁指南、Android 安全性公告、AGP 相容性與 release notes、Android SDK repository、Google Maven、Flutter 官方版本清單）、CISA KEV、xcodereleases.com、endoflife.date、Gradle、Kotlin、npm registry、Swift.org、Firebase Blog、Apache Cordova、GitHub（actions/runner-images、熱門 SDK 與 Cordova issues、React Native releases、GitHub Advisory Database）。
 
 免責聲明與智慧財產權：[中文](DISCLAIMER.md) · [English](DISCLAIMER.en.md)，網站上的版本在 `legal/`。相關文件：
 

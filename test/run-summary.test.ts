@@ -28,3 +28,11 @@ test('buildRunSummary: a refused publish says why', () => {
   const md = buildRunSummary(sources, { errors: {}, quality: {}, counts: {} }, { publish: false, healthy: 1, total: 3, failed: [], reason: 'too many sources failed' });
   assert.match(md, /❌ 未發布：too many sources failed · 成功 1\/3/);
 });
+
+test('buildRunSummary: a failed source showing its last good result says so, and the headline counts it', () => {
+  const md = buildRunSummary({ ...sources, androidNews: { ...sources.androidNews, staleFrom: '2026-10-16T15:00:00.000Z' } },
+    { errors: { androidNews: 'HTTP 404' }, quality: {}, counts: {} },
+    { publish: true, healthy: 2, total: 3, failed: ['androidNews'], stale: ['androidNews'] });
+  assert.match(md, /\| 🕘 失敗，沿用 10\/16 23:00 的資料 \| `androidNews` \|/);
+  assert.match(md, /失敗 1（其中 1 個沿用上次的資料）/);
+});

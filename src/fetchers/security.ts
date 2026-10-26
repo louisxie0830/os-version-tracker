@@ -1,8 +1,9 @@
-import { fetchJson, NETWORK_TIMEOUT_MS, SLOW_NETWORK_TIMEOUT_MS, USER_AGENT } from '../net.js';
+import { fetchJson, githubHeaders, NETWORK_TIMEOUT_MS, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 import { safeUrl } from '../safe-url.js';
 import { cleanText, fetchHtml } from './html-table.js';
 import { settleSources } from './settle.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
+import { calendarDate } from '../taipei-date.js';
 
 /**
  * Security information that affects mobile apps: Apple security releases for iOS / Safari (WebKit is
@@ -71,8 +72,7 @@ const isoDaysAgo = (now: Date, days: number) => new Date(now.getTime() - days * 
 const cveIds = (text: string) => [...new Set(text.match(/CVE-\d{4}-\d{4,}/g) ?? [])];
 
 function toIsoDate(text: string): string | undefined {
-  const d = new Date(`${text.trim()} UTC`);
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10);
+  return calendarDate(text.trim()) ?? undefined;
 }
 
 // ---------- Apple ----------
@@ -84,11 +84,15 @@ const APPLE_PRODUCTS = /^(?:iOS|iPadOS|Safari|Xcode)\b/;
 /** Rows of Apple's "Security releases" table: name (+ advisory link), availability, release date */
 export function parseAppleSecurityReleases(html: string, now = new Date(), days = 120): AppleSecurityRelease[] {
   const since = isoDaysAgo(now, days);
+  // The release date's column by its header ("Release date"), not the last one: a column added at the end
+  // would otherwise date every release
+  const header = [...(html.match(/<tr[^>]*>(?:(?!<\/tr>)[\s\S])*?<th[\s\S]*?<\/tr>/)?.[0] ?? '').matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map(c => cleanText(c[1]));
+  const dateCol = header.findIndex(h => /release date/i.test(h));
   return [...html.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].flatMap(row => {
     const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => c[1]);
     if (cells.length < 3) return [];
     const name = cleanText(cells[0]).replace(/\s*This update has no published CVE entries\.?/i, '').trim();
-    const date = toIsoDate(cleanText(cells[cells.length - 1]));
+    const date = toIsoDate(cleanText(cells[dateCol >= 0 ? dateCol : cells.length - 1] ?? ''));
     if (!APPLE_PRODUCTS.test(name) || !date || date < since) return [];
     const href = cells[0].match(/href="([^"]+)"/)?.[1];
     const url = href ? safeUrl(new URL(href, APPLE_SECURITY_URL).href) ?? undefined : undefined;
@@ -105,7 +109,7 @@ export function parseAppleAdvisory(html: string): Pick<AppleSecurityRelease, 'cv
   return { cves: cveIds(text).length, exploited: [...new Set(exploited)] };
 }
 
-export async function fetchAppleSecurity(now = new Date(), maxPages = 6): Promise<AppleSecurityRelease[]> {
+export async function fetchAppleSecurity(now = new Date(), maxPages = 12): Promise<AppleSecurityRelease[]> {
   const releases = parseAppleSecurityReleases(await fetchHtml(APPLE_SECURITY_URL), now);
   // Advisory pages add CVE counts and exploitation notes; a failed page just leaves them out
   await Promise.all(releases.filter(r => r.url).slice(0, maxPages).map(async r => {
@@ -124,17 +128,30 @@ export const ANDROID_BULLETINS_URL = 'https://source.android.com/docs/security/b
 
 /** The overview table: bulletin link, languages, published date, security patch levels */
 export function parseAndroidBulletinIndex(html: string, limit = 3): AndroidBulletin[] {
-  const table = html.match(/<table[\s\S]*?<\/table>/)?.[0] ?? '';
+  // The table with a "Published" column (not just the page's first table), its columns found by their headers
+  const tables = [...html.matchAll(/<table[\s\S]*?<\/table>/g)].map(m => m[0]);
+  const headersOf = (table: string) => [...table.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map(c => cleanText(c[1]));
+  const table = tables.find(t => headersOf(t).some(h => /published/i.test(h))) ?? tables[0] ?? '';
+  const headers = headersOf(table);
+  const column = (pattern: RegExp, fallback: number) => {
+    const i = headers.findIndex(h => pattern.test(h));
+    return i >= 0 ? i : fallback;
+  };
+  // A header row without a "Published" column: the table changed, and position 2 might now hold anything
+  // (the patch level read as a date). Only a table with no header row at all falls back to the old layout
+  if (headers.length && !headers.some(h => /published/i.test(h))) throw new Error(`Android bulletin index: no "Published" column (headers: ${headers.join(' | ')})`);
+  const publishedCol = column(/published/i, 2);
+  const patchCol = column(/patch level/i, 3);
   return [...table.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/g)].flatMap(row => {
     const cells = [...row[1].matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)].map(c => c[1]);
     const href = cells[0]?.match(/href="([^"]+)"/)?.[1];
-    const published = cells[2] && toIsoDate(cleanText(cells[2]));
+    const published = cells[publishedCol] && toIsoDate(cleanText(cells[publishedCol]));
     if (!href || !published) return [];
     return [{
       title: `Android Security Bulletin ${cleanText(cells[0])}`,
       url: new URL(href, ANDROID_BULLETINS_URL).href.replace(/\.html$/, ''),
       published,
-      patchLevels: cleanText(cells[3] ?? '').match(/\d{4}-\d{2}-\d{2}/g) ?? [],
+      patchLevels: cleanText(cells[patchCol] ?? '').match(/\d{4}-\d{2}-\d{2}/g) ?? [],
       exploited: [],
     }];
   }).slice(0, limit);
@@ -188,7 +205,12 @@ function kevPlatform(e: KevEntry): SecurityPlatform | null {
 
 export function parseKev(feed: { vulnerabilities?: KevEntry[] }, now = new Date(), days = 180): ExploitedVuln[] {
   const since = isoDaysAgo(now, days);
-  return (feed.vulnerabilities ?? []).flatMap(e => {
+  // The catalog is over a thousand entries with ISO dates: anything else is a changed format, and an empty
+  // result from it would read as "nothing exploited" rather than as a failure
+  const all = feed.vulnerabilities;
+  if (!Array.isArray(all) || all.length < 500) throw new Error(`CISA KEV: expected the full catalog, got ${Array.isArray(all) ? all.length : 'no'} entries`);
+  if (all.filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e?.dateAdded ?? '')).length < all.length * 0.9) throw new Error('CISA KEV: dateAdded is no longer YYYY-MM-DD');
+  return all.flatMap(e => {
     const platform = kevPlatform(e);
     if (!platform || e.dateAdded < since) return [];
     return [{
@@ -262,8 +284,7 @@ export function parseAdvisories(items: GithubAdvisory[], limit = 50): SdkAdvisor
 
 /** One request covers every tracked package; unauthenticated calls share GitHub's 60 / hour limit */
 export async function fetchSdkAdvisories(): Promise<SdkAdvisory[]> {
-  const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'User-Agent': USER_AGENT };
-  if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  const headers = githubHeaders();
   const affects = SDK_PACKAGES.map(p => p.name).join(',');
   return parseAdvisories(await fetchJson<GithubAdvisory[]>(`https://api.github.com/advisories?type=reviewed&per_page=100&affects=${encodeURIComponent(affects)}`, { headers }, NETWORK_TIMEOUT_MS, status => `GitHub advisories HTTP ${status}`));
 }

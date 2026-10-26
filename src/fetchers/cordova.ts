@@ -1,6 +1,7 @@
-import { fetchJson, fetchText, NETWORK_TIMEOUT_MS } from '../net.js';
+import { fetchJson, fetchText, githubHeaders, NETWORK_TIMEOUT_MS } from '../net.js';
 import { settleSources } from './settle.js';
-import { compareVersions } from './ios-toolchain.js';
+import { compareVersions } from '../versions.js';
+import { dayOf } from '../taipei-date.js';
 
 /**
  * Apache Cordova platform releases and what to watch for when upgrading: the latest version (npm),
@@ -86,7 +87,8 @@ export function cleanNoteLine(line: string): string {
 export function parseReleaseNotes(markdown: string): NotesSection[] {
   return markdown.split(/^#{2,3}\s+/m).slice(1).flatMap(part => {
     const [headingLine, ...lines] = part.split('\n');
-    const version = headingLine.match(/^(\d+\.\d+\.\d+(?:-[\w.]+)?)/)?.[1];
+    // "8.1.1", "v8.1.1" or "[8.1.1](link)"
+    const version = headingLine.match(/^\[?v?(\d+\.\d+\.\d+(?:-[\w.]+)?)/)?.[1];
     if (!version) return [];
     const lists = new Map<string, string[]>();
     let current: string[] | null = null;
@@ -109,6 +111,9 @@ const listOf = (section: NotesSection | undefined, heading: RegExp) =>
 
 export function summarizeReleaseNotes(markdown: string, latest: string): Pick<CordovaPlatform, 'majorRelease' | 'breaking' | 'fixes'> {
   const sections = parseReleaseNotes(markdown);
+  // No version section at all: the file's heading style changed. Empty lists would read as "no breaking
+  // changes", so this fails instead (and the last good result stands in)
+  if (!sections.length) throw new Error('RELEASENOTES.md: no version sections found');
   const majorRelease = `${latest.split('.')[0]}.0.0`;
   return {
     majorRelease,
@@ -128,9 +133,7 @@ async function fetchPlatform({ name, platform }: typeof CORDOVA_PLATFORMS[number
   const notes = summarizeReleaseNotes(notesText, manifest.version);
 
   // Release date is a nice-to-have; GitHub's unauthenticated API allows 60 requests an hour
-  const githubHeaders: Record<string, string> = { Accept: 'application/vnd.github+json' };
-  if (process.env.GITHUB_TOKEN) githubHeaders.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  const release = await json<{ published_at?: string }>(`https://api.github.com/repos/apache/${name}/releases/tags/rel/${manifest.version}`, githubHeaders)
+  const release = await json<{ published_at?: string }>(`https://api.github.com/repos/apache/${name}/releases/tags/rel/${manifest.version}`, githubHeaders())
     .catch(() => null);
 
   return {
@@ -138,7 +141,8 @@ async function fetchPlatform({ name, platform }: typeof CORDOVA_PLATFORMS[number
     platform,
     latest: manifest.version,
     node: manifest.engines?.node,
-    releasedAt: release?.published_at?.slice(0, 10),
+    // The Taipei calendar day, as every other date on the site (GitHub gives UTC)
+    releasedAt: release?.published_at ? dayOf(release.published_at) : undefined,
     ...notes,
     notesUrl: `${repo}/blob/master/RELEASENOTES.md`,
     issuesUrl: `${repo}/issues`,

@@ -16,6 +16,11 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      new_baseline:
+        description: 'Start over without the saved state (only when it is really lost: "first seen" times and bank history restart)'
+        type: boolean
+        default: false
 
 # Least privilege: read the repo, and only the deploy job may publish Pages
 permissions:
@@ -27,19 +32,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Code changes (a push, a manual run) are verified first by the same workflow pull requests use: Node 24 with
-  # the coverage floor, and Node 26. Scheduled refreshes rebuild the already-verified code with new data, so
-  # they skip it (the page check below still runs on the new data)
+  # Code changes (a push, a manual run) are verified by the same workflow pull requests use: Node 24 with the
+  # coverage floor and the browser test. It runs alongside the build (the build fetches live data, the slow part),
+  # and nothing is deployed unless it passed. Scheduled refreshes rebuild the already-verified code with new data,
+  # so they skip it (the page check below still runs on the new data)
   verify:
     if: github.event_name != 'schedule'
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read
 
+  # Alongside verify, not after it. A build of code that then fails verification isn't deployed; the state it
+  # saved is still right to keep (its "first seen" times are real, and its queued notifications wait in the state
+  # until a deploy succeeds, see the notify job)
   build:
-    needs: verify
-    # Only after verification passed; a scheduled refresh (verification skipped on purpose) goes straight on
-    if: always() && (needs.verify.result == 'success' || (needs.verify.result == 'skipped' && github.event_name == 'schedule'))
     runs-on: ubuntu-24.04
     # issues: write lets a failing source open (and later close) an alert issue
     permissions:
@@ -54,7 +60,8 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 24
+          # .nvmrc: one place to change the Node version, for every workflow
+          node-version-file: .nvmrc
           cache: npm
 
       # --ignore-scripts: dependencies' install scripts never run on the runner
@@ -80,13 +87,19 @@ jobs:
           # Raises the GitHub API rate limits (crash reports, advisories) and opens source alert issues
           GITHUB_TOKEN: ${{ github.token }}
           ALERT_GITHUB_ISSUES: '1'
+          ALLOW_NEW_BASELINE: ${{ inputs.new_baseline && '1' || '' }}
 
       # Headless Chrome at 390 / 1100 / 1440px, light and dark: layout, clicks, script errors, filters and search,
       # contrast, broken anchors and files. A code change that fails isn't deployed; on scheduled runs (only new
-      # data) it warns instead of blocking
+      # data) it warns instead of blocking, and checks only index.html: the legal pages don't depend on the data.
+      # The step's own time limit keeps a stalled browser from running the job into its timeout, which would
+      # lose the build (no artifact, no deploy) even on a scheduled run
       - name: Check the page at phone, tablet and desktop widths
         continue-on-error: ${{ github.event_name == 'schedule' }}
+        timeout-minutes: 8
         run: npm run check:page
+        env:
+          CHECK_PAGES: ${{ github.event_name == 'schedule' && 'index.html' || '' }}
 
       # Saved even when the build fails, so the next run knows which failures were already alerted
       - name: Save state
@@ -110,16 +123,19 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: Keep the schedule enabled
-        run: gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pages.yml/enable"
+      # The watchdog (refresh-watchdog.yml) runs on its own schedule and would go quiet the same way
+      - name: Keep the schedules enabled
+        run: |
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pages.yml/enable"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/refresh-watchdog.yml/enable"
         env:
           GH_TOKEN: ${{ github.token }}
 
   deploy:
-    needs: build
-    # Scheduled runs intentionally skip verify. Explicitly evaluate the direct build result so that the skipped
-    # verify job does not propagate through the dependency chain and suppress deployment of freshly fetched data.
-    if: always() && needs.build.result == 'success'
+    needs: [verify, build]
+    # Only a verified build: verification passed, or (a scheduled refresh) was skipped on purpose. always() so
+    # the skipped verify of a scheduled run doesn't skip the deploy with it
+    if: always() && needs.build.result == 'success' && (needs.verify.result == 'success' || (needs.verify.result == 'skipped' && github.event_name == 'schedule'))
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -131,3 +147,52 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # Change notifications go out only once the site that shows them is live: the build queues new items in the
+  # state instead of sending them (src/build-static.ts), and this sends the queue (src/notify.ts), then saves
+  # the state without them. A failed deploy sends nothing; the items wait for the next one that succeeds
+  notify:
+    needs: [build, deploy]
+    if: always() && needs.deploy.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # .nvmrc: one place to change the Node version, for every workflow
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      # The state this run's build saved
+      - name: Restore state
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .state
+          key: pages-state-${{ github.run_id }}-${{ github.run_attempt }}
+          # A re-run of this job alone (a new attempt number) finds the state its run's build saved
+          restore-keys: pages-state-${{ github.run_id }}-
+          fail-on-cache-miss: true
+
+      - name: Send queued notifications
+        run: |
+          export SITE_URL="${SITE_URL_OVERRIDE:-https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}}"
+          # The TypeScript run as it is (tsx): no compile step for one small script
+          npx tsx src/notify.ts
+        env:
+          SITE_URL_OVERRIDE: ${{ vars.SITE_URL }}
+          NOTIFY_WEBHOOK_URL: ${{ secrets.NOTIFY_WEBHOOK_URL }}
+
+      # A newer entry than the build's: the next run restores this one (restore-keys takes the newest)
+      - name: Save state
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .state
+          key: pages-state-${{ github.run_id }}-${{ github.run_attempt }}-sent

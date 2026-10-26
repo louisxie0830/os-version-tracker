@@ -32,10 +32,11 @@ export interface LineChartOptions {
 
 const W = 480;
 const H = 230;
-const PAD = { left: 36, right: 80, top: 12, bottom: 26 };
+// The right margin holds the line-end labels ("Samsung · 18.3%")
+const PAD = { left: 36, right: 110, top: 12, bottom: 26 };
 const PLOT_W = W - PAD.left - PAD.right;
 const PLOT_H = H - PAD.top - PAD.bottom;
-const LABEL_GAP = 13;
+const LABEL_GAP = 15;
 
 const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
 
@@ -78,18 +79,41 @@ export function renderLineChart(o: LineChartOptions): string {
   const n = o.xLabels.length;
   const all = o.series.flatMap(s => s.values.filter((v): v is number => v !== null));
   const yMax = o.yMax ?? niceMax(Math.max(0, ...all), o.unit);
-  const x = (i: number) => PAD.left + (n === 1 ? PLOT_W / 2 : (i / (n - 1)) * PLOT_W);
+  // Daily points (the bank snapshots) are placed by date, so a gap of nine days looks like one; months and
+  // anything else are evenly spaced
+  const days = o.xLabels.every(l => /^\d{4}-\d{2}-\d{2}$/.test(l)) ? o.xLabels.map(l => Date.parse(`${l}T00:00:00Z`)) : null;
+  const span = days && n > 1 ? days[n - 1] - days[0] : 0;
+  const x = (i: number) => PAD.left + (n === 1 ? PLOT_W / 2 : span > 0 ? ((days![i] - days![0]) / span) * PLOT_W : (i / (n - 1)) * PLOT_W);
   const y = (v: number) => PAD.top + PLOT_H - (v / yMax) * PLOT_H;
 
   const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => Math.round(yMax * f * 10) / 10);
+  // Percentages on every tick; another unit once, on the top tick ("16 個"), so the axis says what it counts
+  const tickUnit = (t: number) => (o.unit === '%' ? '%' : t === ticks.at(-1) ? esc(o.unit) : '');
   const grid = ticks.map(t => `<line class="chart-grid" x1="${PAD.left}" x2="${PAD.left + PLOT_W}" y1="${y(t)}" y2="${y(t)}"/>
-    <text class="chart-axis" x="${PAD.left - 6}" y="${y(t) + 4}" text-anchor="end">${fmt(t)}${o.unit === '%' ? '%' : ''}</text>`).join('');
+    <text class="chart-axis" x="${PAD.left - 6}" y="${y(t) + 4}" text-anchor="end">${fmt(t)}${tickUnit(t)}</text>`).join('');
   // Every other month when crowded, always ending on the latest one
   const every = n > 8 ? 2 : 1;
   const shown = new Set(o.xLabels.map((_, i) => i).filter(i => (n - 1 - i) % every === 0));
-  // Every other shown tick is "minor": hidden on phones, where the axis text is enlarged
+  // Points placed by date can sit close together (snapshots two days apart): a label too close to the one
+  // before it is left out rather than printed over it. The first and the latest always stay (where the line
+  // starts, and today); the one before the latest gives way to it
+  if (days) {
+    const kept = [...shown].sort((a, b) => a - b);
+    const out: number[] = [];
+    for (const i of kept) {
+      if (!out.length || x(i) - x(out.at(-1)!) >= 40) out.push(i);
+      else if (i === kept.at(-1) && out.length > 1) out[out.length - 1] = i;
+    }
+    shown.clear();
+    for (const i of out) shown.add(i);
+  }
+  // Every other shown tick is "minor": hidden on phones, where the axis text is enlarged. Counted along the ticks
+  // actually shown, from the latest back, so thinned date ticks still alternate (and the latest always shows)
+  const order = [...shown].sort((a, b) => b - a);
+  const minor = (i: number) => order.indexOf(i) % 2 === 1;
   const xTicks = o.xLabels.map((l, i) => shown.has(i)
-    ? `<text class="chart-axis${(n - 1 - i) % (every * 2) === 0 ? '' : ' chart-tick-minor'}" x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(monthTick(l, i === Math.min(...shown)))}</text>`
+    // The first label starts at the axis instead of centring on it, clear of the y axis' "0"
+    ? `<text class="chart-axis${minor(i) ? ' chart-tick-minor' : ''}" x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 && n > 1 ? 'start' : 'middle'}">${esc(monthTick(l, i === Math.min(...shown)))}</text>`
     : '').join('');
 
   const path = (values: Array<number | null>) => values
@@ -112,19 +136,18 @@ export function renderLineChart(o: LineChartOptions): string {
     </g>`;
   }).join('');
 
-  // One transparent column per x value for the hover layer
-  const step = n > 1 ? PLOT_W / (n - 1) : PLOT_W;
+  // One transparent column per x value for the hover layer, reaching halfway to its neighbours (kept inside the
+  // plot, so the first and last columns are half width)
   const hits = o.xLabels.map((_, i) => {
-    // Kept inside the plot, so the first and last columns are half width
-    const left = Math.max(PAD.left, x(i) - step / 2);
-    const right = Math.min(PAD.left + PLOT_W, x(i) + step / 2);
+    const left = n === 1 ? PAD.left : i === 0 ? PAD.left : (x(i - 1) + x(i)) / 2;
+    const right = n === 1 ? PAD.left + PLOT_W : i === n - 1 ? PAD.left + PLOT_W : (x(i) + x(i + 1)) / 2;
     return `<rect class="chart-hit" data-i="${i}" data-cx="${x(i)}" x="${left}" y="${PAD.top}" width="${right - left}" height="${PLOT_H}"/>`;
   }).join('');
 
   const data = JSON.stringify({ x: o.xLabels.map(displayDate), unit: o.unit, series: o.series.map(s => ({ name: s.name, slot: s.slot, values: s.values })) });
   const table = `<details class="chart-table"><summary>以表格檢視</summary><div class="table-wrap"><table class="compat-table">
-      <thead><tr><th>月份</th>${o.series.map(s => `<th>${esc(s.name)}</th>`).join('')}</tr></thead>
-      <tbody>${o.xLabels.map((l, i) => `<tr><td>${esc(displayDate(l))}</td>${o.series.map(s => `<td>${s.values[i] === null ? '—' : `${fmt(s.values[i]!)}${esc(o.unit)}`}</td>`).join('')}</tr>`).join('')}</tbody>
+      <thead><tr><th>${days ? '日期' : '月份'}</th>${o.series.map(s => `<th>${esc(s.name)}</th>`).join('')}</tr></thead>
+      <tbody data-search-rows>${o.xLabels.map((l, i) => `<tr><td>${esc(displayDate(l))}</td>${o.series.map(s => `<td>${s.values[i] === null ? '—' : `${fmt(s.values[i]!)}${esc(o.unit)}`}</td>`).join('')}</tr>`).join('')}</tbody>
     </table></div></details>`;
 
   return `<line-chart><figure class="chart"${o.hidden ? ' hidden' : ''}${o.attrs ? ` ${o.attrs}` : ''} data-chart="${esc(data)}">
@@ -136,7 +159,7 @@ export function renderLineChart(o: LineChartOptions): string {
         ${lines}
         ${hits}
       </svg>
-      <div class="chart-tip" role="status" hidden></div>
+      <div class="chart-tip" aria-hidden="true" hidden></div>
     </div>
     ${table}
   </figure></line-chart>`;

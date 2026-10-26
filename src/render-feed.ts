@@ -1,24 +1,15 @@
-import type { TrackedItem } from './changes.js';
+import { shownDate, type TrackedItem } from './changes.js';
 import { SITE_URL, type AllVersions } from './fetch-all.js';
 import { buildNowCards } from './now.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
 import { calendarSubscriptionUrl, safeUrl } from './safe-url.js';
-import { platformClass, taipeiTime } from './render-common.js';
+import { platformClass, renderChoiceChips, taipeiTime } from './render-common.js';
 import { daysUntil, taipeiToday } from './taipei-date.js';
 
 /** "Now" cards, the feed wall, and the two side rails (filters and section nav; snapshot and subscribe). */
 
-export const KIND_LABEL: Record<TrackedItem['kind'], string> = {
-  deadline: '期限',
-  'apple-news': 'Apple 公告',
-  'android-news': 'Android 公告',
-  'dev-news': '開發者新聞',
-  device: '新機型',
-  crash: 'SDK 閃退',
-  security: '資安',
-  bank: '銀行 App',
-  status: '服務狀態',
-};
+// Kept for existing importers
+export { KIND_LABEL } from './changes.js';
 
 /** Feed filter types; every tracked kind maps to one */
 const FEED_TYPE: Record<TrackedItem['kind'], string> = {
@@ -61,34 +52,36 @@ export function renderNow(data: AllVersions): string {
         <p>${esc(displayDate(c.body))}</p>
       </article>`).join('')
     : '<p class="feed-empty">目前沒有需要立即處理的項目。</p>';
-  return `<section class="feed-section" id="now" aria-labelledby="now-h">
+  return `<section class="feed-section" id="now" data-feed-now aria-labelledby="now-h">
     <h2 class="feed-h" id="now-h">待處理</h2>
     <div class="now-list">${list}</div>
-    <p class="feed-empty" id="now-empty" hidden>沒有符合篩選的項目。</p>
+    <p class="feed-empty" id="now-empty" data-now-empty hidden>沒有符合篩選的項目。</p>
   </section>`;
 }
 
 export function renderFeed(data: AllVersions): string {
-  const sortKey = (item: TrackedItem) => item.firstSeen ?? (item.kind === 'deadline' ? '' : item.date);
-  const items = [...data.tracked].sort((a, b) => sortKey(b).localeCompare(sortKey(a))).slice(0, 80);
+  const items = [...data.tracked].sort((a, b) => shownDate(b).localeCompare(shownDate(a))).slice(0, 80);
   const rows = items.map((item, i) => {
     const type = FEED_TYPE[item.kind];
-    const date = (item.firstSeen ?? item.date).slice(5, 10).replace('-', '/');
-    return `<li class="feed-row${i >= FEED_SHOWN ? ' feed-extra' : ''}" data-feed-item data-type="${esc(type)}" data-platform="${esc(item.platform)}" data-key="feed:${esc(item.id)}"${i >= FEED_SHOWN ? ' hidden' : ''}>
+    const date = shownDate(item).slice(5, 10).replace('-', '/');
+    return `<li class="feed-row${i >= FEED_SHOWN ? ' list-extra' : ''}" data-feed-item data-type="${esc(type)}" data-platform="${esc(item.platform)}" data-key="feed:${esc(item.id)}">
       <span class="feed-date">${esc(date)}</span>
       <span class="feed-main">${externalLink(item.url, esc(displayDate(item.title)), 'feed-title')}${item.author ? `<span class="feed-author">作者 ${esc(item.author.name)}</span>` : ''}</span>
       <span class="feed-tags"><span class="tl-platform ${platformClass(item.platform)}">${esc(item.platform)}</span><span class="${typeClass(type)}">${esc(type)}</span></span>
     </li>`;
   }).join('');
+  // Rows past the first FEED_SHOWN wait behind "show more" (the stylesheet hides them only when script runs)
+  const capped = items.length > FEED_SHOWN;
   return `<section class="feed-section" id="feed" aria-labelledby="feed-h">
     <div class="feed-head">
       <h2 class="feed-h" id="feed-h">最新動態</h2>
-      <span class="feed-count">最近 7 天新增 ${data.recent.length} 項</span>
+      <span class="feed-count" data-feed-count>最近 7 天新增 ${data.recent.length} 項</span>
     </div>
     <div class="feed-box">
-      ${items.length ? `<ul class="feed-list">${rows}</ul>` : ''}
-      <p class="feed-empty" id="feed-empty"${items.length ? ' hidden' : ''}>${items.length ? '沒有符合篩選的動態。' : '目前沒有動態。'}</p>
-      ${items.length > FEED_SHOWN ? `<button type="button" class="feed-more" id="feed-more">載入更多（共 ${items.length} 項）</button>` : ''}
+      ${items.length ? `<ul class="feed-list${capped ? ' is-collapsed' : ''}"${capped ? ' data-capped' : ''}>${rows}</ul>` : ''}
+      <p class="feed-empty" id="feed-empty" data-feed-empty${items.length ? ' hidden' : ''}>${items.length ? '沒有符合篩選的動態。' : '目前沒有動態。'}</p>
+      <p class="sr-only" role="status" data-filter-status></p>
+      ${capped ? `<button type="button" class="feed-more" id="feed-more" data-show-more>載入更多（共 ${items.length} 項）</button>` : ''}
     </div>
   </section>`;
 }
@@ -100,23 +93,20 @@ const SECTION_LINKS: Array<[string, string]> = [
 ];
 
 export function renderFilterRail(): string {
-  const chips = (group: string, values: string[]) => `<choice-chips name="${group}"><div class="chips" role="group" data-filter-group="${group}">
-      <button type="button" class="chip is-active" data-value="all" aria-pressed="true">全部</button>
-      ${values.map(v => `<button type="button" class="chip" data-value="${esc(v)}" aria-pressed="false">${esc(v)}</button>`).join('')}
-    </div></choice-chips>`;
+  const chips = (group: string, label: string, values: string[]) => renderChoiceChips(group, label, [['all', '全部'], ...values.map((v): [string, string] => [v, v])], { attrs: `data-filter-group="${group}"` });
   return `<aside class="rail rail-left" aria-label="篩選與頁面區塊">
     <div class="rail-group">
       <span class="rail-label" id="filter-type">類型</span>
-      ${chips('type', FEED_TYPES)}
+      ${chips('type', '篩選類型', FEED_TYPES)}
     </div>
     <div class="rail-group">
       <span class="rail-label">平台</span>
-      ${chips('platform', FEED_PLATFORMS)}
+      ${chips('platform', '篩選平台', FEED_PLATFORMS)}
     </div>
-    <nav class="section-nav" aria-label="頁面區塊">
+    <section-nav><nav class="section-nav" aria-label="頁面區塊">
       <span class="rail-label">頁面區塊</span>
       ${SECTION_LINKS.map(([id, label]) => `<a href="#${id}">${label}</a>`).join('')}
-    </nav>
+    </nav></section-nav>
   </aside>`;
 }
 
@@ -136,8 +126,10 @@ export function renderSnapshotRail(data: AllVersions): string {
   ];
   // Taiwan's today, so the morning build (still yesterday in UTC) doesn't count one day too many
   const today = taipeiToday();
-  const next = data.timeline.filter(d => d.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
-  const days = next ? daysUntil(next.date) ?? 0 : 0;
+  // A deadline that was extended counts from its extension while that's still ahead (the original is past)
+  const due = (d: AllVersions['timeline'][number]) => (d.extensionDate && d.extensionDate >= today && d.date < today ? d.extensionDate : d.date);
+  const next = data.timeline.filter(d => due(d) >= today).sort((a, b) => due(a).localeCompare(due(b)))[0];
+  const days = next ? daysUntil(due(next)) ?? 0 : 0;
   return `<aside class="rail rail-right" aria-label="版本快照">
     <div class="snap">
       <span class="rail-label">目前版本</span>
@@ -146,7 +138,7 @@ export function renderSnapshotRail(data: AllVersions): string {
     ${next ? `<div class="next-deadline">
       <span class="rail-label">下一個期限</span>
       <span class="next-days">${days}<small>天</small></span>
-      <span class="next-title">${esc(displayDate(next.date))} · ${esc(next.title)}</span>
+      <span class="next-title">${esc(displayDate(due(next)))} · ${esc(next.title)}${due(next) !== next.date ? '（已申請延長者的期限）' : ''}</span>
       <a href="#deadlines">完整期限時間軸</a>
     </div>` : ''}
     <div class="subscribe-card" id="subscribe">

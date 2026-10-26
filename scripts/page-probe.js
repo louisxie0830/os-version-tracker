@@ -24,7 +24,8 @@
     const r = el.getBoundingClientRect();
     const s = getComputedStyle(el);
     return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && !el.closest('[hidden]')
-      && !(el.closest('details:not([open])') && !el.closest('summary'));
+      // Inside a closed <details>, only its own summary shows (not one of a <details> nested in it)
+      && !(el.closest('summary') ? el.closest('summary').parentElement.parentElement?.closest('details:not([open])') : el.closest('details:not([open])'));
   };
   const instant = top => scrollTo({ top, behavior: 'instant' });
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -35,7 +36,8 @@
     for (const [id, n] of ids) if (n > 1) add('duplicate id', `${id} ×${n}`);
     for (const a of document.querySelectorAll('a[href^="#"]')) {
       const id = decodeURIComponent(a.getAttribute('href').slice(1));
-      if (id && !document.getElementById(id)) add('link to a missing anchor', `${describe(a)} → #${id}`);
+      // A hidden link (the section list hides links to sections not on the page) can't be followed
+      if (id && !document.getElementById(id) && !a.closest('[hidden]')) add('link to a missing anchor', `${describe(a)} → #${id}`);
     }
     for (const el of document.querySelectorAll('[aria-controls], [aria-labelledby], [aria-describedby], label[for]')) {
       for (const attr of ['aria-controls', 'aria-labelledby', 'aria-describedby', 'for']) {
@@ -102,6 +104,68 @@
     if (document.documentElement.scrollWidth > width) add(`page wider than the screen${when}`, `${document.documentElement.scrollWidth}px > ${width}px`);
   }
 
+  // Content cut off by a box that hides its overflow (a table wider than its card, a header pushing a column
+  // out): nothing to scroll to, so it's simply gone. A scroller in between (overflow auto/scroll) is fine
+  function clipped() {
+    for (const el of document.querySelectorAll('main *, .rail *')) {
+      if (!visible(el) || el.closest('svg, .sr-only, .chart-plot') || !el.textContent.trim()) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0) continue;
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const ox = getComputedStyle(p).overflowX;
+        if (ox === 'auto' || ox === 'scroll') break;
+        if (ox !== 'hidden' && ox !== 'clip') continue;
+        // An ellipsis cut is a choice, not an accident
+        if (getComputedStyle(p).textOverflow === 'ellipsis' || getComputedStyle(el).textOverflow === 'ellipsis') break;
+        const box = p.getBoundingClientRect();
+        const cut = Math.max(r.right - box.right, box.left - r.left);
+        if (cut > 2) add('cut off by its box', `${describe(el)} (${Math.round(cut)}px outside ${describe(p)})`);
+        break;
+      }
+    }
+  }
+
+  // A table squeezed so hard that its text breaks a character or two per line ("App/le/軟/體"): one piece of
+  // text over three lines or more, averaging under four characters a line (separate pieces stacked on purpose,
+  // a bank's name over its app's, don't count)
+  function squeezedTables() {
+    for (const cell of document.querySelectorAll('td, th')) {
+      if (!visible(cell) || getComputedStyle(cell).display !== 'table-cell') continue;
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent.trim();
+        if (text.length < 3) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const lines = new Set([...range.getClientRects()].filter(r => r.width > 0).map(r => Math.round(r.top))).size;
+        if (lines >= 3 && text.length / lines < 4) {
+          add('table column squeezed', `${describe(cell)} "${text.slice(0, 20)}" (${lines} lines)`);
+          break;
+        }
+      }
+    }
+  }
+
+  // A link to a section (the section list, a copied link, #banks in the address) lands with the section's top
+  // just under the sticky header: not thousands of pixels off (lazily laid out sections once did that), and
+  // not hidden under the header
+  function anchors() {
+    const root = document.documentElement;
+    const smooth = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto'; // smooth scrolling doesn't advance in this headless run
+    const padding = parseFloat(getComputedStyle(root).scrollPaddingTop) || 0;
+    for (const section of document.querySelectorAll('main > section[id]')) {
+      if (!visible(section)) continue;
+      location.hash = section.id;
+      const top = section.getBoundingClientRect().top;
+      const atBottom = innerHeight + scrollY >= root.scrollHeight - 2;
+      if (Math.abs(top - padding) > 24 && !(atBottom && top > padding)) add('section link lands off target', `#${section.id} top ${Math.round(top)}px, expected ~${Math.round(padding)}px`);
+    }
+    history.replaceState(null, '', location.pathname + location.search);
+    scrollTo(0, 0);
+    root.style.scrollBehavior = smooth;
+  }
+
   // Text inside a card must not touch the card's left or right border (content outside its padded body)
   function flushText() {
     for (const el of document.querySelectorAll('.case *')) {
@@ -136,9 +200,15 @@
     for (const el of document.querySelectorAll('body *')) {
       if (el.closest('svg') || ![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) || !visible(el)) continue;
       const s = getComputedStyle(el);
-      const fg = rgb(s.color);
+      const color = rgb(s.color);
       const bg = background(el);
-      if (!fg || !bg || (fg.length === 4 && fg[3] < 0.9) || Number(s.opacity) < 1) continue;
+      if (!color || !bg) continue;
+      // What the eye sees: the text colour's own alpha times every opacity on the way up, blended over the
+      // background (an opacity:.8 on muted text is how 300 low-contrast notes slipped through before)
+      let alpha = color.length === 4 ? color[3] : 1;
+      for (let p = el; p && p !== document.body; p = p.parentElement) alpha *= Number(getComputedStyle(p).opacity);
+      if (alpha < 0.1) continue; // hidden on purpose (shown on hover or focus)
+      const fg = color.slice(0, 3).map((c, i) => c * alpha + bg[i] * (1 - alpha));
       const [hi, lo] = [lum(fg), lum(bg)].sort((a, b) => b - a);
       const ratio = (hi + 0.05) / (lo + 0.05);
       const size = parseFloat(s.fontSize);
@@ -154,18 +224,17 @@
   async function interactions() {
     const tick = () => wait(30);
     const resetChips = () => document.querySelectorAll('[data-filter-group], [data-bank-filter], .news-filters').forEach(g => g.querySelector('.chip')?.click());
-    // The custom elements in the page are defined
-    for (const tag of ['choice-chips', 'bank-table', 'news-list', 'chart-switch', 'line-chart']) {
-      if (document.querySelector(tag) && !customElements.get(tag)) add('component not defined', tag);
-    }
+    // Every custom element in the page is defined (a standard element always is)
+    for (const tag of new Set([...document.querySelectorAll(':not(:defined)')].map(el => el.localName))) add('component not defined', tag);
     for (const chip of document.querySelectorAll('.chip')) {
       if (!visible(chip)) continue;
       chip.click();
       await tick();
-      // In a choice-chips group the clicked chip is the only active one, and aria-pressed says so
+      // In a choice-chips radio group the clicked chip is the only active one and the only tab stop, and
+      // aria-checked says so
       const group = chip.closest('choice-chips');
       for (const c of group ? group.querySelectorAll('.chip') : []) {
-        if (c.classList.contains('is-active') !== (c === chip) || c.getAttribute('aria-pressed') !== String(c === chip)) {
+        if (c.classList.contains('is-active') !== (c === chip) || c.getAttribute('aria-checked') !== String(c === chip) || c.tabIndex !== (c === chip ? 0 : -1)) {
           add('chip state out of step', `${describe(chip)}: ${describe(c)}`);
         }
       }
@@ -184,18 +253,30 @@
       if (!hit || !tip || !cross || !visible(chart.querySelector('figure'))) continue;
       hit.dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
       if (tip.hidden || !tip.querySelector('strong')?.textContent || cross.getAttribute('visibility') !== 'visible') add('chart tooltip', `no tooltip on ${describe(chart.querySelector('svg'))}`);
-      chart.querySelector('svg').dispatchEvent(new PointerEvent('pointerleave'));
-      if (!tip.hidden || cross.getAttribute('visibility') !== 'hidden') add('chart tooltip', `tooltip stays after leaving ${describe(chart.querySelector('svg'))}`);
+      const svg = chart.querySelector('svg');
+      svg.dispatchEvent(new PointerEvent('pointerleave'));
+      if (!tip.hidden || cross.getAttribute('visibility') !== 'hidden') add('chart tooltip', `tooltip stays after leaving ${describe(svg)}`);
+      // The keyboard: focusing shows the month last shown, End the latest, the arrow keys move along, leaving hides it
+      svg.focus();
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+      const last = tip.querySelector('strong')?.textContent;
+      svg.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      const before = tip.querySelector('strong')?.textContent;
+      if (document.activeElement !== svg || tip.hidden || !last || before === last) add('chart keyboard', `arrow keys don't move along ${describe(svg)}`);
+      svg.blur();
+      if (!tip.hidden) add('chart keyboard', `tooltip stays after focus leaves ${describe(svg)}`);
     }
     resetChips();
     await tick();
     overflow(' (after using every filter)');
 
-    // Feed filters: each choice shows rows or the empty message
+    // Feed filters: each choice shows rows or the empty message, and the address keeps it
     for (const group of document.querySelectorAll('[data-filter-group]')) {
       for (const chip of group.querySelectorAll('.chip')) {
         chip.click();
         await tick();
+        const kept = new URLSearchParams(location.search).get(`f-${group.dataset.filterGroup}`);
+        if (kept !== (chip.dataset.value === 'all' ? null : chip.dataset.value)) add('filter not kept in the address', `${group.dataset.filterGroup}: "${chip.dataset.value}", address says ${kept}`);
         const feed = document.getElementById('feed');
         if (feed && ![...feed.querySelectorAll('[data-feed-item]')].some(visible) && ![...feed.querySelectorAll('.feed-empty')].some(visible)) {
           add('filter leaves a blank list', `feed: "${chip.textContent.trim()}"`);
@@ -234,6 +315,16 @@
       sort.value = sort.options[0]?.value;
       sort.dispatchEvent(new Event('change'));
     }
+    // "Show more" lists: the rows past the cap wait until the button is used, then show
+    for (const more of document.querySelectorAll('[data-show-more]')) {
+      const list = more.closest('activity-filter, news-list')?.querySelector('[data-capped]');
+      const extras = [...(list?.querySelectorAll(':scope > .list-extra') ?? [])];
+      if (!list || !extras.length) { add('show more', `${describe(more)} without a capped list`); continue; }
+      if (!visible(more) || extras.some(visible)) add('show more', `${describe(list)} not capped before "show more"`);
+      more.click();
+      await tick();
+      if (visible(more) || !extras.every(visible)) add('show more', `${describe(list)}: rows still hidden after "show more"`);
+    }
     // Every other button in the page body ("show more", copy link, back to top…)
     for (const button of document.querySelectorAll('main button, aside button')) {
       if (!visible(button) || button.classList.contains('chip')) continue;
@@ -250,6 +341,11 @@
         if (![...document.querySelectorAll('main > section')].some(visible)) add('search', `"${q}" hides every section`);
         overflow(` (searching "${q}")`);
       }
+      // The summary's count of "now" cards and feed rows is the number shown
+      await type('iOS');
+      const said = Number(document.querySelector('[data-search-summary]')?.textContent.match(/待處理與動態 (\d+) 筆/)?.[1]);
+      const shown = [...document.querySelectorAll('[data-feed-item]')].filter(visible).length;
+      if (said !== shown) add('search', `summary says ${said} "now" and feed rows, ${shown} shown`);
       await type('zzqqxxnomatch');
       if (!visible(document.getElementById('search-status'))) add('search', 'no message when nothing matches');
       await type('');
@@ -257,6 +353,39 @@
       if (hidden.length) add('search', `clearing the search leaves sections hidden: ${hidden.join(', ')}`);
     }
 
+    // Notification center: opening moves focus into the panel, Escape closes it and returns focus to the
+    // bell; every item is a link or a button (both reachable and usable with the keyboard)
+    const bell = document.querySelector('[data-notif-bell]');
+    const panel = document.querySelector('[data-notif-panel]');
+    if (bell && panel) {
+      bell.click();
+      await tick();
+      if (panel.hidden || !panel.contains(document.activeElement)) add('notification center', 'opening leaves focus outside the panel');
+      // All of the open panel on screen (on a narrow screen it once opened mostly off the left edge)
+      const box = panel.getBoundingClientRect();
+      const width = document.documentElement.clientWidth;
+      if (box.left < -1 || box.right > width + 1) add('notification center', `the open panel reaches past the screen (${Math.round(box.left)}–${Math.round(box.right)}px of ${width}px)`);
+      // The top bar fits its contents on its first row: brand, theme and bell together
+      const brand = document.querySelector('.brand');
+      if (brand && Math.abs(brand.getBoundingClientRect().top - bell.getBoundingClientRect().top) > 12) add('top bar', 'the bell wrapped onto a row of its own');
+      for (const entry of panel.querySelectorAll('.notif-item > *')) {
+        if (!(entry.matches('a[href]') || entry.matches('button'))) add('notification center', `${describe(entry)} is neither a link nor a button`);
+      }
+      document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await tick();
+      if (!panel.hidden || document.activeElement !== bell) add('notification center', 'Escape does not close the panel back to the bell');
+    }
+    // The section nav, where it's pinned under the top bar, isn't hidden behind it
+    const nav = document.querySelector('.section-nav');
+    const topbar = document.querySelector('.topbar');
+    if (nav && topbar && getComputedStyle(nav).position === 'sticky') {
+      scrollTo(0, document.documentElement.scrollHeight / 3);
+      await tick();
+      const navTop = nav.getBoundingClientRect().top;
+      const barBottom = topbar.getBoundingClientRect().bottom;
+      if (navTop < barBottom - 2) add('section nav', `pinned at ${Math.round(navTop)}px, under the top bar (which ends at ${Math.round(barBottom)}px)`);
+      scrollTo(0, 0);
+    }
     // Theme toggle switches and switches back
     const toggle = document.getElementById('theme-toggle');
     // Only the main page has the toggle (the legal pages follow the saved theme)
@@ -269,10 +398,14 @@
       toggle.click();
       await tick();
     }
-    // Section links point at visible sections
+    // Section links point at visible sections; a link whose section isn't on the page is hidden
     for (const a of document.querySelectorAll('.section-nav a[href^="#"]')) {
-      if (!visible(document.getElementById(a.getAttribute('href').slice(1)))) add('section link to a hidden section', a.getAttribute('href'));
+      const section = document.getElementById(a.getAttribute('href').slice(1));
+      if (!section) { if (visible(a)) add('section link to a missing section', a.getAttribute('href')); }
+      else if (!visible(section)) add('section link to a hidden section', a.getAttribute('href'));
     }
+    // The capped lists keep has-js: app.js ran
+    if (document.querySelector('[data-capped]') && !document.documentElement.classList.contains('has-js')) add('show more', 'has-js dropped although the components are defined');
   }
 
   addEventListener('load', () => setTimeout(async () => {
@@ -288,6 +421,9 @@
       strayClicks();
       contrast();
       flushText();
+      clipped();
+      squeezedTables();
+      anchors();
       await interactions();
       report.localRefs = [...new Set([...document.querySelectorAll('a[href], link[href], script[src], img[src]')]
         .map(el => el.getAttribute('href') ?? el.getAttribute('src'))

@@ -93,7 +93,9 @@ test('routes keep their own friendly errors (the boundary is only for what they 
   const s = await serve(createHandler(() => Promise.reject(new Error('upstream down')), () => undefined));
   try {
     assert.deepEqual(JSON.parse((await s.request('/api.json')).body.toString()), { error: 'Failed to fetch versions' });
-    assert.deepEqual(JSON.parse((await s.request('/calendar.ics')).body.toString()), { error: 'Failed to build calendar' });
+    const ics = await s.request('/calendar.ics');
+    assert.equal(ics.body.toString(), 'Failed to build calendar', 'plain text, not JSON pretending to be a calendar');
+    assert.equal(ics.headers['access-control-allow-origin'], '*', 'a data route\'s error is readable cross-origin too');
     assert.match((await s.request('/')).body.toString(), /無法取得版本資料/);
   } finally {
     await s.close();
@@ -268,6 +270,34 @@ test('the same content compressed to different bytes gets a different strong ETa
     const identity = await s.request('/api.json');
     assert.equal(identity.headers.etag, bytesTag(identity.body));
     assert.equal((await s.request('/api.json', { 'If-None-Match': String(b.headers.etag) })).status, 200);
+  } finally {
+    await s.close();
+  }
+});
+
+test('server mode answers the static site\'s paths, refuses other methods, and marks data routes cross-origin', async () => {
+  const snap = JSON.parse((await import('node:fs')).readFileSync(new URL('./fixtures/all-versions.json', import.meta.url), 'utf8'));
+  const s = await serve(createHandler(async () => snap, () => ({ value: snap, fetchedAt: Date.now() })));
+  try {
+    const page = await s.request('/index.html');
+    assert.equal(page.status, 200);
+    assert.equal(page.headers['cache-control'], 'no-cache');
+    const legal = await s.request('/legal');
+    assert.deepEqual([legal.status, legal.headers.location], [301, '/legal/']);
+    assert.equal((await s.request('/legal/en')).headers.location, '/legal/en/');
+    assert.equal((await s.request('/health.json')).status, 200);
+    const api = await s.request('/api.json');
+    assert.equal(api.headers['access-control-allow-origin'], '*');
+    assert.equal(api.headers['cache-control'], 'public, max-age=300');
+    for (const path of ['/feed.xml', '/calendar.ics', '/notifications.json', '/api/versions.json']) {
+      assert.equal((await s.request(path)).headers['access-control-allow-origin'], '*', path);
+    }
+    assert.equal((await s.request('/')).headers['access-control-allow-origin'], undefined, 'the page itself isn\'t data');
+    const post = await s.request('/api.json', {}, 'POST');
+    assert.deepEqual([post.status, post.headers.allow], [405, 'GET, HEAD']);
+    const preflight = await s.request('/api/versions.json', {}, 'OPTIONS');
+    assert.deepEqual([preflight.status, preflight.headers['access-control-allow-origin']], [204, '*']);
+    assert.equal((await s.request('/legal/en/index.html')).status, 200, 'a legal page by its file name');
   } finally {
     await s.close();
   }

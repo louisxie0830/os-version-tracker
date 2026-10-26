@@ -1,6 +1,7 @@
 import type { OSVersionInfo } from '../types.js';
 import { fetchJson, NETWORK_TIMEOUT_MS } from '../net.js';
 import { fetchFeed } from './feed.js';
+import { feedDay } from '../taipei-date.js';
 
 export interface EndOfLifeAndroid {
   cycle: string;
@@ -33,7 +34,11 @@ export function parseBetaTitle(title: string): string | null {
   const ordinal = ordinalMatch && ORDINALS[ordinalMatch[1].toLowerCase()];
   if (ordinal) return `${base} Beta ${ordinal}`;
 
-  // "Developer Preview"
+  // "Developer Preview 2" → numbered style
+  const dpNumber = title.match(/Developer\s+Preview\s*(\d+)/i);
+  if (dpNumber) return `${base} DP${dpNumber[1]}`;
+
+  // "The Second Developer Preview of Android 18" → ordinal style
   const dpOrdinal = title.match(/(\w+)\s+Developer\s+Preview/i);
   if (dpOrdinal) {
     const word = dpOrdinal[1].toLowerCase();
@@ -45,7 +50,7 @@ export function parseBetaTitle(title: string): string | null {
 }
 
 /** Newest Android beta / developer preview post in the Android Developers Blog feed */
-export function parseBetaFeed(items: Array<{ title?: string; isoDate?: string }>): OSVersionInfo | null {
+export function parseBetaFeed(items: Array<{ title?: string; isoDate?: string; pubDate?: string; published?: string }>): OSVersionInfo | null {
   const betaEntry = items.find(item => {
     const title = item.title ?? '';
     return /\b(Beta|Developer Preview)\b/i.test(title) && /\bAndroid\s+\d/i.test(title);
@@ -55,7 +60,7 @@ export function parseBetaFeed(items: Array<{ title?: string; isoDate?: string }>
   return {
     platform: 'Android',
     version: parseBetaTitle(title) ?? title,
-    releaseDate: betaEntry.isoDate ? betaEntry.isoDate.split('T')[0] : 'unknown',
+    releaseDate: feedDay(betaEntry.published ?? betaEntry.pubDate ?? betaEntry.isoDate) ?? 'unknown',
     isBeta: true,
   };
 }
@@ -73,6 +78,17 @@ export function parseEndOfLifeAndroid(data: EndOfLifeAndroid[]): OSVersionInfo {
   };
 }
 
+/**
+ * A beta of a major version that is already stable. A QPR beta of the current major is a later update, so it
+ * still counts as upcoming; a QPR beta of an older major doesn't.
+ */
+export function androidBetaShipped(beta: OSVersionInfo, stable: OSVersionInfo): boolean {
+  const betaMajor = Number(beta.version.match(/Android\s+(\d+)/i)?.[1]);
+  const stableMajor = Number(stable.version.match(/(\d+)/)?.[1]);
+  if (!Number.isFinite(betaMajor) || !Number.isFinite(stableMajor)) return false;
+  return /\bQPR\d/i.test(beta.version) ? betaMajor < stableMajor : betaMajor <= stableMajor;
+}
+
 async function fetchBetaFromBlog(): Promise<OSVersionInfo | null> {
   return parseBetaFeed((await fetchFeed(BLOG_FEED)).items);
 }
@@ -83,7 +99,8 @@ export async function fetchAndroidVersions(): Promise<OSVersionInfo[]> {
   // Fetch beta version from Android Developers Blog
   try {
     const beta = await fetchBetaFromBlog();
-    if (beta) {
+    // The blog's newest beta post can be for a version that has since shipped ("Android 17 Beta 4" after 17)
+    if (beta && !androidBetaShipped(beta, results[0])) {
       results.push(beta);
     }
   } catch (err) {
