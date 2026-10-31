@@ -179,7 +179,9 @@ test('twBanks: the tracked Taiwan Bank app com.bot.ibank is present and its Play
 
   const original = globalThis.fetch;
   try {
-    globalThis.fetch = (async () => new Response(fixture('tw-banks-play-cube-zh.html'))) as typeof fetch;
+    globalThis.fetch = (async (url: string | URL | Request) => String(url).includes('itunes.apple.com')
+      ? Response.json({ results: [] })
+      : new Response(fixture('tw-banks-play-cube-zh.html'))) as typeof fetch;
     const [row] = await fetchTaiwanBankApps([app]);
     assert.equal(row.app, '臺銀行動+');
     assert.equal(row.android?.minOs, '9');
