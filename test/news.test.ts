@@ -57,3 +57,12 @@ test('toNewsItems: a post whose text asks developers to act is important even wh
   assert.equal(domain.important, true);
   assert.equal(plain.important, false);
 });
+
+test('parseNewsFeed: Android Developers Atom feed remains parseable after source format changes', async () => {
+  const news = await parseNewsFeed(fixture('android-news.atom'), 'android');
+  assert.equal(news.length, 1);
+  assert.equal(news[0].title, 'Android API policy changes for developers');
+  assert.equal(news[0].url, 'https://developer.android.com/blog/posts/policy-changes');
+  assert.equal(news[0].date, '2026-10-16');
+  assert.equal(news[0].important, true);
+});
