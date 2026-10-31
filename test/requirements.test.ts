@@ -270,3 +270,20 @@ test('mergeAppleRequirements: one requirement on several pages kept once; a word
     'Apple Developer News：macOS：Upcoming expiration of Developer ID Certification Authority',
   ]);
 });
+
+test('Play policy: a timeout remains a source failure and does not trigger locale fallback', async () => {
+  const original = globalThis.fetch;
+  const urls: string[] = [];
+  setRetryDelay(0);
+  try {
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      urls.push(String(url));
+      throw new Error('Timed out after 20s: support.google.com/googleplay/android-developer/table/12921780');
+    }) as typeof fetch;
+    await assert.rejects(fetchPlayPolicyDeadlines(), /Timed out after 20s/);
+    assert.deepEqual(urls, [PLAY_POLICY_URL, PLAY_POLICY_URL], 'the request layer retries once; only 429 selects the alternate locale');
+  } finally {
+    globalThis.fetch = original;
+    setRetryDelay(1500);
+  }
+});
