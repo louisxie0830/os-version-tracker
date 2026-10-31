@@ -172,3 +172,19 @@ test('fetchTaiwanBankApps: both stores failing is the source failing; an empty i
   assert.equal(app.ios?.minOs, '15.0');
   assert.equal(app.android, undefined, 'Play down: that half is missing, not the app');
 });
+
+test('twBanks: the tracked Taiwan Bank app com.bot.ibank is present and its Play data is retained', async () => {
+  const app = TW_BANK_APPS.find(a => a.playPackage === 'com.bot.ibank');
+  assert.ok(app, 'Taiwan Bank app package must stay in the tracked list');
+
+  const original = globalThis.fetch;
+  try {
+    globalThis.fetch = (async () => new Response(fixture('tw-banks-play-cube-zh.html'))) as typeof fetch;
+    const [row] = await fetchTaiwanBankApps([app]);
+    assert.equal(row.app, '臺銀行動+');
+    assert.equal(row.android?.minOs, '9');
+    assert.equal(row.android?.url, playDetailsUrl('com.bot.ibank'));
+  } finally {
+    globalThis.fetch = original;
+  }
+});
