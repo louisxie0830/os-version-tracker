@@ -270,3 +270,27 @@ test('mergeAppleRequirements: one requirement on several pages kept once; a word
     'Apple Developer News：macOS：Upcoming expiration of Developer ID Certification Authority',
   ]);
 });
+
+test('Play policy: a timeout on the primary locale tries the official en-GB page', async () => {
+  const original = globalThis.fetch;
+  const warn = console.warn;
+  const urls: string[] = [];
+  setRetryDelay(0);
+  console.warn = () => {};
+  try {
+    globalThis.fetch = (async (url: string | URL | Request) => {
+      const u = String(url);
+      urls.push(u);
+      if (u === PLAY_POLICY_FALLBACK_URL) return new Response(fixture('play-policy-deadlines.html'));
+      if (u.includes('/table/')) throw new Error('Timed out after 20s: support.google.com/googleplay/android-developer/table/12921780');
+      throw new Error('optional source unavailable');
+    }) as typeof fetch;
+    const items = await fetchPlayPolicyDeadlines();
+    assert.ok(items.length >= 5);
+    assert.deepEqual(urls.filter(u => u.includes('/table/')), [PLAY_POLICY_URL, PLAY_POLICY_URL, PLAY_POLICY_FALLBACK_URL]);
+  } finally {
+    globalThis.fetch = original;
+    console.warn = warn;
+    setRetryDelay(1500);
+  }
+});
