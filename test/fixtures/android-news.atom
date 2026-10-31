@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Synthetic Atom feed based on the Android Developers blog format; not copied from the live feed. -->
+<feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en">
+  <id>https://developer.android.com/blog/atom.xml</id>
+  <title>Android Developers Blog</title>
+  <updated>2026-10-16T20:00:00Z</updated>
+  <entry>
+    <id>tag:developer.android.com,2026:post-1</id>
+    <title>Android API policy changes for developers</title>
+    <link rel="alternate" href="https://developer.android.com/blog/posts/policy-changes"/>
+    <published>2026-10-16T09:30:00-07:00</published>
+    <updated>2026-10-16T16:30:00Z</updated>
+    <summary type="html">&lt;p&gt;Review the new policy requirements before your next release.&lt;/p&gt;</summary>
+  </entry>
+</feed>
