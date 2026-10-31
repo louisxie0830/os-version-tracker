@@ -355,9 +355,10 @@ async function fetchPolicyTable(): Promise<Deadline[]> {
     return parsePlayPolicyDeadlines(await fetchHtml(PLAY_POLICY_URL));
   } catch (err) {
     // net.ts already respects Retry-After and retries the original URL once.
-    // Some Google Support locales intermittently return 429 on hosted runners;
+    // Google Support locales intermittently throttle hosted runners or time out;
     // try ONE other official English locale, not a third-party mirror or stale snapshot.
-    if (!/\b429\b/.test(String((err as Error)?.message ?? err))) throw err;
+    const message = String((err as Error)?.message ?? err);
+    if (!/\b429\b|Timed out after \d+(?:\.\d+)?s:/i.test(message)) throw err;
     return parsePlayPolicyDeadlines(await fetchHtml(PLAY_POLICY_FALLBACK_URL));
   }
 }
