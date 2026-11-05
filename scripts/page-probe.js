@@ -311,7 +311,20 @@
     await tick();
     const sort = document.getElementById('bank-sort');
     if (sort) {
-      for (const option of sort.options) { sort.value = option.value; sort.dispatchEvent(new Event('change')); await tick(); }
+      // Store release dates must remain visible in the phone's stacked table too.
+      for (const cell of document.querySelectorAll('#bank-rows tr:not([hidden]) .bank-updated')) {
+        if (!visible(cell)) add('bank update date hidden', describe(cell));
+      }
+      for (const option of sort.options) {
+        sort.value = option.value;
+        sort.dispatchEvent(new Event('change'));
+        await tick();
+        if (option.dataset.sortKey) {
+          const values = [...document.querySelectorAll('#bank-rows tr')].map(row => Number(row.dataset[option.dataset.sortKey]));
+          const direction = option.dataset.sortDir === 'asc' ? 1 : -1;
+          if (values.some((value, i) => i > 0 && direction * (value - values[i - 1]) < 0)) add('bank sort order', option.textContent.trim());
+        }
+      }
       sort.value = sort.options[0]?.value;
       sort.dispatchEvent(new Event('change'));
     }

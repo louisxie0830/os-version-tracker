@@ -137,7 +137,8 @@ test('banks section: absent without apps; missing listings and fields show "—"
   const rows = html.match(/<tr data-index[\s\S]*?<\/tr>/g)!;
   assert.match(rows[0], /data-label="最低 Android">—/);
   assert.match(rows[1], /data-label="最低 iOS">—/);
-  assert.match(rows[0], /data-label="最近更新">—/, 'no update dates');
+  assert.match(rows[0], /data-label="iOS 更新上架">—/, 'no iOS update date or app version');
+  assert.match(rows[0], /data-label="Android 更新上架">—/, 'no Android listing');
   assert.match(rows[0], /data-android-sort="-1"/, 'no value sorts last');
 });
 

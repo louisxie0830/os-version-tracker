@@ -105,7 +105,7 @@ export const API_ENDPOINTS: Endpoint[] = [
   },
   {
     path: 'api/banks.json',
-    description: '銀行 App 支援版本：最低 iOS / Android、Android targetSdk、近一年的最低版本調整、每日分布紀錄（名稱已部分遮罩）',
+    description: '銀行 App 支援版本：最低 iOS / Android、Android targetSdk、各商店目前版本 version 與更新上架日期 updated（台灣日期）、近一年的最低版本調整、每日分布紀錄（名稱已部分遮罩）',
     sources: ['twBanks'],
     build: d => ({ apps: d.twBanks, changes: d.bankChanges ?? [], trend: d.bankTrend ?? [] }),
   },
