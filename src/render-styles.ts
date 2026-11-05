@@ -837,6 +837,9 @@ a.case-count:hover { text-decoration: underline; }
 .bank-summary .share-chips strong { margin-left: 6px; }
 .bank-table a { color: var(--accent-deep); text-decoration: none; font-weight: 600; }
 .bank-table a:hover { text-decoration: underline; }
+.bank-release { min-width: 0; overflow-wrap: anywhere; }
+.bank-release time { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bank-release .tl-source { margin-top: 2px; }
 .bank-filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 14px; }
 .bank-filter { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .bank-filter .rail-label { flex: none; width: 7.5em; white-space: nowrap; }
@@ -998,7 +1001,6 @@ a.news-title:hover { color: var(--accent-deep); text-decoration: underline; }
   .wrap-cell { min-width: 0; }
   .table-wrap.share-table { border: 1px solid var(--line); background: var(--surface); overflow-x: auto; }
   .share-table td, .share-table th { padding: 8px 10px; }
-  .bank-table .bank-updated { display: none; }
   .bank-table tr { padding: 8px 14px; margin-bottom: 8px; }
   .bank-filter { flex-direction: column; align-items: stretch; gap: 6px; }
   .bank-filter .rail-label { width: auto; }

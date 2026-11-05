@@ -26,8 +26,9 @@ export interface TaiwanBankApp {
   bank: string;
   app: string;
   kind: BankAppKind;
+  /** updated: currentVersionReleaseDate from Apple, as a Taipei calendar date (YYYY-MM-DD). */
   ios?: { minOs: string; version?: string; updated?: string; url: string };
-  /** targetSdk: the API level the build targets (Google Play requires a recent one for updates) */
+  /** targetSdk: the API level the build targets; updated: Play's last-updated timestamp as a Taipei date (YYYY-MM-DD). */
   android?: { minOs: string; version?: string; updated?: string; targetSdk?: number; url: string };
 }
 
