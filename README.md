@@ -16,7 +16,7 @@
 | 趨勢 | iOS / Android 各主版本在台灣與全球近 12 個月的占比變化（StatCounter 月資料，可切換地區）、台灣與全球的手機品牌占比，以及銀行 App 最低版本要求的分布變化（從開始記錄當天起每天累積）；圖表可滑過看數值、可切換為表格 |
 | iOS / Android | 最新正式版與 Beta、開發者須知（上架期限換算成要升級的 Xcode / macOS、targetSdk 倒數、Deployment Target / minSdk 建議等）、開發工具版本、官方公告；iOS 區塊另有 Apple 開發者服務狀態（App Store Connect、TestFlight、APNs、Xcode Cloud 等近 7 天的事件，進行中的會列入「待處理」） |
 | 版本分布 | 台灣與全球 iOS / Android 各版本占比、「支援到某版本可涵蓋多少裝置」、台灣最常見版本（StatCounter），以及 Apple 官方 iOS 採用率 |
-| 銀行 App 支援版本 | 24 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本與 Android targetSdk（標出低於 Google Play 目前規定的 App），即時抓取；可依類型與版本篩選、排序；銀行調高或調低最低版本時會標示並發通知；銀行與 App 名稱以部分遮罩顯示 |
+| 銀行 App 支援版本 | 24 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本與 Android targetSdk（標出低於 Google Play 目前規定的 App），每次更新網站時抓取；分別顯示 iOS / Android 目前版本號與更新上架日期（台灣時間，手機版也可見），可依上架日期由新到舊排序；可依類型與版本篩選；銀行調高或調低最低版本時會標示並發通知；銀行與 App 名稱以部分遮罩顯示 |
 | 通知中心 | 右上角鈴鐺：新規定、重要公告、新機型、SDK 閃退、資安公告、銀行 App 版本調整、Apple 開發者服務事件的未讀清單；網頁開著時每 5 分鐘檢查，可開啟系統通知 |
 | 相容性對照表 | Xcode × macOS × 部署版本 × 實機除錯、GitHub Actions macOS runner 內建的 Xcode、AGP × Gradle × JDK × Android Studio × Kotlin |
 | 上架規定與期限 | App Store / Google Play 期限，以及 Apple Upcoming Requirements、Play 政策、Play Billing Library 淘汰、16 KB 分頁大小的時間軸 |
@@ -137,7 +137,7 @@ npm run test:e2e                            # 用固定資料建立暫存網站�
 | `api/frameworks.json` | React Native 與 Flutter 的最新正式版、近期版本線、release notes 標示的破壞性變更／棄用／資安項目數 |
 | `api/compat.json` | Xcode、AGP、JDK、CI runner 相容性 |
 | `api/trends.json` | 版本分布、近 12 個月主版本占比與手機品牌占比（StatCounter，CC BY-SA 3.0）、Apple iOS 採用率 |
-| `api/banks.json` | 銀行 App 最低版本、Android targetSdk、版本調整紀錄、每日分布（名稱已遮罩） |
+| `api/banks.json` | 銀行 App 最低版本、Android targetSdk、各平台目前版本 `version` 與更新上架日期 `updated`（YYYY-MM-DD，台灣日期）、版本調整紀錄、每日分布（名稱已遮罩） |
 | `api/news.json` | 開發者新聞 |
 | `api/status.json` | Apple 開發者服務近 7 天與進行中的事件（每天更新兩次，不是即時狀態） |
 | `api/privacy.json` | Required Reason API 與須附隱私清單的 SDK |

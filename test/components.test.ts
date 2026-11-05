@@ -138,6 +138,8 @@ test('banks: one bank-table wraps the filters, the sort, the count, the table an
     ['ios', 'iosSort', 'desc'],
     ['android', 'androidSort', 'desc'],
     ['target', 'targetSort', 'asc'],
+    ['iosUpdated', 'iosUpdatedSort', 'desc'],
+    ['androidUpdated', 'androidUpdatedSort', 'desc'],
   ], 'first option keeps the page order; the rest in a fixed order');
   const rowAttrs = inner.match(/<tr[^>]* data-index="0"[^>]*>/)?.[0] ?? '';
   for (const [, , , key] of options.filter(m => m[3])) {

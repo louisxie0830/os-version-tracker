@@ -31,7 +31,15 @@ const BANK_SORTS: Array<[string, string, string?, ('asc' | 'desc')?]> = [
   ['ios', '最低 iOS 由高到低', 'iosSort', 'desc'],
   ['android', '最低 Android 由高到低', 'androidSort', 'desc'],
   ['target', 'targetSdk 由低到高', 'targetSort', 'asc'],
+  ['iosUpdated', 'iOS 上架日期由新到舊', 'iosUpdatedSort', 'desc'],
+  ['androidUpdated', 'Android 上架日期由新到舊', 'androidUpdatedSort', 'desc'],
 ];
+
+/** The store's current app version and its update date, kept together for each platform. */
+function renderStoreRelease(app: AllVersions['twBanks'][number]['ios']): string {
+  if (!app?.updated && !app?.version) return '—';
+  return `<div class="bank-release">${app.updated ? `<time datetime="${esc(app.updated)}">${esc(displayDate(app.updated))}</time>` : '—'}${app.version ? `<div class="tl-source">版本 ${externalLink(app.url, esc(app.version))}</div>` : ''}</div>`;
+}
 
 /** Filters for the bank table: app kind, minimum iOS / Android major, and a sort; applied in the browser by <bank-table> (bank-table.js) */
 function renderBankFilters(banks: AllVersions['twBanks'], hasChanges: boolean, requiredTarget?: number): string {
@@ -81,6 +89,7 @@ export function renderBanksSection(data: AllVersions): string {
   const majorOf = (v?: string) => v?.match(/^\d+/)?.[0];
   // Sortable "major.minor" number; apps without a value sort last
   const sortValue = (v?: string) => { const m = v?.match(/^(\d+)(?:\.(\d+))?/); return m ? Number(m[1]) + Number(m[2] ?? 0) / 100 : -1; };
+  const dateSortValue = (date?: string) => date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Number(date.replaceAll('-', '')) : -1;
   // Minimum-version changes in the last 90 days, newest per app and platform
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const recent = (data.bankChanges ?? []).filter(c => c.date >= since);
@@ -95,17 +104,19 @@ export function renderBanksSection(data: AllVersions): string {
     const kind = (b.kind ?? 'personal') === 'personal' ? 'personal' : 'other';
     const target = b.android?.targetSdk;
     const below = !!(target && requiredTarget && target < requiredTarget);
-    return `<tr data-index="${i}" data-kind="${kind}" data-target="${below ? 'below' : 'ok'}" data-target-sort="${target ?? 999}" data-changed="${changedApps.has(bankAppKey(b)) ? 'recent' : 'none'}" data-ios="${esc(majorOf(b.ios?.minOs) ?? '')}" data-android="${esc(majorOf(b.android?.minOs) ?? '')}" data-ios-sort="${sortValue(b.ios?.minOs)}" data-android-sort="${sortValue(b.android?.minOs)}">
+    return `<tr data-index="${i}" data-kind="${kind}" data-target="${below ? 'below' : 'ok'}" data-target-sort="${target ?? 999}" data-changed="${changedApps.has(bankAppKey(b)) ? 'recent' : 'none'}" data-ios="${esc(majorOf(b.ios?.minOs) ?? '')}" data-android="${esc(majorOf(b.android?.minOs) ?? '')}" data-ios-sort="${sortValue(b.ios?.minOs)}" data-android-sort="${sortValue(b.android?.minOs)}" data-ios-updated-sort="${dateSortValue(b.ios?.updated)}" data-android-updated-sort="${dateSortValue(b.android?.updated)}">
       <td class="row-title" data-label="銀行"><strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}${b.kind && BANK_APP_KIND[b.kind] ? ` <span class="badge badge-sm bank-kind">${BANK_APP_KIND[b.kind]}</span>` : ''}</div></td>
       <td data-label="最低 iOS">${b.ios ? `<span>${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`, 'nowrap')}${changeNote(changeOf(b, 'iOS'))}</span>` : '—'}</td>
       <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`, 'nowrap')}${api ? ` <span class="tl-source nowrap">API ${api}</span>` : ''}${changeNote(changeOf(b, 'Android'))}</span>` : '—'}</td>
       <td data-label="targetSdk">${target ? `<span>${target}${below ? ` <span class="bank-change is-up" title="Google Play 規定新 App 與更新須 target ${requiredTarget} 以上；在期限前送出的版本可能仍是舊值">低於 ${requiredTarget}</span>` : ''}</span>` : '—'}</td>
-      <td class="bank-updated" data-label="最近更新">${esc(displayDate([b.ios?.updated && `iOS ${b.ios.updated}`, b.android?.updated && `Android ${b.android.updated}`].filter(Boolean).join(' · ')) || '—')}</td>
+      <td class="bank-updated" data-label="iOS 更新上架">${renderStoreRelease(b.ios)}</td>
+      <td class="bank-updated" data-label="Android 更新上架">${renderStoreRelease(b.android)}</td>
     </tr>`;
   }).join('');
   return `<section class="panel" id="banks">
     <h2>銀行 App 支援版本</h2>
     <p class="table-note">各銀行官方行動銀行 App 在 App Store 與 Google Play（台灣區）標示的最低支援版本，每次更新網站時重新抓取。部分銀行另列出企業、商家收款與認證 App（以標籤區分），分布統計與篩選都包含這些 App。可作為金融業 App 設定 Deployment Target / minSdk 的業界參考。銀行與 App 名稱以部分遮罩顯示；商店標示的版本不代表銀行的官方支援政策。</p>
+    <p class="table-note">「更新上架」顯示各商店目前版本的更新日期與版本號，日期以台灣時間顯示；未取得的欄位以 — 表示。</p>
     <div class="bank-summary">
       <div><div class="tile-label">最低 iOS 分布</div><div class="share-chips">${countByMajor(ios, 'iOS')}</div></div>
       <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>
@@ -114,7 +125,7 @@ export function renderBanksSection(data: AllVersions): string {
     <bank-table filters="kind ios android changed target">
     ${renderBankFilters(banks, changedApps.size > 0, requiredTarget)}
     <div class="table-wrap"><table class="compat-table stack-on-mobile bank-table">
-      <thead><tr><th>銀行 / App</th><th>最低 iOS</th><th>最低 Android</th><th>targetSdk</th><th>最近更新</th></tr></thead>
+      <thead><tr><th>銀行 / App</th><th>最低 iOS</th><th>最低 Android</th><th>targetSdk</th><th>iOS 更新上架</th><th>Android 更新上架</th></tr></thead>
       <tbody id="bank-rows" data-search-rows>${rows}</tbody>
     </table></div>
     <p class="feed-empty" id="bank-empty" data-bank-empty hidden>沒有符合篩選的 App。</p>
