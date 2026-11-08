@@ -265,17 +265,36 @@ export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = 
       { url: `https://play.google.com/store/apps/details?id=${encodeURIComponent(a.playPackage)}&hl=en&gl=US`, lang: 'en-US,en;q=0.9' },
     ];
     for (const candidate of candidates) {
-      try {
-        const info = parsePlayDetails(await storePage(candidate.url, candidate.lang));
-        if (info) return { ...info, url };
-      } catch {
-        // Try the other official localisation, then leave the missing field visible to quality alerts.
+      // Retry a successful but incomplete HTML response once before switching locale.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const info = parsePlayDetails(await storePage(candidate.url, candidate.lang));
+          if (info) return { ...info, url };
+        } catch {
+          // A failed request moves directly to the other official localisation.
+          break;
+        }
       }
     }
     return undefined;
   });
 
   const [ios, android] = await Promise.all([iosPromise, androidPromise]);
+
+  // iTunes may return a partial batch without an HTTP error. Retry only omitted IDs so a
+  // transiently incomplete response does not silently leave individual apps without data.
+  if (!(ios instanceof Error)) {
+    const missingIds = ids.filter(id => !ios.has(id));
+    if (missingIds.length) {
+      try {
+        const retry = parseItunesLookup(await storePage(itunesLookupUrl(missingIds), 'zh-TW,zh;q=0.9,en;q=0.8'));
+        for (const [id, app] of retry) ios.set(id, app);
+      } catch {
+        // Keep the missing fields visible to the existing quality alert if the retry also fails.
+      }
+    }
+  }
+
   const iosOk = !(ios instanceof Error) && ios.size > 0;
   const androidOk = android.some(Boolean);
   if (!iosOk && !androidOk) {
