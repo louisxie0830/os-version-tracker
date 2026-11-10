@@ -1,4 +1,5 @@
 import type { SourceKey } from './fetch-all.js';
+import { ANDROID_GSI_RELEASES } from './fetchers/android.js';
 import { NEWS_SOURCES } from './fetchers/dev-news.js';
 
 /**
@@ -93,10 +94,12 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     endpoints: [
       { url: 'https://endoflife.date/api/android.json', method: 'API', terms: ENDOFLIFE },
       { url: 'https://developer.android.com/blog/atom.xml', method: 'RSS / Atom', terms: ANDROID_LEGAL },
+      { url: ANDROID_GSI_RELEASES, method: 'HTML 網頁', terms: ANDROID_LEGAL },
+      { url: 'https://developer.android.com/about/versions/{major}/qpr{number}/release-notes', method: 'HTML 網頁', terms: ANDROID_LEGAL },
     ],
-    licence: 'endoflife.date（MIT）；Android Developers Blog feed（官方提供）',
+    licence: `endoflife.date（MIT）；Android Developers Blog feed（官方提供）；${ANDROID_DOCS}`,
     risk: 'low',
-    note: '只取版本號、API 等級、代號與發布日期',
+    note: '只取版本號、API 等級、代號、發布日期及 Build。以官方 GSI 清單辨認仍在測試的 QPR 分支，從各分支版本說明取得最新 Beta',
   },
   appleDeadline: {
     endpoints: [{ url: 'https://developer.apple.com/news/rss/news.rss', method: 'RSS / Atom', terms: APPLE_TERMS }],
@@ -249,7 +252,7 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     ],
     licence: 'iTunes Lookup API（Apple 公開提供的 API）；Google Play 商店頁依 Google Play 服務條款',
     risk: 'medium',
-    note: '只取最低支援版本、版本號、targetSdk 與更新日期；銀行與 App 名稱部分遮罩，不評比任何銀行',
+    note: '擷取最低支援版本、版本號、targetSdk、更新日期與台灣區商店的平均星等。銀行與 App 名稱部分遮罩',
   },
   devNews: {
     // Straight from the feed list the fetcher uses, so the register can't miss a feed

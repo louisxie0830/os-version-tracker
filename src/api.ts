@@ -33,7 +33,7 @@ interface Endpoint {
 export const API_ENDPOINTS: Endpoint[] = [
   {
     path: 'api/versions.json',
-    description: '最新正式版與 Beta：iOS、Android、Xcode、Android 開發工具（AGP、Gradle、Kotlin、Android Studio…）與最新 iPhone',
+    description: 'iOS、Android（含 QPR Beta）、Xcode 與 Android 開發工具的最新正式版、Beta 和發布日期',
     sources: ['ios', 'android', 'iosToolchain', 'androidToolchain'],
     build: d => ({ ios: d.ios, android: d.android, iosToolchain: d.iosToolchain, androidToolchain: d.androidToolchain }),
   },
@@ -105,7 +105,7 @@ export const API_ENDPOINTS: Endpoint[] = [
   },
   {
     path: 'api/banks.json',
-    description: '銀行 App 支援版本：最低 iOS / Android、Android targetSdk、各商店目前版本 version 與更新上架日期 updated（台灣日期）、近一年的最低版本調整、每日分布紀錄（名稱已部分遮罩）',
+    description: '銀行 App 支援版本：最低 iOS / Android、Android targetSdk、各商店目前版本 version、更新上架日期 updated（台灣日期）、台灣區平均星等 rating（滿分 5）、最低版本調整及每日分布紀錄（名稱已部分遮罩）',
     sources: ['twBanks'],
     build: d => ({ apps: d.twBanks, changes: d.bankChanges ?? [], trend: d.bankTrend ?? [] }),
   },

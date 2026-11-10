@@ -379,8 +379,9 @@ html:not(.has-js) [data-show-more], .searching [data-show-more], [data-show-more
   background: var(--bg-2);
 }
 .version-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.version-number { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
+.version-number { min-width: 0; overflow-wrap: anywhere; font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
 .version-details { display: flex; flex-wrap: wrap; gap: 6px; }
+.version-details .meta { min-width: 0; overflow-wrap: anywhere; }
 .meta {
   font-size: 0.78125rem;
   color: var(--muted);

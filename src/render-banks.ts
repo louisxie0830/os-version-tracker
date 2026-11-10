@@ -35,10 +35,12 @@ const BANK_SORTS: Array<[string, string, string?, ('asc' | 'desc')?]> = [
   ['androidUpdated', 'Android 上架日期由新到舊', 'androidUpdatedSort', 'desc'],
 ];
 
-/** The store's current app version and its update date, kept together for each platform. */
+/** The store's current app version, update date and rating, kept together for each platform. */
 function renderStoreRelease(app: AllVersions['twBanks'][number]['ios']): string {
-  if (!app?.updated && !app?.version) return '—';
-  return `<div class="bank-release">${app.updated ? `<time datetime="${esc(app.updated)}">${esc(displayDate(app.updated))}</time>` : '—'}${app.version ? `<div class="tl-source">版本 ${externalLink(app.url, esc(app.version))}</div>` : ''}</div>`;
+  if (!app || (!app.updated && !app.version && app.rating === undefined)) return '—';
+  const rating = typeof app.rating === 'number' && app.rating >= 1 && app.rating <= 5
+    ? `<span aria-hidden="true">★</span> ${app.rating.toFixed(1)}／5` : '—';
+  return `<div class="bank-release">${app.updated ? `<time datetime="${esc(app.updated)}">${esc(displayDate(app.updated))}</time>` : '—'}${app.version ? `<div class="tl-source">版本 ${externalLink(app.url, esc(app.version))}</div>` : ''}<div class="tl-source bank-rating">評分 ${rating}</div></div>`;
 }
 
 /** Filters for the bank table: app kind, minimum iOS / Android major, and a sort; applied in the browser by <bank-table> (bank-table.js) */
@@ -116,7 +118,7 @@ export function renderBanksSection(data: AllVersions): string {
   return `<section class="panel" id="banks">
     <h2>銀行 App 支援版本</h2>
     <p class="table-note">各銀行官方行動銀行 App 在 App Store 與 Google Play（台灣區）標示的最低支援版本，每次更新網站時重新抓取。部分銀行另列出企業、商家收款與認證 App（以標籤區分），分布統計與篩選都包含這些 App。可作為金融業 App 設定 Deployment Target / minSdk 的業界參考。銀行與 App 名稱以部分遮罩顯示；商店標示的版本不代表銀行的官方支援政策。</p>
-    <p class="table-note">「更新上架」顯示各商店目前版本的更新日期與版本號，日期以台灣時間顯示；未取得的欄位以 — 表示。</p>
+    <p class="table-note">「更新上架」顯示各商店目前版本、台灣時間的更新日期，以及台灣區商店的平均星等（滿分 5 星）。未取得的欄位顯示 —。</p>
     <div class="bank-summary">
       <div><div class="tile-label">最低 iOS 分布</div><div class="share-chips">${countByMajor(ios, 'iOS')}</div></div>
       <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>

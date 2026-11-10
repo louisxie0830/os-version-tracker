@@ -25,6 +25,15 @@ const SITE_URL = 'https://example.test/os-version-tracker';
 
 async function buildFixtureSite(dir: string): Promise<void> {
   const data = JSON.parse(await readFile(FIXTURE, 'utf8')) as AllVersions;
+  data.android.push(
+    { platform: 'Android', version: 'Android 17 QPR3 Beta 3', build: 'DP11.261016.003 / DP11.261016.004', releaseDate: '2026-10-29', isBeta: true },
+    { platform: 'Android', version: 'Android 17 QPR2 Beta 7.1', build: 'CP41.260831.019', releaseDate: '2026-10-16', isBeta: true },
+  );
+  const sampleBank = data.twBanks.find(app => app.ios && app.android);
+  if (sampleBank?.ios && sampleBank.android) {
+    sampleBank.ios.rating = 4.8;
+    sampleBank.android.rating = 4.2;
+  }
   // Exercise the real news-list component, including its 25-row cap and every filter, with no network input.
   data.devNews = Array.from({ length: 26 }, (_, i) => ({
     id: `e2e-news-${i}`,

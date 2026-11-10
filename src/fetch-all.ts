@@ -3,7 +3,7 @@ import { bankFieldGaps, countProblems } from './quality.js';
 import { lastGood, rememberGood, saveLastGood } from './last-good.js';
 import { publishDecision } from './publish-health.js';
 import { fetchiOSVersions } from './fetchers/ios.js';
-import { fetchAndroidVersions } from './fetchers/android.js';
+import { ANDROID_GSI_RELEASES, fetchAndroidVersions } from './fetchers/android.js';
 import { fetchAppleSubmissionDeadline } from './fetchers/apple-deadline.js';
 import { fetchGooglePlayDeadline } from './fetchers/google-deadline.js';
 import { fetchiOSToolchain } from './fetchers/ios-toolchain.js';
@@ -131,7 +131,7 @@ export const SITE_URL = (safeUrl(process.env.SITE_URL ?? DEFAULT_SITE_URL) ?? ((
 
 export const SOURCES = {
   ios: { label: 'Apple 軟體更新目錄 / Developer Releases', url: 'https://developer.apple.com/news/releases/' },
-  android: { label: 'endoflife.date · Android Developers Blog', url: 'https://endoflife.date/android' },
+  android: { label: 'endoflife.date · Android 官方版本說明與 Blog', url: ANDROID_GSI_RELEASES },
   appleDeadline: { label: 'Apple Developer News', url: 'https://developer.apple.com/news/' },
   googleDeadline: { label: 'Google Play 目標 API 等級規定', url: 'https://developer.android.com/google/play/requirements/target-sdk' },
   iosToolchain: { label: 'xcodereleases.com · endoflife.date', url: 'https://xcodereleases.com' },
