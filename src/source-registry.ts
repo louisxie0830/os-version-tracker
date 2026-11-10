@@ -64,7 +64,7 @@ const GHSA_LICENSE = 'https://github.com/github/advisory-database/blob/main/LICE
 const SO_API_TERMS = 'https://stackoverflow.com/legal/api-terms-of-use';
 const ANDROID_SOURCE = 'https://source.android.com/docs/setup/about/licenses';
 /** dl.google.com's robots.txt disallows everything; its Maven and SDK repository files are read anyway (disclosed) */
-const DL_GOOGLE_EXCEPTION = 'dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次';
+const DL_GOOGLE_EXCEPTION = 'dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天三次';
 
 /** Terms per news feed host (dev news endpoints come straight from the feed list in dev-news.ts) */
 const FEED_TERMS: Record<string, string> = {
@@ -373,7 +373,7 @@ export function sourcesMarkdown(labels: Record<SourceKey, string>): string {
     '',
     `最後檢查：${REGISTER_CHECKED} · 共 ${keys.length} 個來源（風險低 ${count('low')}、中 ${count('medium')}、高 ${count('high')}）`,
     '',
-    '共同做法：每天兩次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。',
+    '共同做法：每天三次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。',
     '',
     '風險等級：',
     '',

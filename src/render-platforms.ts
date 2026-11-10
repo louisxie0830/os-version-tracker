@@ -210,7 +210,7 @@ export function renderAppleStatus(data: AllVersions): string {
       <span class="case-count">${status.events.length ? `近 7 天 ${status.events.length} 件` : `${status.services} 項服務，近 7 天沒有事件`}</span>
     </div>
     ${rows ? `<ul class="crash-list" data-search-rows>${rows}</ul>` : ''}
-    <div class="case-body"><p class="table-note">App Store Connect、TestFlight、APNs、Xcode Cloud 等服務的事件紀錄，網站每天更新兩次，不是即時狀態；${externalLink(status.url, '最新狀態請看 Apple 系統狀態頁')}。</p></div>
+    <div class="case-body"><p class="table-note">App Store Connect、TestFlight、APNs、Xcode Cloud 等服務的事件紀錄，網站隨排程更新。${externalLink(status.url, '最新狀態請看 Apple 系統狀態頁')}。</p></div>
   </div>`;
 }
 
