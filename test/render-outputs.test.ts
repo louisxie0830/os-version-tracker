@@ -295,6 +295,22 @@ test('a negative Stack Overflow score reads ▼ 2, not ▲ -2', () => {
   assert.doesNotMatch(html, /▲ -/);
 });
 
+test('the version snapshot shows the complete Android QPR and iOS beta labels, dates and builds', () => {
+  const html = renderSnapshotRail({ ...snapshot, android: [
+    { platform: 'Android', version: 'Android 17', releaseDate: '2026-06-16' },
+    { platform: 'Android', version: 'Android 17 QPR3 Beta 3', isBeta: true, releaseDate: '2026-10-29', build: 'DP11.261016.003' },
+    { platform: 'Android', version: 'Android 17 QPR2 Beta 7.1', isBeta: true, releaseDate: '2026-10-16' },
+  ] });
+  const entries = [...html.matchAll(/data-snapshot-os="(ios|android)"[^>]*>.*?<span class="snap-version">([^<]*)<\/span>.*?<time datetime="([^"]+)"/g)].map(m => m.slice(1));
+  assert.deepEqual(entries, [
+    ...snapshot.ios.map(v => ['ios', v.version, v.releaseDate]),
+    ['android', 'Android 17', '2026-06-16'],
+    ['android', 'Android 17 QPR3 Beta 3', '2026-10-29'],
+    ['android', 'Android 17 QPR2 Beta 7.1', '2026-10-16'],
+  ]);
+  assert.match(html, /Build DP11\.261016\.003/);
+});
+
 test('the next deadline counts from an extension still ahead, not the passed original date', () => {
   const day = (offset: number) => new Date(Date.parse(`${taipeiToday()}T00:00:00Z`) + offset * 86_400_000).toISOString().slice(0, 10);
   const timeline = [

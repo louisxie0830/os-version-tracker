@@ -56,6 +56,18 @@
     }
     for (const img of document.querySelectorAll('img:not([alt])')) add('image without alt', img.getAttribute('src'));
     for (const b of document.querySelectorAll('button:not([type])')) add('button without type', describe(b));
+    for (const platform of ['ios', 'android']) {
+      const snapshotRows = [...document.querySelectorAll(`.snap [data-snapshot-os="${platform}"]`)];
+      for (const card of document.querySelectorAll(`#${platform} .version-card`)) {
+        const version = card.querySelector('.version-number')?.textContent;
+        const row = snapshotRows.find(item => item.querySelector('.snap-version')?.textContent === version);
+        const date = card.querySelector('time')?.dateTime;
+        const snapshotDate = row?.querySelector('time');
+        if (!visible(row) || (date && (!visible(snapshotDate) || snapshotDate.dateTime !== date))) {
+          add('version snapshot missing version or date', `${platform} ${version ?? ''}`);
+        }
+      }
+    }
   }
 
   // A click at the centre of every visible control must land on that control
@@ -311,9 +323,13 @@
     await tick();
     const sort = document.getElementById('bank-sort');
     if (sort) {
-      // Store release dates must remain visible in the phone's stacked table too.
+      // Store release dates and ratings must remain visible in the phone's stacked table too.
       for (const cell of document.querySelectorAll('#bank-rows tr:not([hidden]) .bank-updated')) {
         if (!visible(cell)) add('bank update date hidden', describe(cell));
+      }
+      for (const row of document.querySelectorAll('#bank-rows tr:not([hidden])')) {
+        const ratings = [...row.querySelectorAll('.row-title .bank-rating')];
+        if (ratings.length !== 2 || !ratings.every(visible)) add('bank store ratings missing or hidden', describe(row));
       }
       for (const option of sort.options) {
         sort.value = option.value;
