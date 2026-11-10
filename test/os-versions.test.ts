@@ -69,6 +69,7 @@ test('parseEndOfLifeAndroid keeps the version label, API level and codename', ()
 test('parseBetaTitle normalises ordinal, numbered, QPR and developer preview titles', () => {
   assert.equal(parseBetaTitle('The Second Beta of Android 18'), 'Android 18 Beta 2');
   assert.equal(parseBetaTitle('Android 17 QPR3 Beta 2 is now available'), 'Android 17 QPR3 Beta 2');
+  assert.equal(parseBetaTitle('Android 17 QPR 3 Beta 3 (October 2026)'), 'Android 17 QPR3 Beta 3');
   assert.equal(parseBetaTitle('The first Developer Preview of Android 18'), 'Android 18 DP1');
   assert.equal(parseBetaTitle('Android 18 Developer Preview 2'), 'Android 18 DP2', 'numbered: not "DP18" from the version before it');
   assert.equal(parseBetaTitle('What is new in Kotlin'), null);
@@ -137,6 +138,7 @@ test('fetchAndroidVersions: the blog failing leaves the stable version; a beta o
   let blog: Response | Error = new Error('blog down');
   globalThis.fetch = (async (url: string | URL | Request) => {
     if (String(url).includes('endoflife.date')) return Response.json(eol);
+    if (String(url).includes('/generic-system-image/releases')) return new Response('Android 17 QPR1 (stable release)');
     if (blog instanceof Error) throw blog;
     return blog.clone();
   }) as typeof fetch;
@@ -149,6 +151,50 @@ test('fetchAndroidVersions: the blog failing leaves the stable version; a beta o
   blog = atom('Android 18 Developer Preview 1');
   const next = await fetchAndroidVersions();
   assert.deepEqual(next.map(v => [v.version, v.releaseDate]), [['Android 17', '2026-06-16'], ['Android 18 DP1', '2026-10-01']], 'dated as the blog dated it');
+});
+
+test('fetchAndroidVersions keeps active QPR tracks with their official dates and builds', async t => {
+  const { fetchAndroidVersions } = await import('../src/fetchers/android.ts');
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  const warn = t.mock.method(console, 'warn', () => {});
+  const release = (beta: string, date: string, builds: string) => `<h3 id="beta">Beta ${beta}</h3><table><tr><th>Release date</th><td>${date}</td></tr><tr><th>Builds</th><td>${builds}</td></tr></table>`;
+  let qpr2Stage = 'Beta';
+  let notesAvailable = true;
+  let indexAvailable = true;
+  const requested: string[] = [];
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+    requested.push(url);
+    if (url.includes('endoflife.date')) return Response.json([{ cycle: '17', releaseDate: '2026-06-16', apiVersion: '37' }]);
+    if (url.includes('/generic-system-image/releases')) {
+      if (!indexAvailable) return new Response('down', { status: 404 });
+      return new Response(`<ul><li>Android 17 QPR3 (Beta)</li><li>Android 17 QPR2 (${qpr2Stage})</li><li>Android 17 QPR1 (stable release)</li><li>Android 16 QPR3 (Beta)</li></ul><h3>Android 17 QPR2 (Beta)</h3>`);
+    }
+    if (url.includes('/qpr3/')) {
+      return new Response(notesAvailable ? release('2', 'October 20, 2026', 'DP11.261002.005') + release('3', 'October 29, 2026', 'DP11.261016.003<br>DP11.261016.004') : '<h3>No release tables</h3>');
+    }
+    if (url.includes('/qpr2/')) return new Response(release('7.1', 'October 16, 2026', 'CP41.260831.019'));
+    return new Response('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"><title>b</title><entry><title>Android 17 QPR 3 Beta 2</title><published>2026-10-20T17:00:00-07:00</published><link href="https://example.com/x"/></entry></feed>');
+  }) as typeof fetch;
+
+  const versions = await fetchAndroidVersions();
+  assert.deepEqual(versions.map(v => [v.version, v.releaseDate, v.build]), [
+    ['Android 17', '2026-06-16', undefined],
+    ['Android 17 QPR3 Beta 3', '2026-10-29', 'DP11.261016.003 / DP11.261016.004'],
+    ['Android 17 QPR2 Beta 7.1', '2026-10-16', 'CP41.260831.019'],
+  ]);
+  assert.ok(versions.slice(1).every(v => v.isBeta));
+  assert.ok(!requested.some(url => /\/16\/|\/qpr1\//.test(url)));
+
+  qpr2Stage = 'stable release';
+  notesAvailable = false;
+  assert.deepEqual((await fetchAndroidVersions()).map(v => v.version), ['Android 17', 'Android 17 QPR3 Beta 2']);
+  assert.ok(warn.mock.calls.some(c => /No beta release table found/.test(String(c.arguments[0]))));
+
+  indexAvailable = false;
+  assert.deepEqual((await fetchAndroidVersions()).map(v => v.version), ['Android 17', 'Android 17 QPR3 Beta 2']);
+  assert.ok(warn.mock.calls.some(c => /QPR release index failed/.test(String(c.arguments[0]))));
 });
 
 test('fetchiOSVersions: each fallback in turn, the release feed downloaded once, and a failure only when nothing is left', async t => {
