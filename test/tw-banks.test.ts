@@ -13,6 +13,8 @@ import {
 import { fixture, GARBAGE_HTML } from './helpers.js';
 import { setRetryDelay } from '../src/net.js';
 
+const playRating = (rating: number | string) => `<script type="application/ld+json">${JSON.stringify({ '@type': 'SoftwareApplication', aggregateRating: { ratingValue: rating } })}</script>`;
+
 test('parseItunesLookup: min iOS, version, Taipei-dated update and clean URL', () => {
   const apps = parseItunesLookup(fixture('tw-banks-itunes-lookup.json'));
   assert.equal(apps.size, 3);
@@ -38,6 +40,15 @@ test('parseItunesLookup: garbage input yields an empty map', () => {
   assert.equal(parseItunesLookup('{"resultCount":0,"results":[]}').size, 0);
   assert.equal(parseItunesLookup('{"results":[{"trackId":"x"},{"trackId":1}]}').size, 0);
   assert.equal(parseItunesLookup('null').size, 0);
+});
+
+test('store ratings use the five-star scale and leave unscored apps empty', () => {
+  const results = [4.76, 0, 5.1].map((averageUserRating, i) => ({ trackId: i + 1, minimumOsVersion: '15', averageUserRating }));
+  const apple = parseItunesLookup(JSON.stringify({ results }));
+  assert.deepEqual([...apple.values()].map(app => app.rating), [4.76, undefined, undefined]);
+  const play = fixture('tw-banks-play-cube-zh.html');
+  assert.equal(parsePlayDetails(play + playRating('4.32'))?.rating, 4.32);
+  assert.equal(parsePlayDetails(play + playRating(0))?.rating, undefined);
 });
 
 test('parsePlayDetails: zh_TW page (CUBE)', () => {
@@ -125,12 +136,13 @@ test('bank Play listing: a throttled Taiwan locale recovers from the official al
       const u = String(url);
       urls.push(u);
       return u.includes('hl=en&gl=US')
-        ? new Response(fixture('tw-banks-play-cube-zh.html'))
+        ? new Response(fixture('tw-banks-play-cube-zh.html') + playRating(4.5))
         : new Response('rate limited', { status: 429, headers: { 'Retry-After': '0' } });
     }) as typeof fetch;
     const rows = await fetchTaiwanBankApps([{ bank: 'Test Bank', app: 'Test App', playPackage: 'com.cathaybk.mymobibank.android' }]);
     assert.equal(rows[0].android?.minOs, '9');
     assert.equal(rows[0].android?.targetSdk, 36);
+    assert.equal(rows[0].android?.rating, undefined, 'the US rating is not the Taiwan rating');
     assert.equal(rows[0].android?.url, playDetailsUrl('com.cathaybk.mymobibank.android'));
     assert.equal(urls.length, 3, 'the regular GET retries once, then the alternate is requested once');
     assert.ok(urls.at(-1)?.includes('hl=en&gl=US'));
@@ -146,10 +158,11 @@ test('bank Play listing: valid Taiwan data does not request the alternate locale
   try {
     globalThis.fetch = (async (url: string | URL | Request) => {
       urls.push(String(url));
-      return new Response(fixture('tw-banks-play-cube-zh.html'));
+      return new Response(fixture('tw-banks-play-cube-zh.html') + playRating(4.5));
     }) as typeof fetch;
     const rows = await fetchTaiwanBankApps([{ bank: 'Test Bank', app: 'Test App', playPackage: 'com.cathaybk.mymobibank.android' }]);
     assert.equal(rows[0].android?.minOs, '9');
+    assert.equal(rows[0].android?.rating, 4.5);
     assert.equal(urls.length, 1);
   } finally {
     globalThis.fetch = original;

@@ -2,11 +2,12 @@ import { fetchText, NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 /**
  * Minimum iOS / Android versions required by the official mobile banking apps of major Taiwan banks.
  *
- * - iOS: one batched iTunes Lookup API call (`minimumOsVersion`).
+ * - iOS: one batched iTunes Lookup API call (`minimumOsVersion`, `averageUserRating`).
  * - Android: the public Google Play details page. Play does not render "Requires Android x" as text in
  *   the HTML; it lives in the page's `AF_initDataCallback` data (the `ds:5` block). Inside that block the
  *   app array (`data[1][2]`) holds `[140] = [[["<versionName>"]], [[[<targetSdk>]], [[[<minSdk>, "<minAndroid>"]]]]]`
- *   and `[145] = [["<localized date>", [<epochSeconds>, <nanos>]]]` for "last updated".
+ *   and `[145] = [["<localized date>", [<epochSeconds>, <nanos>]]]` for "last updated". The store rating
+ *   comes from `[51][0][1]` or the page's SoftwareApplication structured data.
  *   The values are language-independent (same for hl=en and hl=zh_TW).
  */
 
@@ -27,9 +28,9 @@ export interface TaiwanBankApp {
   app: string;
   kind: BankAppKind;
   /** updated: currentVersionReleaseDate from Apple, as a Taipei calendar date (YYYY-MM-DD). */
-  ios?: { minOs: string; version?: string; updated?: string; url: string };
+  ios?: { minOs: string; version?: string; updated?: string; rating?: number; url: string };
   /** targetSdk: the API level the build targets; updated: Play's last-updated timestamp as a Taipei date (YYYY-MM-DD). */
-  android?: { minOs: string; version?: string; updated?: string; targetSdk?: number; url: string };
+  android?: { minOs: string; version?: string; updated?: string; targetSdk?: number; rating?: number; url: string };
 }
 
 /**
@@ -85,12 +86,18 @@ function taipeiDate(ms: number): string | undefined {
   return new Date(ms + 8 * 3600_000).toISOString().slice(0, 10);
 }
 
+function storeRating(raw: unknown): number | undefined {
+  const rating = typeof raw === 'string' && /^\d+(?:\.\d+)?$/.test(raw) ? Number(raw) : raw;
+  return typeof rating === 'number' && rating >= 1 && rating <= 5 ? rating : undefined;
+}
+
 export interface ItunesAppInfo {
   trackId: number;
   trackName: string;
   minOs: string;
   version?: string;
   updated?: string;
+  rating?: number;
   url: string;
 }
 
@@ -115,6 +122,7 @@ export function parseItunesLookup(json: string): Map<number, ItunesAppInfo> {
       minOs: r.minimumOsVersion,
       version: typeof r.version === 'string' ? r.version : undefined,
       updated: taipeiDate(released),
+      rating: storeRating(r.averageUserRating),
       url:
         typeof r.trackViewUrl === 'string'
           ? r.trackViewUrl.replace(/\?.*$/, '')
@@ -130,6 +138,7 @@ export interface PlayAppInfo {
   version?: string;
   updated?: string;
   targetSdk?: number;
+  rating?: number;
 }
 
 const VARIES = /^(Varies with device|依裝置而異|因裝置而異)$/;
@@ -178,7 +187,21 @@ function at(x: unknown, ...path: number[]): unknown {
   return cur;
 }
 
-/** Full Play details parse: min Android, versionName and last-updated date (Taipei calendar day). */
+function structuredPlayRating(html: string): number | undefined {
+  for (const [, body] of html.matchAll(/<script\b[^>]*\btype\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const app = JSON.parse(body);
+      if (app?.['@type'] !== 'SoftwareApplication') continue;
+      const rating = storeRating(app.aggregateRating?.ratingValue);
+      if (rating !== undefined) return rating;
+    } catch {
+      // Other or invalid structured data does not affect the version and minimum OS fields.
+    }
+  }
+  return undefined;
+}
+
+/** Full Play details parse: min Android, versionName, last-updated date (Taipei calendar day) and rating. */
 export function parsePlayDetails(html: string): PlayAppInfo | undefined {
   const app = findAppDetails(html);
   let minOs: string | undefined;
@@ -221,7 +244,9 @@ export function parsePlayDetails(html: string): PlayAppInfo | undefined {
     const m = html.match(/(?:Requires Android|需要 Android)[^0-9<]{0,20}(\d{1,2}(?:\.\d)?)\s*(?:and up|以上)/);
     if (m) minOs = m[1];
   }
-  return minOs ? { minOs, version, updated, ...(targetSdk ? { targetSdk } : {}) } : undefined;
+  if (!minOs) return undefined;
+  const rating = storeRating(at(app, 51, 0, 1)) ?? structuredPlayRating(html);
+  return { minOs, version, updated, ...(targetSdk ? { targetSdk } : {}), ...(rating !== undefined ? { rating } : {}) };
 }
 
 /** Minimum Android version shown on a Google Play details page, e.g. "8.0" — or undefined if not found. */
@@ -261,13 +286,13 @@ export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = 
     // The second official Play URL is only fetched if the first request fails or cannot parse.
     // Keep the public link pointing at the Taiwan listing regardless of the fallback locale.
     const candidates = [
-      { url, lang: 'zh-TW,zh;q=0.9,en;q=0.8' },
-      { url: `https://play.google.com/store/apps/details?id=${encodeURIComponent(a.playPackage)}&hl=en&gl=US`, lang: 'en-US,en;q=0.9' },
+      { url, lang: 'zh-TW,zh;q=0.9,en;q=0.8', taiwan: true },
+      { url: `https://play.google.com/store/apps/details?id=${encodeURIComponent(a.playPackage)}&hl=en&gl=US`, lang: 'en-US,en;q=0.9', taiwan: false },
     ];
     for (const candidate of candidates) {
       try {
         const info = parsePlayDetails(await storePage(candidate.url, candidate.lang));
-        if (info) return { ...info, url };
+        if (info) return { ...info, rating: candidate.taiwan ? info.rating : undefined, url };
       } catch {
         // Try the other official localisation, then leave the missing field visible to quality alerts.
       }
@@ -290,7 +315,7 @@ export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = 
       bank: a.bank,
       app: a.app,
       kind: a.kind ?? 'personal',
-      ios: it && { minOs: it.minOs, version: it.version, updated: it.updated, url: it.url },
+      ios: it && { minOs: it.minOs, version: it.version, updated: it.updated, rating: it.rating, url: it.url },
       android: android[i],
     };
   });
