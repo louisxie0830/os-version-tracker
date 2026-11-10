@@ -8,11 +8,12 @@ name: Build and deploy site
 
 on:
   schedule:
-    # Twice a day, 05:43 and 17:43 Taipei (21:43 / 09:43 UTC), off the hour and away from 00:00 UTC: runs set
-    # for 08:17 Taipei (00:17 UTC, GitHub's busiest time) started 4–6 hours late. Each run's summary shows when
-    # the data was fetched. 12 hours apart, matching REFRESH_MINUTES in src/build-static.ts
-    - cron: '43 21 * * *'
-    - cron: '43 9 * * *'
+    # Keep the two Taipei refreshes and add a late-morning US Pacific refresh, including daylight saving time.
+    # Keep the windows in refresh-watchdog.yml and the count in src/build-static.ts in sync.
+    - cron: '43 5,17 * * *'
+      timezone: 'Asia/Taipei'
+    - cron: '43 10 * * *'
+      timezone: 'America/Los_Angeles'
   push:
     branches: [master]
   workflow_dispatch:

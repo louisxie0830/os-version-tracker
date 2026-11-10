@@ -31,7 +31,7 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 
 每個來源的端點、擷取方式、條款、授權與風險評估，列在[資料來源合規清冊](SOURCES.md)；授權摘要見 [DATA_LICENSE.md](DATA_LICENSE.md)。
 
-本網站的擷取方式：只讀取公開、不需登入的頁面、feed 與 API，依排程每天兩次（程式更新或手動重建時會額外執行），並以可識別的 User-Agent 標示本專案；不規避任何登入、付費牆、技術保護措施或存取限制，也不重新發布原始網頁的完整內容。截至最後檢查日，除下述例外外，已檢查的列示路徑都未被各網站的 robots.txt 禁止；robots.txt 隨時可能改變，也不等於法律上的授權，每週會自動重新檢查並保存結果與快照。**例外**：dl.google.com（Google Maven 與 Android SDK repository）的 robots.txt 禁止所有程式讀取，本網站仍讀取其中少數固定的版本中繼資料檔（AGP 與 Android SDK 平台、Build Tools 版本；Compose BOM 與 Play Billing 已改讀 developer.android.com 的文件頁），因為這些檔案是供 Gradle、Android Studio 等建置工具自動讀取的套件庫資料；清冊中標為高風險並說明理由，Google 如反對會停止讀取。**其中部分 Apple 來源**（上架規定、Xcode 支援表、App Store 使用率、安全性更新、隱私文件、release notes、開發者系統狀態與軟體更新目錄）是網頁或網頁背後的資料，Apple 的網站使用條款限制以自動方式取得「非刻意提供」的內容；本網站只從中擷取事實資訊並附原始連結，清冊中標為高風險。來源網站的權利人或經營者如不同意本網站擷取或引用，請依第 8 節聯絡，作者會停止擷取並移除相關內容。
+本網站的擷取方式：只讀取公開、不需登入的頁面、feed 與 API，依排程每天三次（程式更新或手動重建時會額外執行），並以可識別的 User-Agent 標示本專案；不規避任何登入、付費牆、技術保護措施或存取限制，也不重新發布原始網頁的完整內容。截至最後檢查日，除下述例外外，已檢查的列示路徑都未被各網站的 robots.txt 禁止；robots.txt 隨時可能改變，也不等於法律上的授權，每週會自動重新檢查並保存結果與快照。**例外**：dl.google.com（Google Maven 與 Android SDK repository）的 robots.txt 禁止所有程式讀取，本網站仍讀取其中少數固定的版本中繼資料檔（AGP 與 Android SDK 平台、Build Tools 版本；Compose BOM 與 Play Billing 已改讀 developer.android.com 的文件頁），因為這些檔案是供 Gradle、Android Studio 等建置工具自動讀取的套件庫資料；清冊中標為高風險並說明理由，Google 如反對會停止讀取。**其中部分 Apple 來源**（上架規定、Xcode 支援表、App Store 使用率、安全性更新、隱私文件、release notes、開發者系統狀態與軟體更新目錄）是網頁或網頁背後的資料，Apple 的網站使用條款限制以自動方式取得「非刻意提供」的內容；本網站只從中擷取事實資訊並附原始連結，清冊中標為高風險。來源網站的權利人或經營者如不同意本網站擷取或引用，請依第 8 節聯絡，作者會停止擷取並移除相關內容。
 
 | 類別 | 來源 |
 |---|---|
@@ -50,7 +50,7 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 - **Stack Overflow**：問題標題與連結來自 Stack Exchange API。使用者貢獻內容依 [CC BY-SA](https://stackoverflow.com/help/licensing) 授權，著作權屬於原作者；本網站在每則問題旁標示原作者（連到其個人頁）、原文連結與授權。
 - **GitHub**：SDK 與 Cordova 的 issue 標題來自各開源專案的公開 issue，著作權屬於原作者與各專案；本網站在每則 issue 旁標示作者（GitHub 帳號）並連回原文。GitHub Actions runner 映像資訊來自 actions/runner-images 專案（MIT）。
 - **App Store / Google Play**：銀行 App 的最低支援版本取自台灣區商店頁面公開顯示的資訊，可能因裝置、地區或 App 更新而不同，**不代表銀行的官方支援政策**，僅供業界參考。本網站僅呈現商店頁面公開的版本數字，**不對任何銀行或其 App 作評價、評比或推薦**；銀行名稱以部分遮罩顯示，以避免被誤解為與各銀行有關聯。
-- **Apple 開發者系統狀態**：只呈現服務名稱、事件類型、狀態與時間，不轉載 Apple 的說明文字，並連回 Apple 的系統狀態頁。網站每天更新兩次，不是即時狀態。
+- **Apple 開發者系統狀態**：只呈現服務名稱、事件類型、狀態與時間，不轉載 Apple 的說明文字，並連回 Apple 的系統狀態頁。網站每天更新三次，不是即時狀態。
 - **React Native、Flutter**：版本與日期取自 GitHub releases 與 Flutter 官方版本清單；React Native 的 release notes 只計算各段落的項目數，不轉載內容，詳細內容請見原始連結。
 - **xcodereleases.com、endoflife.date**：endoflife.date 依 MIT 授權；xcodereleases.com 未標示使用條款，只取版本與日期等事實資訊。
 - **API、RSS 與行事曆**：每個 API 回應都附 `license`、`termsUrl` 與 `attribution` 欄位（各來源的授權、條款與須標示的來源或作者）；RSS 與行事曆也附上本聲明的連結。轉用時請保留這些標示。
@@ -89,7 +89,7 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 
 ## 6. 資訊正確性與免責
 
-- 本網站資料由程式**自動抓取與解析**（網站每天更新兩次），可能因來源網站改版、網路錯誤、快取或解析限制而**延遲、不完整或錯誤**。每個區塊都標示資料來源與抓取時間。
+- 本網站資料由程式**自動抓取與解析**（網站每天更新三次），可能因來源網站改版、網路錯誤、快取或解析限制而**延遲、不完整或錯誤**。每個區塊都標示資料來源與抓取時間。
 - 標示「**推估**」的項目依往年慣例推算（例如下一波 SDK 或 targetSdk 要求），並非官方公告；標示「**社群回報**」的閃退資訊來自 GitHub 與 Stack Overflow，未經官方確認。
 - 「開發者須知」「待處理」與 Deployment Target / minSdk 建議，是依上述資料以固定規則推導的參考結果，**不保證適用於你的專案**。
 - 本網站內容**僅供參考，不構成法律、法規遵循、資訊安全、財務或任何專業建議**。上架、版本支援、金融業法規遵循等決策，請以 Apple、Google 與主管機關的官方文件與公告為準，並自行評估或諮詢專業人士。
@@ -117,7 +117,7 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 - **目的**：Stack Overflow 內容依 CC BY-SA 授權，必須標示原作者；GitHub issue 標題同樣是作者的著作，一併標示。除此之外不作其他用途，也不與其他資料比對或建立個人檔案。
 - **期間**：只在該則內容仍在清單時間範圍內時顯示（GitHub SDK 回報近 30 天、Cordova 回報近 180 天、Stack Overflow 近 90 天），之後下一次更新就會自動移除；跨次保存的狀態檔（`state/`）不包含作者名稱。
 - **地區**：網站與 API 託管於 GitHub Pages，可在全球存取。
-- **你的權利**：如果你是這些作者之一，希望查詢、更正或停止顯示，請依第 8 節的私密管道提出；確認身分後，會在下一次網站更新時處理（網站每天更新兩次）。
+- **你的權利**：如果你是這些作者之一，希望查詢、更正或停止顯示，請依第 8 節的私密管道提出；確認身分後，會在下一次網站更新時處理（網站每天更新三次）。
 
 **公開發布的檔案：** 除頁面與 `legal/` 底下的法律文件外，`api.json`、`api/` 底下各主題的 JSON、`notifications.json`、`calendar.ics`、`feed.xml`、`health.json`，以及用於跨次更新的 `state/changes.json`、`state/alerts.json`、`state/history.json` 皆為公開檔案，內容是彙整的公開資訊、項目首次出現時間、資料來源的健康狀態，以及銀行 App 最低版本（名稱已遮罩）、核心版本與各來源筆數的歷史紀錄，**不含金鑰**；除上述公開來源的作者名稱外，不含個人資料。
 

@@ -4,7 +4,7 @@
 
 最後檢查：2026-10-17 · 共 29 個來源（風險低 9、中 8、高 12）
 
-共同做法：每天兩次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。
+共同做法：每天三次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。
 
 風險等級：
 
@@ -98,10 +98,10 @@
 - 授權或條款：Google Maven 與 Android SDK repository（Google 服務條款）；Maven Central（使用條款）；Gradle（網站條款）；JetBrains 版本清單（JetBrains 網站條款）；Kotlin 文件（Apache 2.0）；Android 文件（Apache 2.0）
 - 端點：
   - XML 檔 `https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml`（條款：<https://policies.google.com/terms>）
-    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
+    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天三次
   - HTML 網頁 `https://developer.android.com/develop/ui/compose/bom/bom-mapping`（條款：<https://policies.google.com/terms>）
   - XML 檔 `https://dl.google.com/android/repository/repository2-3.xml`（條款：<https://policies.google.com/terms>）
-    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
+    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天三次
   - XML 檔 `https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/maven-metadata.xml`（條款：<https://repo1.maven.org/terms.html>）
   - API `https://services.gradle.org/versions/current`（條款：<https://gradle.org/terms/>）
   - HTML 網頁 `https://gradle.org/releases/`（條款：<https://gradle.org/terms/>）
