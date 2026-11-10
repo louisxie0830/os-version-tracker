@@ -2,11 +2,10 @@ import { widthClass } from './render-styles.js';
 import type { AllVersions } from './fetch-all.js';
 import { compareVersions } from './versions.js';
 import { zhDate } from './insights.js';
-import { displayDate, esc, externalLink } from './render-actions.js';
+import { displayDate, esc, externalLink, renderReleaseDate } from './render-actions.js';
 import type { OSVersionInfo, ToolVersion } from './types.js';
 import type { Tile } from './render-common.js';
 import { isActive } from './fetchers/apple-status.js';
-import { calendarDate } from './taipei-date.js';
 
 /** The iOS and Android sections: version cards, toolchain tiles and version distribution bars. */
 
@@ -174,15 +173,13 @@ function renderVersionCard(v: OSVersionInfo): string {
   const build = v.build ? `<span class="meta">Build <code>${esc(v.build)}</code></span>` : '';
   const api = v.apiLevel ? `<span class="meta">API ${v.apiLevel}</span>` : '';
   const codename = v.codename ? `<span class="meta">${esc(v.codename)}</span>` : '';
-  const day = calendarDate(v.releaseDate);
-  const releaseDate = day ? `<time datetime="${day}">${esc(displayDate(day))}</time>` : '待確認';
   return `<div class="version-card">
     <div class="version-header">
       <span class="badge ${badgeClass}">${badgeText}</span>
       <span class="version-number">${esc(v.version)}</span>
     </div>
     <div class="version-details">
-      <span class="meta">發布日期 ${releaseDate}</span>
+      <span class="meta">發布日期 ${renderReleaseDate(v.releaseDate)}</span>
       ${build}${api}${codename}
     </div>
   </div>`;
