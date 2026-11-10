@@ -1,7 +1,7 @@
 import { shownDate, type TrackedItem } from './changes.js';
 import { SITE_URL, type AllVersions } from './fetch-all.js';
 import { buildNowCards } from './now.js';
-import { displayDate, esc, externalLink } from './render-actions.js';
+import { displayDate, esc, externalLink, renderReleaseDate } from './render-actions.js';
 import { calendarSubscriptionUrl, safeUrl } from './safe-url.js';
 import { platformClass, renderChoiceChips, taipeiTime } from './render-common.js';
 import { daysUntil, taipeiToday } from './taipei-date.js';
@@ -112,18 +112,27 @@ export function renderFilterRail(): string {
 
 export function renderSnapshotRail(data: AllVersions): string {
   const webcal = calendarSubscriptionUrl(SITE_URL) ?? 'calendar.ics';
-  const iosStable = data.ios.find(v => !v.isBeta);
-  const iosBeta = data.ios.find(v => v.isBeta);
-  const androidStable = data.android.find(v => !v.isBeta);
   const tc = data.iosToolchain;
-  const rows: Array<[string, string | undefined]> = [
-    ['iOS 正式版', iosStable?.version],
-    ['iOS Beta', iosBeta?.version.replace(/\s*beta\s*/i, ' b')],
-    ['Xcode', tc?.xcodeStable?.version],
-    ['Xcode Beta', tc?.xcodeBeta?.version],
-    ['Android', androidStable?.version.replace(/^Android\s*/i, '')],
-    ['AGP', data.androidToolchain?.agpStable?.version],
+  const agp = data.androidToolchain?.agpStable;
+  const rows: Array<{ label: string; version?: string; releaseDate?: string; build?: string; platform?: string }> = [
+    ...[...data.ios, ...data.android].map(v => ({
+      label: `${v.platform} ${v.isBeta ? 'Beta' : '正式版'}`,
+      version: v.version,
+      releaseDate: v.releaseDate,
+      build: v.build,
+      platform: v.platform.toLowerCase(),
+    })),
+    { label: 'Xcode', version: tc?.xcodeStable?.version, releaseDate: tc?.xcodeStable?.releaseDate },
+    { label: 'Xcode Beta', version: tc?.xcodeBeta?.version, releaseDate: tc?.xcodeBeta?.releaseDate },
+    { label: 'AGP', version: agp?.version, releaseDate: agp?.releaseDate },
   ];
+  const versionRows = rows.map(({ label, version, releaseDate, build, platform }) => {
+    if (!version) return '';
+    const platformAttr = platform ? ` data-snapshot-os="${esc(platform)}"` : '';
+    const date = platform || releaseDate ? `<span class="snap-meta">發布日期 ${renderReleaseDate(releaseDate)}</span>` : '';
+    const buildMeta = build ? `<span class="snap-meta">Build ${esc(build)}</span>` : '';
+    return `<div${platformAttr}><dt>${esc(label)}</dt><dd><span class="snap-version">${esc(version)}</span>${date}${buildMeta}</dd></div>`;
+  }).join('');
   // Taiwan's today, so the morning build (still yesterday in UTC) doesn't count one day too many
   const today = taipeiToday();
   // A deadline that was extended counts from its extension while that's still ahead (the original is past)
@@ -133,7 +142,7 @@ export function renderSnapshotRail(data: AllVersions): string {
   return `<aside class="rail rail-right" aria-label="版本快照">
     <div class="snap">
       <span class="rail-label">目前版本</span>
-      <dl>${rows.filter(([, v]) => v).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v!)}</dd></div>`).join('')}</dl>
+      <dl>${versionRows}</dl>
     </div>
     ${next ? `<div class="next-deadline">
       <span class="rail-label">下一個期限</span>

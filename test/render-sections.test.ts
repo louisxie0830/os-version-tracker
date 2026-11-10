@@ -173,13 +173,15 @@ test('banks summary: distribution lowest first, strictest versions ignore "Varie
   assert.match(html, /data-ios-sort="15.04"/);
 });
 
-test('bank release columns show the iOS and Android store ratings separately', () => {
+test('bank app names have distinct App Store and Google Play rating labels', () => {
   const html = renderBanksSection(data({ twBanks: [app('甲', '15', '9', {
     ios: { minOs: '15', version: '1.2', rating: 4.76, url: 'https://apps.apple.com/tw/app/id1' },
     android: { minOs: '9', version: '1.3', rating: 4.24, url: 'https://play.google.com/store/apps/details?id=a' },
   })] }));
-  assert.match(html, /data-label="iOS 更新上架">(?:(?!<\/td>)[\s\S])*★<\/span> 4\.8／5/);
-  assert.match(html, /data-label="Android 更新上架">(?:(?!<\/td>)[\s\S])*★<\/span> 4\.2／5/);
+  const titleCell = html.match(/<td class="row-title"[\s\S]*?<\/td>/)?.[0] ?? '';
+  assert.match(titleCell, /<span>App Store<\/span><strong><span aria-hidden="true">★<\/span> 4\.8／5/);
+  assert.match(titleCell, /<span>Google Play<\/span><strong><span aria-hidden="true">★<\/span> 4\.2／5/);
+  assert.match(renderBanksSection(data({ twBanks: [app('乙', '15')] })), /<span>Google Play<\/span><strong>—<\/strong>/);
 });
 
 test('banks: targetSdk below the Play requirement is flagged and filterable; none below says all reached it', () => {

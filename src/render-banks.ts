@@ -35,12 +35,16 @@ const BANK_SORTS: Array<[string, string, string?, ('asc' | 'desc')?]> = [
   ['androidUpdated', 'Android 上架日期由新到舊', 'androidUpdatedSort', 'desc'],
 ];
 
-/** The store's current app version, update date and rating, kept together for each platform. */
+/** The store's current app version and update date, kept together for each platform. */
 function renderStoreRelease(app: AllVersions['twBanks'][number]['ios']): string {
-  if (!app || (!app.updated && !app.version && app.rating === undefined)) return '—';
-  const rating = typeof app.rating === 'number' && app.rating >= 1 && app.rating <= 5
-    ? `<span aria-hidden="true">★</span> ${app.rating.toFixed(1)}／5` : '—';
-  return `<div class="bank-release">${app.updated ? `<time datetime="${esc(app.updated)}">${esc(displayDate(app.updated))}</time>` : '—'}${app.version ? `<div class="tl-source">版本 ${externalLink(app.url, esc(app.version))}</div>` : ''}<div class="tl-source bank-rating">評分 ${rating}</div></div>`;
+  if (!app?.updated && !app?.version) return '—';
+  return `<div class="bank-release">${app.updated ? `<time datetime="${esc(app.updated)}">${esc(displayDate(app.updated))}</time>` : '—'}${app.version ? `<div class="tl-source">版本 ${externalLink(app.url, esc(app.version))}</div>` : ''}</div>`;
+}
+
+function renderStoreRating(store: 'App Store' | 'Google Play', rating: number | undefined): string {
+  const score = typeof rating === 'number' && rating >= 1 && rating <= 5
+    ? `<span aria-hidden="true">★</span> ${rating.toFixed(1)}／5` : '—';
+  return `<span class="bank-rating"><span>${store}</span><strong>${score}</strong></span>`;
 }
 
 /** Filters for the bank table: app kind, minimum iOS / Android major, and a sort; applied in the browser by <bank-table> (bank-table.js) */
@@ -107,7 +111,10 @@ export function renderBanksSection(data: AllVersions): string {
     const target = b.android?.targetSdk;
     const below = !!(target && requiredTarget && target < requiredTarget);
     return `<tr data-index="${i}" data-kind="${kind}" data-target="${below ? 'below' : 'ok'}" data-target-sort="${target ?? 999}" data-changed="${changedApps.has(bankAppKey(b)) ? 'recent' : 'none'}" data-ios="${esc(majorOf(b.ios?.minOs) ?? '')}" data-android="${esc(majorOf(b.android?.minOs) ?? '')}" data-ios-sort="${sortValue(b.ios?.minOs)}" data-android-sort="${sortValue(b.android?.minOs)}" data-ios-updated-sort="${dateSortValue(b.ios?.updated)}" data-android-updated-sort="${dateSortValue(b.android?.updated)}">
-      <td class="row-title" data-label="銀行"><strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}${b.kind && BANK_APP_KIND[b.kind] ? ` <span class="badge badge-sm bank-kind">${BANK_APP_KIND[b.kind]}</span>` : ''}</div></td>
+      <td class="row-title" data-label="銀行"><div class="bank-name">
+        <strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}${b.kind && BANK_APP_KIND[b.kind] ? ` <span class="badge badge-sm bank-kind">${BANK_APP_KIND[b.kind]}</span>` : ''}</div>
+        <div class="bank-ratings" role="group" aria-label="台灣區商店評分">${renderStoreRating('App Store', b.ios?.rating)}${renderStoreRating('Google Play', b.android?.rating)}</div>
+      </div></td>
       <td data-label="最低 iOS">${b.ios ? `<span>${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`, 'nowrap')}${changeNote(changeOf(b, 'iOS'))}</span>` : '—'}</td>
       <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`, 'nowrap')}${api ? ` <span class="tl-source nowrap">API ${api}</span>` : ''}${changeNote(changeOf(b, 'Android'))}</span>` : '—'}</td>
       <td data-label="targetSdk">${target ? `<span>${target}${below ? ` <span class="bank-change is-up" title="Google Play 規定新 App 與更新須 target ${requiredTarget} 以上；在期限前送出的版本可能仍是舊值">低於 ${requiredTarget}</span>` : ''}</span>` : '—'}</td>
@@ -118,7 +125,7 @@ export function renderBanksSection(data: AllVersions): string {
   return `<section class="panel" id="banks">
     <h2>銀行 App 支援版本</h2>
     <p class="table-note">各銀行官方行動銀行 App 在 App Store 與 Google Play（台灣區）標示的最低支援版本，每次更新網站時重新抓取。部分銀行另列出企業、商家收款與認證 App（以標籤區分），分布統計與篩選都包含這些 App。可作為金融業 App 設定 Deployment Target / minSdk 的業界參考。銀行與 App 名稱以部分遮罩顯示；商店標示的版本不代表銀行的官方支援政策。</p>
-    <p class="table-note">「更新上架」顯示各商店目前版本、台灣時間的更新日期，以及台灣區商店的平均星等（滿分 5 星）。未取得的欄位顯示 —。</p>
+    <p class="table-note">App 名稱下方分別列出台灣區 App Store 與 Google Play 的平均評分，滿分 5 星。「更新上架」列出各商店目前版本及台灣時間的更新日期。缺值顯示 —。</p>
     <div class="bank-summary">
       <div><div class="tile-label">最低 iOS 分布</div><div class="share-chips">${countByMajor(ios, 'iOS')}</div></div>
       <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>
