@@ -2,7 +2,7 @@
 
 **iOS 與 Android 開發者的上架雷達**：最新系統版本，以及隨之而來的 Xcode、SDK、商店上架規定與相容性問題。
 
-🔗 **網站：<https://louisxie0830.github.io/os-version-tracker/>**（每天自動更新兩次，可安裝成 PWA）
+🔗 **網站：<https://louisxie0830.github.io/os-version-tracker/>**（每日排程三次，可安裝成 PWA）
 
 ## 功能
 
@@ -28,9 +28,11 @@
 
 ```
 push 到 master、手動觸發：驗證（Node 24＋覆蓋率門檻、瀏覽器 e2e）→ 抓取所有來源 → 產生網站 → 頁面檢查 → 部署
-每天兩次的排程：             抓取所有來源 → 產生網站 → 頁面檢查（只警告）→ 部署
+每日三次的排程：             抓取所有來源 → 產生網站 → 頁面檢查（只警告）→ 部署
 pull request：            驗證（Node 24＋覆蓋率門檻、瀏覽器 e2e）
 ```
+
+每日排程為台灣時間 05:43、17:43，以及美國太平洋時間 10:43。美西夏令時間對應台灣次日 01:43，標準時間對應次日 02:43。若排程延遲，補跑流程會檢查兩個時區的更新時段。
 
 驗證是同一份 `.github/workflows/ci.yml`：PR 直接執行，push 與手動觸發時由 `pages.yml` 呼叫，驗證沒過就不會建置與部署；每個 commit 只測一次。排程更新的程式碼已經驗證過，只跑建置與頁面檢查。
 
@@ -139,7 +141,7 @@ npm run test:e2e                            # 用固定資料建立暫存網站�
 | `api/trends.json` | 版本分布、近 12 個月主版本占比與手機品牌占比（StatCounter，CC BY-SA 3.0）、Apple iOS 採用率 |
 | `api/banks.json` | 銀行 App 最低版本、Android targetSdk、各平台目前版本 `version`、更新上架日期 `updated`（YYYY-MM-DD，台灣日期）與台灣區平均星等 `rating`（滿分 5）、版本調整紀錄、每日分布（名稱已遮罩） |
 | `api/news.json` | 開發者新聞 |
-| `api/status.json` | Apple 開發者服務近 7 天與進行中的事件（每天更新兩次，不是即時狀態） |
+| `api/status.json` | Apple 開發者服務近 7 天與進行中的事件（隨網站排程更新） |
 | `api/privacy.json` | Required Reason API 與須附隱私清單的 SDK |
 
 每個端點的格式相同：

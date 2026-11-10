@@ -38,8 +38,8 @@ const HISTORY_STATE = path.join(STATE_DIR, 'history.json');
 const LAST_GOOD_STATE = path.join(STATE_DIR, 'last-good.json');
 
 
-// Must match the cron schedule in .github/workflows/pages.yml (twice a day)
-const REFRESH_MINUTES = 12 * 60;
+// Average across the three daily windows in pages.yml, used for the displayed refresh frequency.
+const REFRESH_MINUTES = (24 * 60) / 3;
 
 const SITE_URL = (process.env.SITE_URL ?? '').replace(/\/$/, '');
 if (!SITE_URL) {
