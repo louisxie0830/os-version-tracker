@@ -270,14 +270,35 @@ async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) 
   return out;
 }
 
-export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = TW_BANK_APPS): Promise<TaiwanBankApp[]> {
-  const ids = apps.flatMap(a => (a.appStoreId ? [a.appStoreId] : []));
+async function fetchItunesApps(ids: number[]): Promise<Map<number, ItunesAppInfo>> {
+  const apps = new Map<number, ItunesAppInfo>();
+  if (!ids.length) return apps;
 
-  const iosPromise: Promise<Map<number, ItunesAppInfo> | Error> = ids.length
-    ? storePage(itunesLookupUrl(ids), 'zh-TW,zh;q=0.9,en;q=0.8')
-        .then(parseItunesLookup)
-        .catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))))
-    : Promise.resolve(new Map());
+  const lookup = async (batch: number[]) => {
+    const result = parseItunesLookup(await storePage(itunesLookupUrl(batch), 'zh-TW,zh;q=0.9,en;q=0.8'));
+    for (const id of batch) {
+      const app = result.get(id);
+      if (app) apps.set(id, app);
+    }
+  };
+  await lookup(ids);
+
+  // A successful lookup may omit some IDs or return rows without a valid minimum OS.
+  const missingIds = ids.filter(id => !apps.has(id));
+  if (missingIds.length) {
+    try {
+      await lookup(missingIds);
+    } catch {
+      // Publish what the first batch returned so the quality check can report the remaining gaps.
+    }
+  }
+  return apps;
+}
+
+export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = TW_BANK_APPS): Promise<TaiwanBankApp[]> {
+  const ids = [...new Set(apps.flatMap(a => (a.appStoreId ? [a.appStoreId] : [])))];
+  const iosPromise = fetchItunesApps(ids)
+    .catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
   const androidPromise = mapLimit(apps, PLAY_CONCURRENCY, async a => {
     if (!a.playPackage) return undefined;
@@ -290,11 +311,16 @@ export async function fetchTaiwanBankApps(apps: readonly TaiwanBankAppEntry[] = 
       { url: `https://play.google.com/store/apps/details?id=${encodeURIComponent(a.playPackage)}&hl=en&gl=US`, lang: 'en-US,en;q=0.9', taiwan: false },
     ];
     for (const candidate of candidates) {
-      try {
-        const info = parsePlayDetails(await storePage(candidate.url, candidate.lang));
-        if (info) return { ...info, rating: candidate.taiwan ? info.rating : undefined, url };
-      } catch {
-        // Try the other official localisation, then leave the missing field visible to quality alerts.
+      // Give incomplete Taiwan HTML one more read before falling back to the US listing.
+      const attempts = candidate.taiwan ? 2 : 1;
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        try {
+          const info = parsePlayDetails(await storePage(candidate.url, candidate.lang));
+          if (info) return { ...info, rating: candidate.taiwan ? info.rating : undefined, url };
+        } catch {
+          // fetchText has already handled any applicable transport retry.
+          break;
+        }
       }
     }
     return undefined;

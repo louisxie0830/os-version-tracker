@@ -12,6 +12,7 @@ import {
 } from '../src/fetchers/tw-banks.js';
 import { fixture, GARBAGE_HTML } from './helpers.js';
 import { setRetryDelay } from '../src/net.js';
+import { bankFieldGaps } from '../src/quality.js';
 
 const playRating = (rating: number | string) => `<script type="application/ld+json">${JSON.stringify({ '@type': 'SoftwareApplication', aggregateRating: { ratingValue: rating } })}</script>`;
 
@@ -167,6 +168,97 @@ test('bank Play listing: valid Taiwan data does not request the alternate locale
   } finally {
     globalThis.fetch = original;
   }
+});
+
+for (const retry of ['recovers', 'missing', 'fails'] as const) {
+  test('iTunes requests only missing IDs and preserves the first batch when the retry ' + retry, async t => {
+    const entries = [
+      { bank: 'CUBE', app: 'CUBE', appStoreId: 373500505 },
+      { bank: 'SinoPac', app: 'SinoPac', appStoreId: 6587560188 },
+    ];
+    const urls: string[] = [];
+    t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
+      urls.push(String(input));
+      if (urls.length === 1) return Response.json({ results: [
+        { trackId: 373500505, minimumOsVersion: '15', version: '7.10', averageUserRating: 4.2 },
+        { trackId: 6587560188, version: '2.0' },
+      ] });
+      if (retry === 'fails') return new Response('unavailable', { status: 500 });
+      return Response.json({ results: [
+        { trackId: 373500505, minimumOsVersion: '13', version: '6.0' },
+        ...(retry === 'recovers' ? [{ trackId: 6587560188, minimumOsVersion: '15', version: '2.1' }] : []),
+      ] });
+    });
+
+    const rows = await fetchTaiwanBankApps(entries);
+    assert.deepEqual(urls, [itunesLookupUrl([373500505, 6587560188]), itunesLookupUrl([6587560188])]);
+    assert.equal(rows[0].ios?.version, '7.10');
+    assert.equal(rows[0].ios?.rating, 4.2);
+    assert.equal(rows[1].ios?.version, retry === 'recovers' ? '2.1' : undefined);
+    assert.deepEqual(bankFieldGaps(entries, rows), retry === 'recovers'
+      ? []
+      : ['App Store 沒有抓到 1 個 App：id6587560188']);
+  });
+}
+
+test('iTunes responses for unrelated IDs do not count as a working store', async t => {
+  let requests = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    requests++;
+    return Response.json({ results: [{ trackId: 999, minimumOsVersion: '15' }] });
+  });
+  await assert.rejects(fetchTaiwanBankApps([{ bank: 'SinoPac', app: 'SinoPac', appStoreId: 6587560188 }]), /both platforms failed/);
+  assert.equal(requests, 2);
+});
+
+const sinoPacPackage = 'com.sinopac.newmobilebank';
+const sinoPacPlay = [{ bank: 'SinoPac', app: 'SinoPac', playPackage: sinoPacPackage }];
+const taiwanPlayUrl = playDetailsUrl(sinoPacPackage);
+const usPlayUrl = 'https://play.google.com/store/apps/details?id=' + sinoPacPackage + '&hl=en&gl=US';
+
+for (const recoverInTaiwan of [true, false]) {
+  test('incomplete Play HTML recovers on ' + (recoverInTaiwan ? 'the Taiwan retry' : 'the US fallback'), async t => {
+    const urls: string[] = [];
+    t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
+      const url = String(input);
+      urls.push(url);
+      if (recoverInTaiwan ? urls.length === 2 : url === usPlayUrl) {
+        return new Response(fixture('tw-banks-play-cube-zh.html') + playRating(4.5));
+      }
+      return new Response(GARBAGE_HTML);
+    });
+    const [row] = await fetchTaiwanBankApps(sinoPacPlay);
+    assert.deepEqual(urls, recoverInTaiwan
+      ? [taiwanPlayUrl, taiwanPlayUrl]
+      : [taiwanPlayUrl, taiwanPlayUrl, usPlayUrl]);
+    assert.equal(row.android?.minOs, '9');
+    assert.equal(row.android?.targetSdk, 36);
+    assert.equal(row.android?.rating, recoverInTaiwan ? 4.5 : undefined);
+    assert.equal(row.android?.url, taiwanPlayUrl);
+  });
+}
+
+test('Play transport retries and incomplete HTML are bounded to six GETs', async t => {
+  const urls: string[] = [];
+  setRetryDelay(0);
+  t.after(() => setRetryDelay(1500));
+  t.mock.method(globalThis, 'fetch', async (input: string | URL | Request) => {
+    urls.push(String(input));
+    return urls.length % 2 === 1
+      ? new Response('rate limited', { status: 429, headers: { 'Retry-After': '0' } })
+      : new Response(GARBAGE_HTML);
+  });
+  await assert.rejects(fetchTaiwanBankApps(sinoPacPlay), /both platforms failed/);
+  assert.deepEqual(urls, [taiwanPlayUrl, taiwanPlayUrl, taiwanPlayUrl, taiwanPlayUrl, usPlayUrl, usPlayUrl]);
+});
+
+test('Play data with a minimum OS and optional fields missing is accepted after one GET', async t => {
+  const fetch = t.mock.method(globalThis, 'fetch', async () => new Response('<html>Requires Android 9 and up</html>'));
+  const [row] = await fetchTaiwanBankApps(sinoPacPlay);
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.equal(row.android?.minOs, '9');
+  assert.equal(row.android?.updated, undefined);
+  assert.equal(row.android?.targetSdk, undefined);
 });
 
 test('fetchTaiwanBankApps: both stores failing is the source failing; an empty iTunes answer with Play down too', async t => {
