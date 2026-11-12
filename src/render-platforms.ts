@@ -2,7 +2,7 @@ import { widthClass } from './render-styles.js';
 import type { AllVersions } from './fetch-all.js';
 import { compareVersions } from './versions.js';
 import { zhDate } from './insights.js';
-import { displayDate, esc, externalLink } from './render-actions.js';
+import { displayDate, esc, externalLink, renderReleaseDate } from './render-actions.js';
 import type { OSVersionInfo, ToolVersion } from './types.js';
 import type { Tile } from './render-common.js';
 import { isActive } from './fetchers/apple-status.js';
@@ -179,8 +179,8 @@ function renderVersionCard(v: OSVersionInfo): string {
       <span class="version-number">${esc(v.version)}</span>
     </div>
     <div class="version-details">
+      <span class="meta">發布日期 ${renderReleaseDate(v.releaseDate)}</span>
       ${build}${api}${codename}
-      <span class="meta">${esc(displayDate(v.releaseDate))} 發布</span>
     </div>
   </div>`;
 }
@@ -210,7 +210,7 @@ export function renderAppleStatus(data: AllVersions): string {
       <span class="case-count">${status.events.length ? `近 7 天 ${status.events.length} 件` : `${status.services} 項服務，近 7 天沒有事件`}</span>
     </div>
     ${rows ? `<ul class="crash-list" data-search-rows>${rows}</ul>` : ''}
-    <div class="case-body"><p class="table-note">App Store Connect、TestFlight、APNs、Xcode Cloud 等服務的事件紀錄，網站每天更新兩次，不是即時狀態；${externalLink(status.url, '最新狀態請看 Apple 系統狀態頁')}。</p></div>
+    <div class="case-body"><p class="table-note">App Store Connect、TestFlight、APNs、Xcode Cloud 等服務的事件紀錄，網站隨排程更新。${externalLink(status.url, '最新狀態請看 Apple 系統狀態頁')}。</p></div>
   </div>`;
 }
 

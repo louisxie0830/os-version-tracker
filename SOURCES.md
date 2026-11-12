@@ -4,7 +4,7 @@
 
 最後檢查：2026-10-17 · 共 29 個來源（風險低 9、中 8、高 12）
 
-共同做法：每天兩次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。
+共同做法：每天三次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。
 
 風險等級：
 
@@ -15,7 +15,7 @@
 | 來源 | 名稱 | 風險 | 方式 | 授權或條款 |
 | --- | --- | --- | --- | --- |
 | `ios` | Apple 軟體更新目錄 / Developer Releases | 高 | RSS / Atom、API、JSON 檔 | Apple RSS（官方提供）；endoflife.date（MIT）；gdmf.apple.com 為未公開文件的軟體更新目錄 |
-| `android` | endoflife.date · Android Developers Blog | 低 | API、RSS / Atom | endoflife.date（MIT）；Android Developers Blog feed（官方提供） |
+| `android` | endoflife.date · Android 官方版本說明與 Blog | 低 | API、RSS / Atom、HTML 網頁 | endoflife.date（MIT）；Android Developers Blog feed（官方提供）；Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
 | `appleDeadline` | Apple Developer News | 低 | RSS / Atom | Apple Developer News RSS（官方提供） |
 | `googleDeadline` | Google Play 目標 API 等級規定 | 中 | HTML 網頁 | Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款 |
 | `iosToolchain` | xcodereleases.com · endoflife.date | 中 | JSON 檔、API | xcodereleases.com 未標示使用條款；endoflife.date（MIT） |
@@ -56,14 +56,16 @@
   - JSON 檔 `https://gdmf.apple.com/v2/pmv`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
 - 說明：RSS 與 endoflife.date 風險低；gdmf.apple.com 不是 Apple 公開提供的資料介面。只取版本、日期與規定名稱等事實資訊並附原始連結
 
-### `android`：endoflife.date · Android Developers Blog
+### `android`：endoflife.date · Android 官方版本說明與 Blog
 
 - 風險：低
-- 授權或條款：endoflife.date（MIT）；Android Developers Blog feed（官方提供）
+- 授權或條款：endoflife.date（MIT）；Android Developers Blog feed（官方提供）；Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款
 - 端點：
   - API `https://endoflife.date/api/android.json`（條款：<https://github.com/endoflife-date/endoflife.date/blob/master/LICENSE>）
   - RSS / Atom `https://developer.android.com/blog/atom.xml`（條款：<https://developer.android.com/legal>）
-- 說明：只取版本號、API 等級、代號與發布日期
+  - HTML 網頁 `https://developer.android.com/topic/generic-system-image/releases`（條款：<https://developer.android.com/legal>）
+  - HTML 網頁 `https://developer.android.com/about/versions/{major}/qpr{number}/release-notes`（條款：<https://developer.android.com/legal>）
+- 說明：只取版本號、API 等級、代號、發布日期及 Build。以官方 GSI 清單辨認仍在測試的 QPR 分支，從各分支版本說明取得最新 Beta
 
 ### `appleDeadline`：Apple Developer News
 
@@ -96,10 +98,10 @@
 - 授權或條款：Google Maven 與 Android SDK repository（Google 服務條款）；Maven Central（使用條款）；Gradle（網站條款）；JetBrains 版本清單（JetBrains 網站條款）；Kotlin 文件（Apache 2.0）；Android 文件（Apache 2.0）
 - 端點：
   - XML 檔 `https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml`（條款：<https://policies.google.com/terms>）
-    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
+    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天三次
   - HTML 網頁 `https://developer.android.com/develop/ui/compose/bom/bom-mapping`（條款：<https://policies.google.com/terms>）
   - XML 檔 `https://dl.google.com/android/repository/repository2-3.xml`（條款：<https://policies.google.com/terms>）
-    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次
+    - **robots.txt 例外**：dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天三次
   - XML 檔 `https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/maven-metadata.xml`（條款：<https://repo1.maven.org/terms.html>）
   - API `https://services.gradle.org/versions/current`（條款：<https://gradle.org/terms/>）
   - HTML 網頁 `https://gradle.org/releases/`（條款：<https://gradle.org/terms/>）
@@ -234,7 +236,7 @@
 - 端點：
   - API `https://itunes.apple.com/lookup`（條款：<https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/iTuneSearchAPI/index.html>）
   - 網頁內嵌資料 `https://play.google.com/store/apps/details`（條款：<https://play.google.com/about/play-terms/>）
-- 說明：只取最低支援版本、版本號、targetSdk 與更新日期；銀行與 App 名稱部分遮罩，不評比任何銀行
+- 說明：擷取最低支援版本、版本號、targetSdk、更新日期與台灣區商店的平均星等。銀行與 App 名稱部分遮罩
 
 ### `devNews`：Apple / Android / Swift / Kotlin / Firebase / Cordova 官方 feed
 

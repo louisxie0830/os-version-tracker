@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import type { AllVersions } from '../src/fetch-all.ts';
 import { renderCompatSection, renderDeadlinesSection } from '../src/render-schedule.ts';
 import { renderBanksSection } from '../src/render-banks.ts';
+import { renderPlatformSection } from '../src/render-platforms.ts';
 import { renderTrendsSection } from '../src/render-trends.ts';
 import { taipeiToday } from '../src/taipei-date.ts';
 import { bankAppKey } from '../src/history.ts';
@@ -19,6 +20,21 @@ const HOSTILE = '<img src=x onerror=alert(1)>';
 const inDays = (n: number) => new Date(Date.parse(`${taipeiToday()}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 const deadline = (date: string, extra: Record<string, unknown> = {}) => ({ platform: 'iOS', date, title: 'T', detail: 'D', source: 'S', url: 'https://developer.apple.com/news/', ...extra });
 const statusOf = (html: string) => [...html.matchAll(/<span class="status status-(\w+)">([^<]*)<\/span>/g)].map(m => `${m[1]}:${m[2]}`);
+
+test('platform cards label release dates on iOS and Android and mark missing dates', () => {
+  const ios = renderPlatformSection('ios', 'iOS', [
+    { platform: 'iOS', version: '27.2.1', releaseDate: '2026-11-09' },
+    { platform: 'iOS', version: '27.3 beta', releaseDate: '2026-11-03', isBeta: true },
+  ]);
+  const android = renderPlatformSection('android', 'Android', [
+    { platform: 'Android', version: 'Android 17 QPR3 Beta 3', releaseDate: '2026-10-29', isBeta: true },
+    { platform: 'Android', version: 'Android 18 DP1', releaseDate: 'unknown', isBeta: true },
+  ]);
+  assert.match(ios, /發布日期 <time datetime="2026-11-09">2026\/11\/09<\/time>/);
+  assert.match(ios, /發布日期 <time datetime="2026-11-03">2026\/11\/03<\/time>/);
+  assert.match(android, /發布日期 <time datetime="2026-10-29">2026\/10\/29<\/time>/);
+  assert.match(android, /發布日期 待確認/);
+});
 
 // ---------- deadlines and the timeline ----------
 
@@ -155,6 +171,17 @@ test('banks summary: distribution lowest first, strictest versions ignore "Varie
   assert.doesNotMatch(renderBanksSection(data({ twBanks: [app('甲', '13.0')] })), /data-bank-filter="kind"/);
   // Sort values: major.minor as a number
   assert.match(html, /data-ios-sort="15.04"/);
+});
+
+test('bank app names have distinct App Store and Google Play rating labels', () => {
+  const html = renderBanksSection(data({ twBanks: [app('甲', '15', '9', {
+    ios: { minOs: '15', version: '1.2', rating: 4.76, url: 'https://apps.apple.com/tw/app/id1' },
+    android: { minOs: '9', version: '1.3', rating: 4.24, url: 'https://play.google.com/store/apps/details?id=a' },
+  })] }));
+  const titleCell = html.match(/<td class="row-title"[\s\S]*?<\/td>/)?.[0] ?? '';
+  assert.match(titleCell, /<span>App Store<\/span><strong><span aria-hidden="true">★<\/span> 4\.8／5/);
+  assert.match(titleCell, /<span>Google Play<\/span><strong><span aria-hidden="true">★<\/span> 4\.2／5/);
+  assert.match(renderBanksSection(data({ twBanks: [app('乙', '15')] })), /<span>Google Play<\/span><strong>—<\/strong>/);
 });
 
 test('banks: targetSdk below the Play requirement is flagged and filterable; none below says all reached it', () => {

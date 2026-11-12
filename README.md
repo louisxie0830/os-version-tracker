@@ -2,7 +2,7 @@
 
 **iOS 與 Android 開發者的上架雷達**：最新系統版本，以及隨之而來的 Xcode、SDK、商店上架規定與相容性問題。
 
-🔗 **網站：<https://louisxie0830.github.io/os-version-tracker/>**（每天自動更新兩次，可安裝成 PWA）
+🔗 **網站：<https://louisxie0830.github.io/os-version-tracker/>**（每日排程三次，可安裝成 PWA）
 
 ## 功能
 
@@ -14,9 +14,9 @@
 | React Native · Flutter | 兩個框架的最新正式版與近期各版本線；React Native 各版本 release notes 標示的破壞性變更、棄用與資安項目數，Flutter 內建的 Dart 版本；只列影響近期版本的已知漏洞 |
 | 資安 | CISA KEV 近 180 天已遭利用的 iOS / Android / Chromium（WebView）漏洞、Apple 安全性更新（iOS、Safari、Xcode，標出可能已遭利用的 CVE）、每月 Android 安全性公告，以及 Cordova、React Native、OkHttp、Alamofire 等常用 SDK 在 GitHub Advisory Database 的資安公告；新的已遭利用漏洞會進通知中心 |
 | 趨勢 | iOS / Android 各主版本在台灣與全球近 12 個月的占比變化（StatCounter 月資料，可切換地區）、台灣與全球的手機品牌占比，以及銀行 App 最低版本要求的分布變化（從開始記錄當天起每天累積）；圖表可滑過看數值、可切換為表格 |
-| iOS / Android | 最新正式版與 Beta、開發者須知（上架期限換算成要升級的 Xcode / macOS、targetSdk 倒數、Deployment Target / minSdk 建議等）、開發工具版本、官方公告；iOS 區塊另有 Apple 開發者服務狀態（App Store Connect、TestFlight、APNs、Xcode Cloud 等近 7 天的事件，進行中的會列入「待處理」） |
+| iOS / Android | 最新正式版、Beta 和各版本發布日期（含 Android QPR Beta 的 Build）、開發者須知（上架期限換算成要升級的 Xcode / macOS、targetSdk 倒數、Deployment Target / minSdk 建議等）、開發工具版本、官方公告；iOS 區塊另有 Apple 開發者服務狀態（App Store Connect、TestFlight、APNs、Xcode Cloud 等近 7 天的事件，進行中的會列入「待處理」） |
 | 版本分布 | 台灣與全球 iOS / Android 各版本占比、「支援到某版本可涵蓋多少裝置」、台灣最常見版本（StatCounter），以及 Apple 官方 iOS 採用率 |
-| 銀行 App 支援版本 | 24 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本與 Android targetSdk（標出低於 Google Play 目前規定的 App），每次更新網站時抓取；分別顯示 iOS / Android 目前版本號與更新上架日期（台灣時間，手機版也可見），可依上架日期由新到舊排序；可依類型與版本篩選；銀行調高或調低最低版本時會標示並發通知；銀行與 App 名稱以部分遮罩顯示 |
+| 銀行 App 支援版本 | 24 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本與 Android targetSdk（標出低於 Google Play 目前規定的 App），每次更新網站時抓取；分別顯示 iOS / Android 目前版本號、更新上架日期與台灣區商店星等（手機版也可見），可依上架日期由新到舊排序；可依類型與版本篩選；銀行調高或調低最低版本時會標示並發通知；銀行與 App 名稱以部分遮罩顯示 |
 | 通知中心 | 右上角鈴鐺：新規定、重要公告、新機型、SDK 閃退、資安公告、銀行 App 版本調整、Apple 開發者服務事件的未讀清單；網頁開著時每 5 分鐘檢查，可開啟系統通知 |
 | 相容性對照表 | Xcode × macOS × 部署版本 × 實機除錯、GitHub Actions macOS runner 內建的 Xcode、AGP × Gradle × JDK × Android Studio × Kotlin |
 | 上架規定與期限 | App Store / Google Play 期限，以及 Apple Upcoming Requirements、Play 政策、Play Billing Library 淘汰、16 KB 分頁大小的時間軸 |
@@ -28,9 +28,11 @@
 
 ```
 push 到 master、手動觸發：驗證（Node 24＋覆蓋率門檻、瀏覽器 e2e）→ 抓取所有來源 → 產生網站 → 頁面檢查 → 部署
-每天兩次的排程：             抓取所有來源 → 產生網站 → 頁面檢查（只警告）→ 部署
+每日三次的排程：             抓取所有來源 → 產生網站 → 頁面檢查（只警告）→ 部署
 pull request：            驗證（Node 24＋覆蓋率門檻、瀏覽器 e2e）
 ```
+
+每日排程為台灣時間 05:43、17:43，以及美國太平洋時間 10:43。美西夏令時間對應台灣次日 01:43，標準時間對應次日 02:43。若排程延遲，補跑流程會檢查兩個時區的更新時段。
 
 驗證是同一份 `.github/workflows/ci.yml`：PR 直接執行，push 與手動觸發時由 `pages.yml` 呼叫，驗證沒過就不會建置與部署；每個 commit 只測一次。排程更新的程式碼已經驗證過，只跑建置與頁面檢查。
 
@@ -126,7 +128,7 @@ npm run test:e2e                            # 用固定資料建立暫存網站�
 
 | 端點 | 內容 |
 |---|---|
-| `api/versions.json` | iOS、Android、Xcode 與 Android 開發工具的最新正式版與 Beta |
+| `api/versions.json` | iOS、Android（含 QPR Beta）、Xcode 與 Android 開發工具的最新正式版、Beta 和發布日期 |
 | `api/now.json` | 待處理項目（會擋上架的規定、可能已遭利用的漏洞、新系統閃退、目前有狀況的 Apple 開發者服務） |
 | `api/actions.json` | iOS / Android 開發者須知 |
 | `api/deadlines.json` | 上架規定與期限時間軸 |
@@ -137,9 +139,9 @@ npm run test:e2e                            # 用固定資料建立暫存網站�
 | `api/frameworks.json` | React Native 與 Flutter 的最新正式版、近期版本線、release notes 標示的破壞性變更／棄用／資安項目數 |
 | `api/compat.json` | Xcode、AGP、JDK、CI runner 相容性 |
 | `api/trends.json` | 版本分布、近 12 個月主版本占比與手機品牌占比（StatCounter，CC BY-SA 3.0）、Apple iOS 採用率 |
-| `api/banks.json` | 銀行 App 最低版本、Android targetSdk、各平台目前版本 `version` 與更新上架日期 `updated`（YYYY-MM-DD，台灣日期）、版本調整紀錄、每日分布（名稱已遮罩） |
+| `api/banks.json` | 銀行 App 最低版本、Android targetSdk、各平台目前版本 `version`、更新上架日期 `updated`（YYYY-MM-DD，台灣日期）與台灣區平均星等 `rating`（滿分 5）、版本調整紀錄、每日分布（名稱已遮罩） |
 | `api/news.json` | 開發者新聞 |
-| `api/status.json` | Apple 開發者服務近 7 天與進行中的事件（每天更新兩次，不是即時狀態） |
+| `api/status.json` | Apple 開發者服務近 7 天與進行中的事件（隨網站排程更新） |
 | `api/privacy.json` | Required Reason API 與須附隱私清單的 SDK |
 
 每個端點的格式相同：

@@ -1,4 +1,5 @@
 import type { SourceKey } from './fetch-all.js';
+import { ANDROID_GSI_RELEASES } from './fetchers/android.js';
 import { NEWS_SOURCES } from './fetchers/dev-news.js';
 
 /**
@@ -63,7 +64,7 @@ const GHSA_LICENSE = 'https://github.com/github/advisory-database/blob/main/LICE
 const SO_API_TERMS = 'https://stackoverflow.com/legal/api-terms-of-use';
 const ANDROID_SOURCE = 'https://source.android.com/docs/setup/about/licenses';
 /** dl.google.com's robots.txt disallows everything; its Maven and SDK repository files are read anyway (disclosed) */
-const DL_GOOGLE_EXCEPTION = 'dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天兩次';
+const DL_GOOGLE_EXCEPTION = 'dl.google.com 的 robots.txt 對所有程式 Disallow: /。這些是 Google Maven 與 Android SDK repository 的中繼資料檔，供 Gradle、Android Studio 等建置工具自動讀取；本站只讀取少數固定檔案取版本號，每天三次';
 
 /** Terms per news feed host (dev news endpoints come straight from the feed list in dev-news.ts) */
 const FEED_TERMS: Record<string, string> = {
@@ -93,10 +94,12 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     endpoints: [
       { url: 'https://endoflife.date/api/android.json', method: 'API', terms: ENDOFLIFE },
       { url: 'https://developer.android.com/blog/atom.xml', method: 'RSS / Atom', terms: ANDROID_LEGAL },
+      { url: ANDROID_GSI_RELEASES, method: 'HTML 網頁', terms: ANDROID_LEGAL },
+      { url: 'https://developer.android.com/about/versions/{major}/qpr{number}/release-notes', method: 'HTML 網頁', terms: ANDROID_LEGAL },
     ],
-    licence: 'endoflife.date（MIT）；Android Developers Blog feed（官方提供）',
+    licence: `endoflife.date（MIT）；Android Developers Blog feed（官方提供）；${ANDROID_DOCS}`,
     risk: 'low',
-    note: '只取版本號、API 等級、代號與發布日期',
+    note: '只取版本號、API 等級、代號、發布日期及 Build。以官方 GSI 清單辨認仍在測試的 QPR 分支，從各分支版本說明取得最新 Beta',
   },
   appleDeadline: {
     endpoints: [{ url: 'https://developer.apple.com/news/rss/news.rss', method: 'RSS / Atom', terms: APPLE_TERMS }],
@@ -249,7 +252,7 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
     ],
     licence: 'iTunes Lookup API（Apple 公開提供的 API）；Google Play 商店頁依 Google Play 服務條款',
     risk: 'medium',
-    note: '只取最低支援版本、版本號、targetSdk 與更新日期；銀行與 App 名稱部分遮罩，不評比任何銀行',
+    note: '擷取最低支援版本、版本號、targetSdk、更新日期與台灣區商店的平均星等。銀行與 App 名稱部分遮罩',
   },
   devNews: {
     // Straight from the feed list the fetcher uses, so the register can't miss a feed
@@ -370,7 +373,7 @@ export function sourcesMarkdown(labels: Record<SourceKey, string>): string {
     '',
     `最後檢查：${REGISTER_CHECKED} · 共 ${keys.length} 個來源（風險低 ${count('low')}、中 ${count('medium')}、高 ${count('high')}）`,
     '',
-    '共同做法：每天兩次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。',
+    '共同做法：每天三次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。',
     '',
     '風險等級：',
     '',

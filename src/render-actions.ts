@@ -1,5 +1,6 @@
 import type { ActionBasis, ActionItem, ActionStatus } from './types.js';
 import { safeUrl } from './safe-url.js';
+import { calendarDate } from './taipei-date.js';
 
 // Rendering helpers for the action lists; kept free of Node APIs
 
@@ -87,4 +88,9 @@ export function renderActions(actions: ActionItem[], heading = '開發者須知'
  */
 export function displayDate(text: string): string {
   return text.replace(/\b(\d{4})-(\d{2})(?:-(\d{2}))?\b/g, (_, y, m, d) => (d ? `${y}/${m}/${d}` : `${y}/${m}`));
+}
+
+export function renderReleaseDate(value?: string): string {
+  const day = calendarDate(value ?? '');
+  return day ? `<time datetime="${day}">${displayDate(day)}</time>` : '待確認';
 }

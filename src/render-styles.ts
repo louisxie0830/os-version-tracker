@@ -307,9 +307,11 @@ html:not(.has-js) [data-show-more], .searching [data-show-more], [data-show-more
 .snap { background: var(--snap-bg); color: var(--snap-ink); border: 1px solid var(--snap-line); border-radius: var(--r-md); padding: 18px 20px; display: grid; gap: 10px; }
 .snap .rail-label { color: var(--snap-label); }
 .snap dl { margin: 0; display: grid; }
-.snap dl div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid var(--snap-line); }
+.snap dl > div { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: 10px; padding: 10px 0; border-top: 1px solid var(--snap-line); }
 .snap dt { font-size: 0.8125rem; color: var(--snap-dt); }
-.snap dd { margin: 0; font-family: var(--mono); font-size: 1.0625rem; font-weight: 600; white-space: nowrap; }
+.snap dd { margin: 0; min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.snap-version { display: block; font-family: var(--mono); font-size: 0.9375rem; font-weight: 600; }
+.snap-meta { display: block; margin-top: 2px; font-size: 0.75rem; color: var(--snap-dt); }
 .next-deadline, .subscribe-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 18px 20px; display: grid; gap: 10px; }
 .next-days { font-family: var(--mono); font-size: 2.5rem; font-weight: 600; line-height: 1; color: var(--warn); }
 .next-days small { font-family: "PingFang TC", "Noto Sans TC", sans-serif; font-size: 0.9375rem; font-weight: 600; margin-left: 6px; }
@@ -379,8 +381,9 @@ html:not(.has-js) [data-show-more], .searching [data-show-more], [data-show-more
   background: var(--bg-2);
 }
 .version-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.version-number { font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
+.version-number { min-width: 0; overflow-wrap: anywhere; font-size: 1.375rem; font-weight: 700; letter-spacing: -0.01em; }
 .version-details { display: flex; flex-wrap: wrap; gap: 6px; }
+.version-details .meta { min-width: 0; overflow-wrap: anywhere; }
 .meta {
   font-size: 0.78125rem;
   color: var(--muted);
@@ -837,6 +840,10 @@ a.case-count:hover { text-decoration: underline; }
 .bank-summary .share-chips strong { margin-left: 6px; }
 .bank-table a { color: var(--accent-deep); text-decoration: none; font-weight: 600; }
 .bank-table a:hover { text-decoration: underline; }
+.bank-name { min-width: 0; overflow-wrap: anywhere; }
+.bank-ratings { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.bank-rating { display: inline-flex; align-items: baseline; gap: 5px; border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; background: var(--bg-2); color: var(--ink); font-size: 0.75rem; white-space: nowrap; }
+.bank-rating strong { font-variant-numeric: tabular-nums; }
 .bank-release { min-width: 0; overflow-wrap: anywhere; }
 .bank-release time { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .bank-release .tl-source { margin-top: 2px; }
@@ -914,7 +921,7 @@ a.news-title:hover { color: var(--accent-deep); text-decoration: underline; }
   .rail { position: static; max-height: none; overflow: visible; }
   .rail-right { display: contents; }
   .snap { order: 1; }
-  .snap dl { grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); column-gap: 20px; }
+  .snap dl { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); column-gap: 20px; }
   .next-deadline { order: 2; }
   .section-nav { order: 4; }
   .main { order: 5; margin-top: 8px; }
