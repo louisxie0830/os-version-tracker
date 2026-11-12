@@ -275,3 +275,15 @@ async function fetchLatestShare(now: Date): Promise<OsShare> {
   }
   throw new Error('StatCounter version share unavailable');
 }
+
+/**
+ * Percent of devices that can install an app whose minimum is `minOs` ("15.0", "8.1"), from a region's coverage:
+ * a minimum below every listed major covers everything listed, one between majors counts the next newer one,
+ * one above the newest covers nothing. Undefined without data or a numeric minimum.
+ */
+export function coveredFrom(share: PlatformShare | undefined, minOs: string | undefined): number | undefined {
+  const major = Number(minOs?.match(/^\d+/)?.[0]);
+  if (!share?.coverage.length || !Number.isFinite(major)) return undefined;
+  const atOrAbove = share.coverage.filter(c => Number(c.min) >= major);
+  return atOrAbove.length ? Math.max(...atOrAbove.map(c => c.covered)) : 0;
+}

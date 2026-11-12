@@ -206,7 +206,7 @@ export function renderSecuritySection(data: AllVersions): string {
       ${securityCard('已遭利用的漏洞（近 180 天）', kev, '美國 CISA 已知遭利用漏洞清單（KEV）；Chromium 會影響 Android WebView 與 Chrome', '近 180 天沒有新增與 iOS / Android / WebView 相關的項目。')}
       ${securityCard('Apple 安全性更新（近 120 天）', apple, 'iOS / iPadOS、Safari（WKWebView 使用的 WebKit）與 Xcode；取自 Apple 安全性更新頁面', '近 120 天沒有相關的安全性更新。')}
       ${securityCard('Android 安全性公告', android, '每月的 Android Security Bulletin；修補程式等級可在裝置的「設定 → 安全性」查看', '目前抓不到 Android 安全性公告。', 3)}
-      ${securityCard('常用 SDK 資安公告', advisories, `取自 GitHub Advisory Database：Cordova、React Native、Capacitor、Flutter WebView、OkHttp、Retrofit、Glide、Alamofire、Firebase、Sentry 等 ${SDK_PACKAGES.length} 個套件；依公布日期排序`, '這些套件目前沒有資安公告。', 8)}
+      ${securityCard('常用 SDK 資安公告', advisories, `取自 GitHub Advisory Database：Cordova、React Native、Expo、Capacitor、Flutter WebView、dio、OkHttp、Gson、Retrofit、Glide、Alamofire、Firebase、Sentry 等 ${SDK_PACKAGES.length} 個套件；依公布日期排序`, '這些套件目前沒有資安公告。', 8)}
     </div>
     ${renderSources(data, ['security'])}
   </section>`;

@@ -2,12 +2,13 @@ import { arrayField, isRecord, readJsonState, recordField, writeJsonAtomic, type
 import { compareVersions } from './versions.js';
 import { taipeiToday } from './taipei-date.js';
 import type { TaiwanBankApp } from './fetchers/tw-banks.js';
+import type { DevNewsItem } from './fetchers/dev-news.js';
 
 /**
  * Values remembered between refreshes: each bank app's minimum OS versions (to report when a bank raises
  * or lowers them) and the last accepted core versions (to catch a parser that suddenly reads a wrong,
  * older version), plus how many items each list source returned (to catch a parser that suddenly finds far
- * fewer). Like changes.ts, state persists only when HISTORY_STATE_FILE is set (the static build
+ * fewer), and the news items of feeds that hold only a few days (kept for the news window). Like changes.ts, state persists only when HISTORY_STATE_FILE is set (the static build
  * carries it between runs); otherwise it lives in memory. Bank names are stored already masked.
  */
 
@@ -51,6 +52,8 @@ interface HistoryState {
   bankSnapshots: BankSnapshot[];
   versions: Record<string, VersionGuard>;
   counts: Record<string, CountGuard>;
+  /** News items remembered per feed id, for feeds that drop their posts within days (dev-news.ts `keep`) */
+  news: Record<string, DevNewsItem[]>;
 }
 
 const STATE_FILE = process.env.HISTORY_STATE_FILE;
@@ -60,7 +63,7 @@ const KEEP_SNAPSHOT_DAYS = 2 * 365;
 export const ROLLBACK_ACCEPT_AFTER = 3;
 
 function emptyState(): HistoryState {
-  return { banks: {}, bankChanges: [], bankSnapshots: [], versions: {}, counts: {} };
+  return { banks: {}, bankChanges: [], bankSnapshots: [], versions: {}, counts: {}, news: {} };
 }
 
 const str = (v: unknown): v is string => typeof v === 'string';
@@ -73,6 +76,9 @@ const isCounts = (v: unknown) => isRecord(v) && Object.values(v).every(num);
 const isSnapshot = (v: unknown): v is BankSnapshot => isRecord(v) && str(v.date) && isCounts(v.iOS) && isCounts(v.Android);
 const isPending = (v: unknown) => v === undefined || (isRecord(v) && num(v.seen) && (str(v.value) || num(v.value)));
 const isVersion = (v: unknown): v is VersionGuard => isRecord(v) && str(v.value) && isPending(v.pending);
+const isNewsItem = (v: unknown): v is DevNewsItem => isRecord(v)
+  && ['id', 'source', 'platform', 'category', 'title', 'url', 'date'].every(k => str(v[k])) && typeof v.important === 'boolean';
+const isNewsList = (v: unknown): v is DevNewsItem[] => Array.isArray(v) && v.every(isNewsItem);
 const isCount = (v: unknown): v is CountGuard => isRecord(v) && num(v.value)
   && (v.recent === undefined || (Array.isArray(v.recent) && v.recent.every(num)))
   && (v.low === undefined || (isRecord(v.low) && num(v.low.value) && num(v.low.seen)));
@@ -88,6 +94,7 @@ export function normalizeHistoryState(raw: unknown): Normalized<HistoryState> {
       bankSnapshots: arrayField(raw, 'bankSnapshots', isSnapshot, repaired),
       versions: recordField(raw, 'versions', isVersion, repaired),
       counts: recordField(raw, 'counts', isCount, repaired),
+      news: recordField(raw, 'news', isNewsList, repaired),
     },
     repaired,
   };
@@ -278,4 +285,29 @@ export function checkCountNotDropped(name: string, count: number): VersionCheck 
   state.counts[name] = { ...guard, low: { value: count, seen } };
   saveState();
   return { ok: false, message: `${name}：筆數從 ${baseline} 掉到 ${count}（第 ${seen}/${ROLLBACK_ACCEPT_AFTER} 次；連續 ${ROLLBACK_ACCEPT_AFTER} 次就視為正常）` };
+}
+
+/**
+ * Adds a feed's current items to the ones remembered from earlier refreshes and returns them all: a feed
+ * that keeps only its newest posts (a news agency's: about a day) would otherwise lose an item within days.
+ * The current item wins over a remembered one with the same URL (a corrected title); items older than `days`
+ * are forgotten. Newest first.
+ */
+export function rememberNews(feedId: string, current: DevNewsItem[], now = new Date(), days = 60): DevNewsItem[] {
+  const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const urls = new Set(current.map(item => item.url));
+  const kept = [...current, ...(state.news[feedId] ?? []).filter(item => !urls.has(item.url))]
+    .filter(item => item.date >= since)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  state.news[feedId] = kept;
+  saveState();
+  return kept;
+}
+
+/** Drops what was remembered for feeds no longer kept (a removed source), so it isn't published forever */
+export function forgetOtherNews(keepIds: string[]): void {
+  const stale = Object.keys(state.news).filter(id => !keepIds.includes(id));
+  if (!stale.length) return;
+  for (const id of stale) delete state.news[id];
+  saveState();
 }

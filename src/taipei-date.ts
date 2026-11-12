@@ -47,14 +47,16 @@ export function calendarDate(date: string): string | null {
 /**
  * The day a feed item was published, as its publisher dated it: the calendar day written in the timestamp
  * itself, in the publisher's own time zone ("Mon, 05 Oct 2026 17:05:00 PDT" is October 5, as Apple's page
- * says, not the 6th it already is in UTC; "2026-10-13T23:30:00-07:00" is the 13th). Use the feed's original
+ * says, not the 6th it already is in UTC; "2026-10-13T23:30:00-07:00" is the 13th; "2026-11-19  06:11:02",
+ * with no zone, is the 19th on any machine). Use the feed's original
  * pubDate, not rss-parser's isoDate (converted to UTC). Anything else readable gives its UTC day. Null when
  * missing or unreadable (never throws, unlike toISOString on an invalid date).
  */
 export function feedDay(raw: string | undefined): string | null {
   const text = raw?.trim();
   if (!text) return null;
-  const iso = text.match(/^(\d{4}-\d{2}-\d{2})(?:$|T)/);
+  // Also "2026-11-19  06:11:02" (iThome): no zone at all, and new Date() would read it in the machine's own zone
+  const iso = text.match(/^(\d{4}-\d{2}-\d{2})(?:$|T|\s)/);
   if (iso) return Number.isNaN(Date.parse(`${iso[1]}T00:00:00Z`)) ? null : iso[1];
   const rfc = text.match(/^(?:[A-Za-z]{3},?\s+)?(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})\b/);
   const month = rfc ? MONTHS.indexOf(rfc[2].toLowerCase()) + 1 : 0;

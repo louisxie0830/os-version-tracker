@@ -5,6 +5,7 @@ import {
   buildNotificationsJson,
   deferNotifications,
   FORGET_AFTER_DAYS,
+  prunableWhen,
   recentItems,
   shownDate,
   toTrackedItems,
@@ -106,6 +107,16 @@ test('a GitHub issue keeps its author through the feed, notifications and Atom',
   assert.match(atom, /<entry>[\s\S]*<author><name>octocat<\/name><uri>https:\/\/github\.com\/octocat<\/uri><\/author>\n  <\/entry>/);
   assert.match(atom, /<rights>[^<]*各資料來源[^<]*\/legal\/<\/rights>/);
   assert.match(atom, /<link rel="related" href="https:\/\/site\.example\/legal\/"/);
+});
+
+test('important dev news is tracked: security news is labelled 資安 (kind security) and keeps its dev-news id', () => {
+  const n = (url: string, category: 'blog' | 'security', important = true) =>
+    ({ id: `x:${url}`, source: 'iThome', platform: '跨平台' as const, category, title: url, url, date: '2026-11-18', important });
+  const items = toTrackedItems({ deadlines: [], appleNews: [], androidNews: [], devices: [],
+    devNews: [n('https://a.example/1', 'security'), n('https://a.example/2', 'blog'), n('https://a.example/3', 'security', false)] });
+  assert.deepEqual(items.map(i => [i.id, i.kind]), [['dev-news:https://a.example/1', 'security'], ['dev-news:https://a.example/2', 'dev-news']]);
+  assert.equal(JSON.parse(buildNotificationsJson(items, '2026-11-21T00:00:00Z')).items.find((i: { id: string }) => i.id === 'dev-news:https://a.example/1').kindLabel, '資安');
+  assert.equal(prunableWhen(key => key === 'devNews')('dev-news:https://a.example/1'), true, 'pruned with its source');
 });
 
 test('pruning forgets only items long gone: one still listed, or seen recently, stays known', () => {

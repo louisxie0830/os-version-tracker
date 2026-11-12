@@ -2,7 +2,7 @@
 
 <!-- 由 src/source-registry.ts 產生：npm run sources:doc。請改那個檔案，不要直接編輯本檔。 -->
 
-最後檢查：2026-10-17 · 共 29 個來源（風險低 9、中 8、高 12）
+最後檢查：2026-10-17 · 共 29 個來源（風險低 8、中 9、高 12）
 
 共同做法：每天三次（另加程式更新或手動重建時），以可識別的 User-Agent（`os-version-tracker`）請求；不登入、不繞過任何存取限制；每個請求有逾時限制。截至最後檢查日，除標示為「robots.txt 例外」的 dl.google.com 端點外，已檢查的列示端點都未被各網站的 robots.txt 禁止（gs.statcounter.com 與 gdmf.apple.com 沒有 robots.txt）；robots.txt 隨時可能改變，也不等於法律上的授權。每週會自動重新檢查（`npm run check:robots`），結果與 robots.txt 快照保存在該次執行的紀錄中。
 
@@ -34,7 +34,7 @@
 | `privacy` | Apple 隱私清單與第三方 SDK 規定 | 高 | JSON 檔、HTML 網頁 | Apple 網站使用條款；文件頁面背後的 JSON 不是公開提供的資料介面 |
 | `osShare` | StatCounter Global Stats（台灣、全球） | 低 | CSV 匯出 | CC BY-SA 3.0 |
 | `twBanks` | App Store / Google Play（台灣區） | 中 | API、網頁內嵌資料 | iTunes Lookup API（Apple 公開提供的 API）；Google Play 商店頁依 Google Play 服務條款 |
-| `devNews` | Apple / Android / Swift / Kotlin / Firebase / Cordova 官方 feed | 低 | RSS / Atom | 各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase 各自的網站條款 |
+| `devNews` | Apple / Android / Swift / Kotlin / Firebase / Cordova / Google 與 GitHub 資安部落格官方 feed · 數位發展部資安署 · 金管會 · 銀行局 · TWCERT/CC | 中 | RSS / Atom、JSON 檔 | 各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase、GitHub 各自的網站條款；金管會網站資料開放宣告（金管會與銀行局）；數位發展部資安署新聞稿開放資料（CC0）；TWCERT/CC 網站著作權聲明 |
 | `cordova` | npm registry · Apache Cordova RELEASENOTES.md | 低 | API、Markdown 檔 | npm registry 公開 API；Apache Cordova 原始碼與 release notes 依 Apache 2.0；GitHub 服務條款 |
 | `security` | Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database | 高 | JSON 檔、API、HTML 網頁 | CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款） |
 | `crashes` | Apple / Android release notes · GitHub SDK 與 Cordova issues | 高 | API、JSON 檔、HTML 網頁 | GitHub 服務條款；Stack Overflow 使用者內容依 CC BY-SA（Stack Exchange API 條款要求標示來源與作者）；Apple release notes 依 Apple 網站使用條款 |
@@ -238,10 +238,10 @@
   - 網頁內嵌資料 `https://play.google.com/store/apps/details`（條款：<https://play.google.com/about/play-terms/>）
 - 說明：擷取最低支援版本、版本號、targetSdk、更新日期與台灣區商店的平均星等。銀行與 App 名稱部分遮罩
 
-### `devNews`：Apple / Android / Swift / Kotlin / Firebase / Cordova 官方 feed
+### `devNews`：Apple / Android / Swift / Kotlin / Firebase / Cordova / Google 與 GitHub 資安部落格官方 feed · 數位發展部資安署 · 金管會 · 銀行局 · TWCERT/CC
 
-- 風險：低
-- 授權或條款：各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase 各自的網站條款
+- 風險：中
+- 授權或條款：各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase、GitHub 各自的網站條款；金管會網站資料開放宣告（金管會與銀行局）；數位發展部資安署新聞稿開放資料（CC0）；TWCERT/CC 網站著作權聲明
 - 端點：
   - RSS / Atom `https://developer.apple.com/news/rss/news.rss`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
   - RSS / Atom `https://developer.apple.com/news/releases/rss/releases.rss`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
@@ -252,7 +252,15 @@
   - RSS / Atom `https://blog.jetbrains.com/kotlin/feed/`（條款：<https://www.jetbrains.com/legal/docs/company/useterms/>）
   - RSS / Atom `https://cordova.apache.org/feed.xml`（條款：<https://www.apache.org/licenses/LICENSE-2.0>）
   - RSS / Atom `https://firebase.blog/rss.xml`（條款：<https://firebase.google.com/terms>）
-- 說明：只取標題、日期與連結，標題維持原文
+  - RSS / Atom `https://blog.google/security/rss/`（條款：<https://policies.google.com/terms>）
+  - RSS / Atom `https://projectzero.google/feed.xml`（條款：<https://policies.google.com/terms>）
+  - RSS / Atom `https://github.blog/security/feed/`（條款：<https://docs.github.com/site-policy/github-terms/github-terms-of-service>）
+  - RSS / Atom `https://www.fsc.gov.tw/RSS/Messages?serno=201202290009&language=chinese`（條款：<https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004>）
+  - RSS / Atom `https://www.twcert.org.tw/tw/rss-132-1.xml`（條款：<https://www.twcert.org.tw/tw/cp-39-470-19dcd-1.html>）
+  - RSS / Atom `https://www.banking.gov.tw/RSS/banking/Messages?serno=201203060004&language=chinese`（條款：<https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004>）
+  - RSS / Atom `https://www.banking.gov.tw/RSS/banking/Messages?serno=201203060002&language=chinese`（條款：<https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004>）
+  - JSON 檔 `https://www-api.moda.gov.tw/OpenData/json/23`（條款：<https://data.gov.tw/dataset/175337>）
+- 說明：只取標題、日期與連結，標題維持原文。台灣金融資安只用主管機關的第一手公告，不轉載新聞媒體：金管會與銀行局新聞稿只取符合金融資安關鍵字（盜轉、防詐、銀行遭駭等）的標題，銀行局裁罰只取與資安、個資相關的處分；TWCERT/CC 漏洞公告只取與行動 App、金融相關的標題並保留 60 天；TWCERT/CC 條款要求引用前洽詢，風險列為中
 
 ### `cordova`：npm registry · Apache Cordova RELEASENOTES.md
 

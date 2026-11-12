@@ -12,11 +12,11 @@
 | 閃退與當機 | Apple / Android 官方 release notes 的已知問題與修正、18 個熱門 SDK repo 在 GitHub 近 30 天的閃退回報、Stack Overflow 近 90 天的社群討論，以及 Apple Developer Forums 捷徑 |
 | Cordova 版本與閃退 | cordova-ios / cordova-android 最新版本、Node 需求、已知漏洞、目前大版本的破壞性變更與最新版修正（官方 RELEASENOTES.md）；7 個核心 plugin 的最新版、需要的平台版本（cordovaDependencies）與已知漏洞的受影響範圍及修正版本；以及平台與 7 個核心 plugin 在 GitHub 近半年的閃退、白屏、無法啟動回報；Cordova 官方公告併入開發者新聞 |
 | React Native · Flutter | 兩個框架的最新正式版與近期各版本線；React Native 各版本 release notes 標示的破壞性變更、棄用與資安項目數，Flutter 內建的 Dart 版本；只列影響近期版本的已知漏洞 |
-| 資安 | CISA KEV 近 180 天已遭利用的 iOS / Android / Chromium（WebView）漏洞、Apple 安全性更新（iOS、Safari、Xcode，標出可能已遭利用的 CVE）、每月 Android 安全性公告，以及 Cordova、React Native、OkHttp、Alamofire 等常用 SDK 在 GitHub Advisory Database 的資安公告；新的已遭利用漏洞會進通知中心 |
+| 資安 | CISA KEV 近 180 天已遭利用的 iOS / Android / Chromium（WebView）漏洞、Apple 安全性更新（iOS、Safari、Xcode，標出可能已遭利用的 CVE）、每月 Android 安全性公告，以及 Cordova、React Native、Expo、Flutter（dio）、OkHttp、Gson、Alamofire 等常用 SDK 在 GitHub Advisory Database 的資安公告；新的已遭利用漏洞會進通知中心；Google Security Blog、Project Zero、GitHub Security Blog 的資安文章，台灣只收主管機關第一手公告：數位發展部資安署新聞稿、金管會與銀行局新聞稿中的金融資安項目（盜轉、防詐、銀行遭駭等）、銀行局與資安或個資相關的裁罰，以及 TWCERT/CC 漏洞公告中與行動 App、金融相關的項目併入開發者新聞，可用「資安」篩選 |
 | 趨勢 | iOS / Android 各主版本在台灣與全球近 12 個月的占比變化（StatCounter 月資料，可切換地區）、台灣與全球的手機品牌占比，以及銀行 App 最低版本要求的分布變化（從開始記錄當天起每天累積）；圖表可滑過看數值、可切換為表格 |
 | iOS / Android | 最新正式版、Beta 和各版本發布日期（含 Android QPR Beta 的 Build）、開發者須知（上架期限換算成要升級的 Xcode / macOS、targetSdk 倒數、Deployment Target / minSdk 建議等）、開發工具版本、官方公告；iOS 區塊另有 Apple 開發者服務狀態（App Store Connect、TestFlight、APNs、Xcode Cloud 等近 7 天的事件，進行中的會列入「待處理」） |
 | 版本分布 | 台灣與全球 iOS / Android 各版本占比、「支援到某版本可涵蓋多少裝置」、台灣最常見版本（StatCounter），以及 Apple 官方 iOS 採用率 |
-| 銀行 App 支援版本 | 24 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本與 Android targetSdk（標出低於 Google Play 目前規定的 App），每次更新網站時抓取；分別顯示 iOS / Android 目前版本號、更新上架日期與台灣區商店星等（手機版也可見），可依上架日期由新到舊排序；可依類型與版本篩選；銀行調高或調低最低版本時會標示並發通知；銀行與 App 名稱以部分遮罩顯示 |
+| 銀行 App 支援版本 | 26 家銀行官方行動銀行 App 在 App Store / Google Play 標示的最低 iOS / Android 版本與 Android targetSdk（標出低於 Google Play 目前規定的 App），並依 StatCounter 台灣版本占比估算每個 App 有多少比例的台灣裝置可安裝、要求最高的 App 擋掉多少使用者，每次更新網站時抓取；分別顯示 iOS / Android 目前版本號、更新上架日期與台灣區商店星等（手機版也可見），可依上架日期由新到舊排序；可依類型與版本篩選；銀行調高或調低最低版本時會標示並發通知；銀行與 App 名稱以部分遮罩顯示 |
 | 通知中心 | 右上角鈴鐺：新規定、重要公告、新機型、SDK 閃退、資安公告、銀行 App 版本調整、Apple 開發者服務事件的未讀清單；網頁開著時每 5 分鐘檢查，可開啟系統通知 |
 | 相容性對照表 | Xcode × macOS × 部署版本 × 實機除錯、GitHub Actions macOS runner 內建的 Xcode、AGP × Gradle × JDK × Android Studio × Kotlin |
 | 上架規定與期限 | App Store / Google Play 期限，以及 Apple Upcoming Requirements、Play 政策、Play Billing Library 淘汰、16 KB 分頁大小的時間軸 |
@@ -201,7 +201,7 @@ Slack、LINE、Facebook 會快取預覽圖，已分享過的連結要等它們�
 
 ## 資料來源
 
-共 26 個資料來源，每次建置的摘要表會逐一列出：StatCounter Global Stats（版本與手機品牌占比，CC BY-SA 3.0）、App Store / Google Play（台灣區）、Stack Exchange API、Apple（軟體更新目錄、Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 採用率、release notes、安全性更新、隱私文件、開發者系統狀態）、Google（Android Developers Blog、Play 目標 API 等級、Play 政策期限、Play Console 技術品質規定（程式碼混淆與最佳化、記憶體用量、登入還原）、Play Billing 淘汰時程、16 KB 分頁指南、Android 安全性公告、AGP 相容性與 release notes、Android SDK repository、Google Maven、Flutter 官方版本清單）、CISA KEV、xcodereleases.com、endoflife.date、Gradle、Kotlin、npm registry、Swift.org、Firebase Blog、Apache Cordova、GitHub（actions/runner-images、熱門 SDK 與 Cordova issues、React Native releases、GitHub Advisory Database）。
+共 26 個資料來源，每次建置的摘要表會逐一列出：StatCounter Global Stats（版本與手機品牌占比，CC BY-SA 3.0）、App Store / Google Play（台灣區）、Stack Exchange API、Apple（軟體更新目錄、Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 採用率、release notes、安全性更新、隱私文件、開發者系統狀態）、Google（Android Developers Blog、Play 目標 API 等級、Play 政策期限、Play Console 技術品質規定（程式碼混淆與最佳化、記憶體用量、登入還原）、Play Billing 淘汰時程、16 KB 分頁指南、Android 安全性公告、AGP 相容性與 release notes、Android SDK repository、Google Maven、Flutter 官方版本清單）、CISA KEV、xcodereleases.com、endoflife.date、Gradle、Kotlin、npm registry、Swift.org、Firebase Blog、Apache Cordova、Google Security Blog 與 Project Zero、金管會與銀行局（新聞稿、裁罰）、數位發展部資安署、TWCERT/CC 漏洞公告、GitHub（GitHub Security Blog、actions/runner-images、熱門 SDK 與 Cordova issues、React Native releases、GitHub Advisory Database）。
 
 免責聲明與智慧財產權：[中文](DISCLAIMER.md) · [English](DISCLAIMER.en.md)，網站上的版本在 `legal/`。相關文件：
 

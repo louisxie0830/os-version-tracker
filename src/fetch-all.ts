@@ -150,7 +150,7 @@ export const SOURCES = {
   privacy: { label: 'Apple 隱私清單與第三方 SDK 規定', url: THIRD_PARTY_SDK_URL },
   osShare: { label: 'StatCounter Global Stats（台灣、全球）', url: STATCOUNTER_URL },
   twBanks: { label: 'App Store / Google Play（台灣區）', url: 'https://apps.apple.com/tw/' },
-  devNews: { label: 'Apple / Android / Swift / Kotlin / Firebase / Cordova 官方 feed', url: 'https://developer.apple.com/news/' },
+  devNews: { label: 'Apple / Android / Swift / Kotlin / Firebase / Cordova / Google 與 GitHub 資安部落格官方 feed · 數位發展部資安署 · 金管會 · 銀行局 · TWCERT/CC', url: 'https://developer.apple.com/news/' },
   crashes: { label: 'Apple / Android release notes · GitHub SDK 與 Cordova issues', url: 'https://developer.apple.com/documentation/ios-ipados-release-notes' },
   cordova: { label: 'npm registry · Apache Cordova RELEASENOTES.md', url: 'https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md' },
   security: { label: 'Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database', url: APPLE_SECURITY_URL },

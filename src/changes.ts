@@ -170,7 +170,9 @@ export function toTrackedItems(input: {
       .filter(n => n.important && !n.id.startsWith('apple-news:') && !n.id.startsWith('android-blog:'))
       .map(n => ({
         id: `dev-news:${n.url}`,
-        kind: 'dev-news' as const,
+        // Security news (security blogs, Taiwan financial-security reports) is labelled 資安, not 公告; the id keeps
+        // its dev-news prefix, so what was seen stays seen and its source (devNews) still decides pruning
+        kind: n.category === 'security' ? 'security' as const : 'dev-news' as const,
         platform: n.platform,
         title: n.title,
         detail: n.source,

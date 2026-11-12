@@ -152,7 +152,7 @@ test('changes state: a seen list of the wrong type, or a file that is not an obj
 test('history state: older files without counts or snapshots load; wrong types reset; bad entries dropped', () => {
   const old = { banks: { 'ios:1': { iOS: '15.0' } }, bankChanges: [], versions: { iosStable: { value: '26.0' } } };
   withStateFile(JSON.stringify(old), (file, logs) => {
-    assert.deepEqual(readJsonState(file, 'history', normalizeHistoryState), { ...old, bankSnapshots: [], counts: {} });
+    assert.deepEqual(readJsonState(file, 'history', normalizeHistoryState), { ...old, bankSnapshots: [], counts: {}, news: {} });
     assert.deepEqual(logs, [], 'missing fields of an older version are not a problem');
   });
   const broken = {
@@ -161,6 +161,7 @@ test('history state: older files without counts or snapshots load; wrong types r
     bankSnapshots: [{ date: '2026-10-01', iOS: { 15: 3 }, Android: { 8: 2 } }, { date: 5 }],
     versions: { iosStable: { value: '26.0', pending: { value: '25.0', seen: 1 } }, agpStable: { value: 9 } },
     counts: { 'twBanks.apps': { value: 26 }, bad: { value: 'many' } },
+    news: { ithome: [{ id: 'ithome:x', source: 'iThome', platform: '跨平台', category: 'security', title: 'T', url: 'https://www.ithome.com.tw/news/1', date: '2026-11-19', important: true }], bad: [{ id: 1 }] },
   };
   withStateFile(JSON.stringify(broken), (file, logs) => {
     const state = readJsonState(file, 'history', normalizeHistoryState)!;
@@ -169,7 +170,8 @@ test('history state: older files without counts or snapshots load; wrong types r
     assert.equal(state.bankSnapshots.length, 1);
     assert.deepEqual(Object.keys(state.versions), ['iosStable']);
     assert.deepEqual(Object.keys(state.counts), ['twBanks.apps']);
-    assert.match(logs[0], /1 entries of banks, bankChanges, 1 entries of bankSnapshots, 1 entries of versions, 1 entries of counts/);
+    assert.deepEqual(Object.keys(state.news), ['ithome']);
+    assert.match(logs[0], /1 entries of banks, bankChanges, 1 entries of bankSnapshots, 1 entries of versions, 1 entries of counts, 1 entries of news/);
   });
 });
 

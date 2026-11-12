@@ -2,6 +2,7 @@ import { androidApiLevel } from './android-api.js';
 import type { AllVersions } from './fetch-all.js';
 import { compareVersions } from './versions.js';
 import { bankAppKey, type BankChange } from './history.js';
+import { coveredFrom } from './fetchers/os-share.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
 import { renderChoiceChips, renderSources } from './render-common.js';
 
@@ -105,6 +106,16 @@ export function renderBanksSection(data: AllVersions): string {
     ? ` <span class="bank-change ${compareVersions(c.to, c.from) > 0 ? 'is-up' : 'is-down'}" title="${esc(displayDate(c.date))} 由 ${esc(c.from)} 調整為 ${esc(c.to)}">${compareVersions(c.to, c.from) > 0 ? '↑' : '↓'} 原 ${esc(c.from)}（${esc(c.date.slice(5).replace('-', '/'))}）</span>`
     : '';
   const changedApps = new Set(recent.map(c => c.key));
+  // Share of Taiwan devices (StatCounter, latest month) on each app's minimum version or newer
+  const twIos = data.osShare?.ios.TW;
+  const twAndroid = data.osShare?.android.TW;
+  const reach = (covered: number | undefined) => covered === undefined ? ''
+    : ` <span class="tl-source nowrap" title="依 StatCounter ${esc(data.osShare?.month ?? '')} 台灣行動裝置版本占比估算">台灣 ${covered}% 可安裝</span>`;
+  const blocked = (platform: 'iOS' | 'Android', share: typeof twIos, minOs?: string) => {
+    const covered = coveredFrom(share, minOs);
+    return covered === undefined ? '' : `<span>最低 ${platform} ${esc(minOs!)}：台灣約 <strong>${Math.round((100 - covered) * 10) / 10}%</strong> 的裝置裝不了</span>`;
+  };
+  const reachLine = [blocked('iOS', twIos, strictestIos), blocked('Android', twAndroid, strictestAndroid)].filter(Boolean);
   const rows = banks.map((b, i) => {
     const api = b.android ? androidApiLevel(b.android.minOs) : undefined;
     const kind = (b.kind ?? 'personal') === 'personal' ? 'personal' : 'other';
@@ -115,8 +126,8 @@ export function renderBanksSection(data: AllVersions): string {
         <strong>${esc(b.bank)}</strong><div class="tl-source">${esc(b.app)}${b.kind && BANK_APP_KIND[b.kind] ? ` <span class="badge badge-sm bank-kind">${BANK_APP_KIND[b.kind]}</span>` : ''}</div>
         <div class="bank-ratings" role="group" aria-label="台灣區商店評分">${renderStoreRating('App Store', b.ios?.rating)}${renderStoreRating('Google Play', b.android?.rating)}</div>
       </div></td>
-      <td data-label="最低 iOS">${b.ios ? `<span>${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`, 'nowrap')}${changeNote(changeOf(b, 'iOS'))}</span>` : '—'}</td>
-      <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`, 'nowrap')}${api ? ` <span class="tl-source nowrap">API ${api}</span>` : ''}${changeNote(changeOf(b, 'Android'))}</span>` : '—'}</td>
+      <td data-label="最低 iOS">${b.ios ? `<span>${externalLink(b.ios.url, `iOS ${esc(b.ios.minOs)}`, 'nowrap')}${reach(coveredFrom(twIos, b.ios.minOs))}${changeNote(changeOf(b, 'iOS'))}</span>` : '—'}</td>
+      <td data-label="最低 Android">${b.android ? `<span>${externalLink(b.android.url, `Android ${esc(b.android.minOs)}`, 'nowrap')}${api ? ` <span class="tl-source nowrap">API ${api}</span>` : ''}${reach(coveredFrom(twAndroid, b.android.minOs))}${changeNote(changeOf(b, 'Android'))}</span>` : '—'}</td>
       <td data-label="targetSdk">${target ? `<span>${target}${below ? ` <span class="bank-change is-up" title="Google Play 規定新 App 與更新須 target ${requiredTarget} 以上；在期限前送出的版本可能仍是舊值">低於 ${requiredTarget}</span>` : ''}</span>` : '—'}</td>
       <td class="bank-updated" data-label="iOS 更新上架">${renderStoreRelease(b.ios)}</td>
       <td class="bank-updated" data-label="Android 更新上架">${renderStoreRelease(b.android)}</td>
@@ -125,10 +136,11 @@ export function renderBanksSection(data: AllVersions): string {
   return `<section class="panel" id="banks">
     <h2>銀行 App 支援版本</h2>
     <p class="table-note">各銀行官方行動銀行 App 在 App Store 與 Google Play（台灣區）標示的最低支援版本，每次更新網站時重新抓取。部分銀行另列出企業、商家收款與認證 App（以標籤區分），分布統計與篩選都包含這些 App。可作為金融業 App 設定 Deployment Target / minSdk 的業界參考。銀行與 App 名稱以部分遮罩顯示；商店標示的版本不代表銀行的官方支援政策。</p>
-    <p class="table-note">App 名稱下方分別列出台灣區 App Store 與 Google Play 的平均評分，滿分 5 星。「更新上架」列出各商店目前版本及台灣時間的更新日期。缺值顯示 —。</p>
+    <p class="table-note">App 名稱下方分別列出台灣區 App Store 與 Google Play 的平均評分，滿分 5 星。「更新上架」列出各商店目前版本及台灣時間的更新日期。${twIos || twAndroid ? `「台灣 X% 可安裝」依 StatCounter ${esc(data.osShare!.month)} 台灣行動裝置的版本占比估算（只計入版本可辨識的裝置），不是銀行公布的數字。` : ''}缺值顯示 —。</p>
     <div class="bank-summary">
       <div><div class="tile-label">最低 iOS 分布</div><div class="share-chips">${countByMajor(ios, 'iOS')}</div></div>
       <div><div class="tile-label">最低 Android 分布</div><div class="share-chips">${countByMajor(android, 'Android')}</div></div>
+      ${reachLine.length ? `<div><div class="tile-label">要求最高的 App 擋掉多少台灣使用者（StatCounter ${esc(data.osShare!.month)}）</div><div class="tl-source bank-reach">${reachLine.join('；')}</div></div>` : ''}
       <div class="tl-source">共 ${banks.length} 個 App${others ? `（個人行動銀行 ${personal.length} 個、企業／收款／認證 ${others} 個）` : ''}；要求最高：iOS ${esc(strictestIos ?? '—')}、Android ${esc(strictestAndroid ?? '—')}；${changedApps.size ? `<strong>近 90 天有 ${changedApps.size} 個 App 調整最低版本</strong>` : '近 90 天沒有 App 調整最低版本'}${requiredTarget ? `；Google Play 目前規定 targetSdk ${requiredTarget}，${belowTarget ? `<strong>${belowTarget} 個 App 的最新版還低於這個值</strong>` : '所有 App 都已達到'}` : ''}</div>
     </div>
     <bank-table filters="kind ios android changed target">
@@ -139,6 +151,6 @@ export function renderBanksSection(data: AllVersions): string {
     </table></div>
     <p class="feed-empty" id="bank-empty" data-bank-empty hidden>沒有符合篩選的 App。</p>
     </bank-table>
-    ${renderSources(data, ['twBanks'])}
+    ${renderSources(data, ['twBanks', 'osShare'])}
   </section>`;
 }

@@ -146,6 +146,18 @@ const app = (bank: string, ios?: string, android?: string, extra: Partial<Taiwan
   ...extra,
 });
 
+test('banks section: Taiwan install share per app, and how many the strictest minimum leaves out', () => {
+  const tw = (coverage: Array<{ min: string; covered: number }>) => ({ byMajor: [], topVersions: [], coverage, url: 'u' });
+  const osShare = { month: '2026-10', ios: { TW: tw([{ min: '26', covered: 70 }, { min: '18', covered: 92.4 }]) }, android: { TW: tw([{ min: '16', covered: 40 }, { min: '10', covered: 95 }]) } };
+  const html = renderBanksSection(data({ twBanks: [app('甲', '18.0', '10'), app('乙', '15.0', '8.0')], osShare } as never));
+  const rows = html.match(/<tr data-index[\s\S]*?<\/tr>/g)!;
+  assert.match(rows[0], /台灣 92\.4% 可安裝/);
+  assert.match(rows[1], /台灣 92\.4% 可安裝/, 'older than every listed major');
+  assert.match(html, /最低 iOS 18\.0：台灣約 <strong>7\.6%<\/strong> 的裝置裝不了/);
+  assert.match(html, /最低 Android 10：台灣約 <strong>5%<\/strong>/);
+  assert.doesNotMatch(renderBanksSection(data({ twBanks: [app('甲', '18.0')] })), /可安裝|裝不了/, 'no share data: nothing shown');
+});
+
 test('banks section: absent without apps; missing listings and fields show "—"', () => {
   assert.equal(renderBanksSection(base), '');
   const html = renderBanksSection(data({ twBanks: [app('甲銀行', '15.0'), app('乙銀行', undefined, '9')] }));

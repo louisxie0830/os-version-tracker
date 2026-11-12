@@ -236,12 +236,12 @@ export const ADVISORY_URL = 'https://github.com/advisories';
 
 /** Package names as the advisory database spells them, per ecosystem */
 export const SDK_PACKAGES: Array<{ name: string; platform: SecurityPlatform }> = [
-  ...['cordova-ios', 'cordova-android', 'react-native', '@capacitor/core',
+  ...['cordova-ios', 'cordova-android', 'react-native', 'react-native-webview', 'expo', '@capacitor/core',
     ...['camera', 'inappbrowser', 'file', 'file-transfer', 'geolocation', 'media', 'network-information'].map(p => `cordova-plugin-${p}`)]
     .map(name => ({ name, platform: '跨平台' as const })),
-  ...['webview_flutter', 'flutter_inappwebview', 'firebase_core'].map(name => ({ name, platform: '跨平台' as const })),
+  ...['webview_flutter', 'flutter_inappwebview', 'firebase_core', 'dio'].map(name => ({ name, platform: '跨平台' as const })),
   ...['com.squareup.okhttp3:okhttp', 'com.squareup.retrofit2:retrofit', 'com.github.bumptech.glide:glide', 'com.facebook.android:facebook-android-sdk',
-    'io.sentry:sentry-android', 'com.airbnb.android:lottie', 'io.coil-kt:coil'].map(name => ({ name, platform: 'Android' as const })),
+    'io.sentry:sentry-android', 'com.airbnb.android:lottie', 'io.coil-kt:coil', 'com.google.code.gson:gson'].map(name => ({ name, platform: 'Android' as const })),
   ...['Alamofire/Alamofire', 'SDWebImage/SDWebImage', 'onevcat/Kingfisher', 'firebase/firebase-ios-sdk', 'getsentry/sentry-cocoa', 'airbnb/lottie-ios', 'realm/realm-swift']
     .map(repo => ({ name: `github.com/${repo}`, platform: 'iOS' as const })),
 ];

@@ -88,7 +88,7 @@ test('search: one page-search around the activity filter holds the input, the st
 
 test('news: one news-list owns declarative choice chips, rows, show-more and an existing empty state', () => {
   const item = (platform: 'iOS' | 'Android' | '跨平台', important: boolean, i: number) => ({
-    id: `item-${i}`, source: 'Official', platform, category: 'release' as const, title: `Release ${i}`,
+    id: `item-${i}`, source: 'Official', platform, category: i === 3 ? 'security' as const : 'release' as const, title: `Release ${i}`,
     url: `https://example.com/${i}`, date: '2026-10-25', important,
   });
   const html = renderNewsSection({
@@ -107,12 +107,15 @@ test('news: one news-list owns declarative choice chips, rows, show-more and an 
   // Each row's data-news holds every value of the filter that lets it through; one row past the cap
   assert.match(inner, /<li class="news-item" data-news="iOS\|important"/);
   assert.match(inner, /<li class="news-item" data-news="Android"/);
+  assert.match(inner, /<li class="news-item" data-news="Android\|security"[\s\S]*?<span class="news-cat">資安<\/span>/, 'security news: its own chip token and label');
   assert.equal(inner.match(/class="news-item list-extra"/g)?.length, 1);
   // Every chip value matches some row token (or is "all")
   const tokens = new Set([...inner.matchAll(/data-news="([^"]+)"/g)].flatMap(m => m[1].split('|')));
   for (const [, value] of inner.matchAll(/class="chip[^"]*" data-value="([^"]+)"/g)) {
     if (value !== 'all' && value !== '跨平台') assert.ok(tokens.has(value), value);
   }
+  assert.equal(inner.includes('href="#security"'), Boolean(snapshot.security), 'links the security section only when it is rendered');
+  assert.doesNotMatch(renderNewsSection({ ...snapshot, security: undefined, devNews: [item('iOS', false, 0)] }), /href="#security"/);
   const few = renderNewsSection({ ...snapshot, devNews: [item('iOS', false, 0)] });
   assert.match(few, /<ul class="news news-feed" id="news-list" data-news-items data-search-rows>/, 'no cap to lift: no is-collapsed');
   assert.doesNotMatch(few, /data-show-more/);
@@ -728,9 +731,11 @@ function notifCenter(registry: ReturnType<typeof loadComponents>, items: unknown
 test('notif-center: items without a link are buttons, so the keyboard can mark them read; focus goes into the panel and back', () => {
   const registry = loadComponents();
   const recent = new Date().toISOString();
+  // Relative to today: a published item (security) older than 30 days is never new, so a fixed date expires
+  const published = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
   const root = notifCenter(registry, [
     { id: 'a', kind: 'deadline', platform: 'iOS', title: 'Xcode 26 required', url: 'https://developer.apple.com/news/', date: '2026-10-20', firstSeen: recent },
-    { id: 'b', kind: 'security', platform: 'Android', title: 'CVE <b>', url: 'javascript:alert(1)', date: '2026-10-21', firstSeen: recent },
+    { id: 'b', kind: 'security', platform: 'Android', title: 'CVE <b>', url: 'javascript:alert(1)', date: published, firstSeen: recent },
     { id: 'c', kind: 'crash', platform: 'iOS', title: 'Old crash', date: '2020-01-01' },
   ]);
   connectAll(root);

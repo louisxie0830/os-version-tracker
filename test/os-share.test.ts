@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { majorOf, parseShareCsv, summarize } from '../src/fetchers/os-share.ts';
+import { coveredFrom, majorOf, parseShareCsv, summarize } from '../src/fetchers/os-share.ts';
 
 const IOS_CSV = `"iOS Version","Market Share Perc. (Sept 2026)"
 "iOS 26.6",48.51
@@ -94,4 +94,14 @@ test('StatCounter CSV: a quoted label with a comma stays one cell; "iOS26.6" wit
   assert.equal(majorOf('ios', 'iOS26.6'), '26');
   const trend = parseVendorHistoryCsv('"Date","Apple","Samsung, Inc."\n2026-08,60,40\n2026-09,58,42\n', 'u');
   assert.deepEqual(trend.series.map(s => [s.version, s.shares.at(-1)]), [['Apple', 58], ['Samsung, Inc.', 42]]);
+});
+
+test('coveredFrom: share of devices on a minimum version or newer', () => {
+  const share = { byMajor: [], topVersions: [], url: 'u', coverage: [{ min: '26', covered: 60 }, { min: '18', covered: 85 }, { min: '16', covered: 97 }] };
+  assert.equal(coveredFrom(share, '18.0'), 85);
+  assert.equal(coveredFrom(share, '17.2'), 85, 'between majors: the next newer one counts');
+  assert.equal(coveredFrom(share, '13.0'), 97, 'older than every listed major');
+  assert.equal(coveredFrom(share, '27'), 0, 'newer than every listed major');
+  assert.equal(coveredFrom(share, 'Varies with device'), undefined);
+  assert.equal(coveredFrom(undefined, '15'), undefined);
 });

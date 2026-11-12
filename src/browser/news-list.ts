@@ -1,6 +1,6 @@
 // <news-list filters="news">: developer-news filtering, its "show more" cap and empty state. The server renders
 // all rows and the empty message; this component only changes visibility, so the content stays complete
-// without JS. Each row's data-news holds the values that let it through (its platform, and "important").
+// without JS. Each row's data-news holds the values that let it through (its platform, "security" for security news, and "important").
 defineElement('news-list', class extends FilterController {
   #rows: HTMLElement[] = [];
   #empty: HTMLElement | null = null;

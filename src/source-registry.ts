@@ -75,6 +75,15 @@ const FEED_TERMS: Record<string, string> = {
   'blog.jetbrains.com': JETBRAINS_TERMS,
   'cordova.apache.org': APACHE,
   'firebase.blog': FIREBASE_TERMS,
+  'blog.google': GOOGLE_TERMS,
+  'projectzero.google': GOOGLE_TERMS,
+  'github.blog': GITHUB_TERMS,
+  // FSC: the site's open-data declaration (government data, reuse allowed with attribution)
+  'www.fsc.gov.tw': 'https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004',
+  // CNA's RSS terms: titles, leads and links for personal or non-profit, non-commercial use
+  'www.banking.gov.tw': 'https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004',
+  'www-api.moda.gov.tw': 'https://data.gov.tw/dataset/175337',
+  'www.twcert.org.tw': 'https://www.twcert.org.tw/tw/cp-39-470-19dcd-1.html',
 };
 const ANDROID_DOCS = 'Android 文件依 Apache 2.0、其他內容依 CC BY 2.5（Android 網站法律聲明）；Google 服務條款';
 const APPLE_FACTS = '只取版本、日期與規定名稱等事實資訊並附原始連結';
@@ -256,10 +265,10 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
   },
   devNews: {
     // Straight from the feed list the fetcher uses, so the register can't miss a feed
-    endpoints: NEWS_SOURCES.map(n => ({ url: n.url, method: 'RSS / Atom' as const, terms: FEED_TERMS[new URL(n.url).hostname] ?? '' })),
-    licence: '各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase 各自的網站條款',
-    risk: 'low',
-    note: '只取標題、日期與連結，標題維持原文',
+    endpoints: NEWS_SOURCES.map(n => ({ url: n.url, method: n.json ? 'JSON 檔' as const : 'RSS / Atom' as const, terms: FEED_TERMS[new URL(n.url).hostname] ?? '' })),
+    licence: '各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase、GitHub 各自的網站條款；金管會網站資料開放宣告（金管會與銀行局）；數位發展部資安署新聞稿開放資料（CC0）；TWCERT/CC 網站著作權聲明',
+    risk: 'medium',
+    note: '只取標題、日期與連結，標題維持原文。台灣金融資安只用主管機關的第一手公告，不轉載新聞媒體：金管會與銀行局新聞稿只取符合金融資安關鍵字（盜轉、防詐、銀行遭駭等）的標題，銀行局裁罰只取與資安、個資相關的處分；TWCERT/CC 漏洞公告只取與行動 App、金融相關的標題並保留 60 天；TWCERT/CC 條款要求引用前洽詢，風險列為中',
   },
   cordova: {
     endpoints: [

@@ -1,7 +1,9 @@
 import { safeUrl } from '../safe-url.js';
 import { settleSources } from './settle.js';
 import { fetchFeed } from './feed.js';
+import { fetchJson, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 import { feedDay } from '../taipei-date.js';
+import { forgetOtherNews, rememberNews } from '../history.js';
 
 /**
  * Developer news from official feeds, merged into one timeline. Titles stay in their original
@@ -9,7 +11,7 @@ import { feedDay } from '../taipei-date.js';
  */
 
 export type NewsPlatform = 'iOS' | 'Android' | '跨平台';
-export type NewsCategory = 'announcement' | 'release' | 'blog';
+export type NewsCategory = 'announcement' | 'release' | 'blog' | 'security';
 
 export interface DevNewsItem {
   id: string;
@@ -46,9 +48,79 @@ interface NewsSource {
   limit?: number;
   /** Keep only items whose title matches (e.g. mobile-relevant releases) */
   include?: RegExp;
+  /** Drop items whose title matches (e.g. desktop-only security research) */
+  exclude?: RegExp;
+  /** The platform an item is about, from its title, when the feed covers every platform */
+  platformOf?: (title: string) => NewsPlatform;
+  /** At most this many of the feed's items in the merged list (default PER_SOURCE) */
+  cap?: number;
+  /** The feed holds only its newest few days: remember its items between refreshes (history.ts) */
+  keep?: boolean;
+  /** A JSON open-data file instead of RSS / Atom: turns its body into feed items */
+  json?: (body: unknown) => FeedItem[];
 }
 
 const REQUIREMENTS = /requirement|deadline|deprecat|must|policy|expir|privacy|breaking|security|outage|incident|migrat|end of (?:life|support)/i;
+
+/**
+ * Security feeds cover every platform; a title that names only Apple's or only Android's side is filed there.
+ * "Protecting Chrome and Android users…" names Android only → Android; one naming both stays cross-platform.
+ */
+export function securityPlatform(title: string): NewsPlatform {
+  const ios = /\b(?:iOS|iPadOS|iPhone|iPad|Apple|WebKit|Safari|Swift|Xcode)\b/i.test(title);
+  const android = /\b(?:Android|Pixel|Kotlin|Google Play|Play Integrity)\b/i.test(title);
+  return ios === android ? '跨平台' : ios ? 'iOS' : 'Android';
+}
+
+/** Security posts engineers should act on or know about: exploited bugs, CVEs, compromised or distrusted certificates, supply-chain attacks, disclosure policy */
+const SECURITY_IMPORTANT = /\bCVE-\d|0-click|zero-click|zero-day|0-day|exploited|in the wild|vulnerabilit(?:y|ies) (?:announced|disclosed)|compromised|revok|distrust|supply[- ]chain|malware|disclosure policy|policy and disclosure/i;
+
+/**
+ * Taiwan financial-security items in the FSC's and its Banking Bureau's press releases: unauthorised transfers,
+ * banks / brokers / payment firms hacked or leaking data, phishing,
+ * scam apps and banks' anti-fraud measures. Titles are Chinese, so no word boundaries.
+ */
+export const TW_FIN_SECURITY = /盜轉|盜領|防詐|阻詐|打詐|盜刷|盜用|網銀|網路銀行|行動銀行|非約定轉帳|OTP|簡訊驗證碼|釣魚|惡意(?:程式|App|軟體)|木馬|(?:銀行|金融|金控|證券|券商|支付|保險|信用卡|信合社|信用合作社).{0,20}(?:駭|資安|入侵|外洩|漏洞|勒索|攻擊|異常轉帳)|(?:駭|資安|入侵|外洩|勒索).{0,20}(?:銀行|金融|金控|證券|券商|支付|保險|信用卡|信用合作社)|(?:App|手機|簡訊|Android|iPhone|LINE).{0,12}詐|詐.{0,12}(?:App|手機|簡訊|Android|iPhone|LINE)/i;
+
+/**
+ * TVN (Taiwan Vulnerability Note) titles are "vendor｜product - flaw", mostly Taiwanese enterprise web systems;
+ * only the ones about mobile apps or financial products are relevant here.
+ */
+export const TVN_MOBILE_FIN = /Android|iOS|iPhone|iPad|行動(?:應用|裝置|版|App|銀行|支付)|手機|(?:^|[^A-Za-z])App(?![A-Za-z])|銀行|金融|支付|電子錢包|證券|保險/i;
+
+/** The ones about money actually taken or systems actually breached */
+const TW_FIN_IMPORTANT = /盜轉|盜領|盜刷|盜用|遭駭|駭客|入侵|外洩|勒索|漏洞|惡意(?:程式|App|軟體)|木馬|異常轉帳/;
+
+/**
+ * The Administration for Cyber Security's press releases (數位發展部資通安全署, open data, CC0): a JSON array of
+ * { 來源網址, 標題, 發布日期 (Taipei time, no zone), … }. Rows without a title or link are skipped.
+ */
+export function acsPressItems(body: unknown): FeedItem[] {
+  if (!Array.isArray(body)) throw new Error('ACS press releases: not a JSON array');
+  return body.flatMap(row => {
+    const r = row as Record<string, unknown>;
+    const title = typeof r['標題'] === 'string' ? r['標題'] : '';
+    const link = typeof r['來源網址'] === 'string' ? r['來源網址'] : '';
+    const date = typeof r['發布日期'] === 'string' ? r['發布日期'] : '';
+    return title && link && date ? [{ title, link, pubDate: date }] : [];
+  }).sort((a, b) => b.pubDate.localeCompare(a.pubDate));
+}
+
+/** ACS releases engineers act on: urgent patches, exploited flaws, breaches, ransomware (fraud reminders are routine) */
+const ACS_IMPORTANT = /重大(?:安全)?(?:更新|漏洞)|籲.{0,16}(?:儘速|盡速|加速|立即)|緊急安全更新|遭.{0,4}利用|已遭攻擊|CVE-\d|零時差|外洩|勒索|入侵/;
+/** Ceremonies, talks, calendars and recruiting: not news an app team needs */
+const ACS_EXCLUDE = /月曆|演講|登台|致詞|頒獎|徵選|招生|研討會|論壇|年會|峰會|座談|說明會|交流|簽署|合作備忘錄|MOU|展覽|資安週|大會|揭幕|開幕|金盾獎|報名|輔導|稽核|會議/i;
+
+/**
+ * The FSC Banking Bureau's penalties that touch information security or customer data (leaks, hacking,
+ * personal-data safeguards, fraud). Most penalties are about lending or AML and are left out.
+ */
+export const BANK_PENALTY_SECURITY = /資訊|資安|系統(?!性)|網路|網站|網銀|行動銀行|電子銀行|個資|個人資料|客戶資料|盜|詐|釣魚|駭|OTP|驗證/;
+
+/** The FSC's feed escapes the & in its links twice ("&amp;amp;"), so the parsed link still reads "&amp;" */
+export function fscTitle(item: FeedItem): { title: string; url?: string } | null {
+  return { title: (item.title ?? '').trim(), url: item.link?.replace(/&amp;/g, '&') };
+}
 
 /** AndroidX entries are titled with a date; list the libraries instead, stable releases first */
 export function androidxTitle(item: FeedItem): { title: string; url?: string } | null {
@@ -81,7 +153,35 @@ export const NEWS_SOURCES: NewsSource[] = [
     // Security fixes and new platform majors (which carry breaking changes)
     important: /CVE-\d|security|Cordova (?:iOS|Android) \d+\.0\.0/i },
   { id: 'firebase', name: 'Firebase Blog', url: 'https://firebase.blog/rss.xml', platform: '跨平台', category: 'blog', limit: 30 },
+  // Security news. Google's security blog moved from security.googleblog.com in 2026 (the old feed stopped in April)
+  { id: 'google-security', name: 'Google Security Blog', url: 'https://blog.google/security/rss/', platform: '跨平台', category: 'security',
+    important: SECURITY_IMPORTANT, platformOf: securityPlatform },
+  // Moved from googleprojectzero.blogspot.com; Windows-only research doesn't touch mobile apps
+  { id: 'project-zero', name: 'Google Project Zero', url: 'https://projectzero.google/feed.xml', platform: '跨平台', category: 'security',
+    important: SECURITY_IMPORTANT, platformOf: securityPlatform, exclude: /\bWindows\b|\bWin32\b|Hyper-V|\bNTFS\b/i },
+  { id: 'github-security', name: 'GitHub Security Blog', url: 'https://github.blog/security/feed/', platform: '跨平台', category: 'security',
+    important: SECURITY_IMPORTANT, platformOf: securityPlatform },
+  // Taiwan financial security (盜轉, banks hacked, scam apps), only from the authorities themselves (first-hand,
+  // no news media), picked by keyword. Each gets its own cap: a busy week of incidents shouldn't push them out.
+  { id: 'fsc', name: '金管會新聞稿', url: 'https://www.fsc.gov.tw/RSS/Messages?serno=201202290009&language=chinese', platform: '跨平台', category: 'security',
+    include: TW_FIN_SECURITY, important: TW_FIN_IMPORTANT, platformOf: securityPlatform, transform: fscTitle, cap: 20 },
+  // TWCERT/CC's vulnerability notes for Taiwanese products (first-hand; its news section mostly retells foreign
+  // reports, so it isn't used). The 20 items cover about a month, so the few that match are remembered.
+  { id: 'twcert-tvn', name: 'TWCERT/CC 漏洞公告', url: 'https://www.twcert.org.tw/tw/rss-132-1.xml', platform: '跨平台', category: 'security',
+    include: TVN_MOBILE_FIN, important: /./, platformOf: securityPlatform, keep: true },
+  // The FSC Banking Bureau: its press releases (anti-fraud measures, notices) and its penalties on banks over
+  // security or customer-data failures; both feeds go back months.
+  { id: 'banking-news', name: '金管會銀行局新聞稿', url: 'https://www.banking.gov.tw/RSS/banking/Messages?serno=201203060004&language=chinese', platform: '跨平台', category: 'security',
+    include: TW_FIN_SECURITY, important: TW_FIN_IMPORTANT, platformOf: securityPlatform, transform: fscTitle, cap: 20 },
+  { id: 'banking-penalty', name: '金管會銀行局裁罰', url: 'https://www.banking.gov.tw/RSS/banking/Messages?serno=201203060002&language=chinese', platform: '跨平台', category: 'security',
+    include: BANK_PENALTY_SECURITY, important: TW_FIN_IMPORTANT, platformOf: securityPlatform, transform: fscTitle, cap: 20 },
+  // The Administration for Cyber Security (數位發展部資通安全署): Taiwan's government security notices, from its open-data JSON
+  { id: 'acs', name: '數位發展部資安署', url: 'https://www-api.moda.gov.tw/OpenData/json/23', platform: '跨平台', category: 'security',
+    json: acsPressItems, exclude: ACS_EXCLUDE, important: ACS_IMPORTANT, platformOf: securityPlatform, cap: 20 },
 ];
+
+/** Items per feed in the merged list, unless the feed sets its own cap */
+const PER_SOURCE = 12;
 
 const toDate = (item: FeedItem) => {
   return feedDay(item.published ?? item.pubDate ?? item.isoDate) ?? '';
@@ -91,41 +191,74 @@ export function parseSourceItems(source: NewsSource, items: FeedItem[]): DevNews
   return items.slice(0, source.limit ?? items.length).flatMap(item => {
     const shaped = source.transform ? source.transform(item) : { title: (item.title ?? '').trim(), url: item.link };
     if (source.include && !source.include.test(shaped?.title ?? '')) return [];
+    if (source.exclude?.test(shaped?.title ?? '')) return [];
     const url = safeUrl(shaped?.url);
     const date = toDate(item);
     if (!shaped?.title || !url || !date) return [];
+    const title = shaped.title.replace(/\s+/g, ' ');
     return [{
       id: `${source.id}:${url}`,
       source: source.name,
-      platform: source.platform,
+      platform: source.platformOf?.(title) ?? source.platform,
       category: source.category,
-      title: shaped.title.replace(/\s+/g, ' '),
+      title,
       url,
       date,
-      important: (source.important?.test(shaped.title) ?? false) || REQUIREMENTS.test(shaped.title),
+      // Security feeds use their own rules: the shared ones flag every title saying "security" or "policy"
+      important: (source.important?.test(title) ?? false) || (source.category !== 'security' && REQUIREMENTS.test(title)),
     }];
   });
 }
 
 export { decodeFeedBody } from './feed.js';
 
+/** An empty feed means its format changed (or the address now serves something else); that is a failure */
 async function fetchSource(source: NewsSource): Promise<DevNewsItem[]> {
-  const feed = await fetchFeed(source.url);
-  return parseSourceItems(source, feed.items as FeedItem[]);
+  const items = source.json
+    ? source.json(await fetchJson<unknown>(source.url, {}, SLOW_NETWORK_TIMEOUT_MS, status => `${source.name} HTTP ${status}`))
+    : (await fetchFeed(source.url)).items as FeedItem[];
+  if (!items.length) throw new Error('feed parsed empty');
+  return parseSourceItems(source, items);
 }
 
-/** Newest first, within the last `days`, de-duplicated by URL, at most `perSource` items from each feed */
-export function mergeNews(lists: DevNewsItem[][], now = new Date(), days = 60, limit = 80, perSource = 12): DevNewsItem[] {
+/**
+ * Newest first, within the last `days`, de-duplicated by URL (and security items by title), at most `perSource` items from each feed. The
+ * overall limit leaves room for the security feeds without pushing out older developer news (it was 80 before them, 140 before TWCERT/CC).
+ * `perSource` is one cap for every list, or a function giving each list its own
+ */
+export function mergeNews(lists: DevNewsItem[][], now = new Date(), days = 60, limit = 160, perSource: number | ((list: DevNewsItem[]) => number) = PER_SOURCE): DevNewsItem[] {
   const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const seen = new Set<string>();
-  return lists.map(list => list.filter(item => item.date >= since).sort((a, b) => b.date.localeCompare(a.date)).slice(0, perSource)).flat()
-    .filter(item => item.date >= since && !seen.has(item.url) && seen.add(item.url))
+  // The FSC and its Banking Bureau publish the same press release under different URLs: one copy per title.
+  // Only for security items, where that happens; other feeds' items are told apart by URL alone
+  const titles = new Set<string>();
+  const firstTitle = (item: DevNewsItem) => item.category !== 'security' || (!titles.has(item.title) && !!titles.add(item.title));
+  const capOf = typeof perSource === 'number' ? () => perSource : perSource;
+  return lists.map(list => list.filter(item => item.date >= since).sort((a, b) => b.date.localeCompare(a.date)).slice(0, capOf(list))).flat()
+    .filter(item => item.date >= since && !seen.has(item.url) && seen.add(item.url) && firstTitle(item))
     .sort((a, b) => b.date.localeCompare(a.date) || Number(b.important) - Number(a.important))
     .slice(0, limit);
 }
 
-/** Partial results are fine; fails only when every feed failed */
-export async function fetchDevNews(sources = NEWS_SOURCES, fetcher: (s: NewsSource) => Promise<DevNewsItem[]> = fetchSource): Promise<DevNewsItem[]> {
-  const { values } = await settleSources('dev news', sources.map(s => [s.name, () => fetcher(s)] as const), list => list.length > 0);
-  return mergeNews([...values.values()]);
+/**
+ * Partial results are fine; fails only when every feed failed. A `keep` feed's items are added to the ones
+ * remembered from earlier refreshes (and a failed keep feed still shows what was remembered). An include
+ * filter can leave a feed with nothing to show this time, so an empty list counts as an answer, not a failure.
+ */
+export async function fetchDevNews(
+  sources = NEWS_SOURCES,
+  fetcher: (s: NewsSource) => Promise<DevNewsItem[]> = fetchSource,
+  remember: (feedId: string, items: DevNewsItem[], now: Date) => DevNewsItem[] = rememberNews,
+  now = new Date(),
+  forget: (keepIds: string[]) => void = forgetOtherNews,
+): Promise<DevNewsItem[]> {
+  const { values } = await settleSources('dev news', sources.map(s => [s.name, () => fetcher(s).then(items => ({ source: s, items }))] as const),
+    r => r.items.length > 0 || !!r.source.include);
+  const lists = sources.map(s => {
+    const fetched = values.get(s.name)?.items;
+    return s.keep ? remember(s.id, fetched ?? [], now) : fetched ?? [];
+  });
+  forget(sources.filter(s => s.keep).map(s => s.id));
+  const caps = new Map(sources.map(s => [s.id, s.cap ?? PER_SOURCE]));
+  return mergeNews(lists, now, 60, 160, list => caps.get(list[0]?.id.slice(0, list[0].id.indexOf(':')) ?? '') ?? PER_SOURCE);
 }

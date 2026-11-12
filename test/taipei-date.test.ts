@@ -26,6 +26,7 @@ test('daysUntil counts whole Taiwan days: 0 on the day, negative after', () => {
 
 test('feedDay reads the day the publisher wrote, in its own time zone, and never throws', () => {
   assert.equal(feedDay('Tue, 13 Oct 2026 17:00:00 GMT'), '2026-10-13');
+  assert.equal(feedDay('2026-11-19  06:11:02'), '2026-11-19', 'no zone (iThome): the day as written, whatever the machine\'s zone');
   assert.equal(feedDay('Mon, 05 Oct 2026 17:05:00 PDT'), '2026-10-05', 'Apple\'s evening post: still the 5th, as Apple\'s page says');
   assert.equal(feedDay('Sun, 01 Nov 2026 17:30:00 PST'), '2026-11-01', 'after the switch to standard time');
   assert.equal(feedDay('Mon, 28 Dec 2026 23:00:00 PST'), '2026-12-28');

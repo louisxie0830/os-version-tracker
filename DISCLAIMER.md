@@ -38,7 +38,7 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 | Apple 官方 | developer.apple.com（Developer News / Releases、Upcoming Requirements、Xcode 支援表、App Store 使用率、release notes、隱私清單文件、Xcode Cloud release notes）、www.apple.com（開發者系統狀態）、support.apple.com（安全性更新）、gdmf.apple.com（軟體更新目錄）、itunes.apple.com（iTunes Lookup API）、apps.apple.com（只提供連結） |
 | Google 官方 | developer.android.com（含 Android Developers Blog 與 AndroidX feed）、source.android.com（Android 安全性公告）、support.google.com（Play 政策與技術品質規定）、play.google.com（商店頁）、firebase.google.com（Firebase SDK 版本說明）、developers.google.com（Google Play services 版本說明）、dl.google.com（Google Maven、Android SDK repository）、storage.googleapis.com（Flutter 官方版本清單）、docs.flutter.dev（Flutter 破壞性變更清單）、androidstudio.googleblog.com |
 | 開發工具 | services.gradle.org、gradle.org、kotlinlang.org、repo1.maven.org、jb.gg（Android Studio 版本清單）、registry.npmjs.org（npm） |
-| 開發者新聞 | www.swift.org、blog.jetbrains.com（Kotlin Blog）、firebase.blog、cordova.apache.org，以及上列 Apple 與 Google 的官方 feed；新聞標題維持原文並連回原始文章 |
+| 開發者新聞 | www.swift.org、blog.jetbrains.com（Kotlin Blog）、firebase.blog、cordova.apache.org、資安部落格 blog.google/security（Google Security Blog）、projectzero.google（Project Zero）、github.blog/security（GitHub Security Blog）、台灣金融資安新聞來源 www.fsc.gov.tw（金管會新聞稿）、www.banking.gov.tw（金管會銀行局新聞稿與裁罰）、www-api.moda.gov.tw（數位發展部資安署新聞稿開放資料，CC0）、www.twcert.org.tw（TWCERT/CC 漏洞公告），以及上列 Apple 與 Google 的官方 feed；新聞標題維持原文並連回原始文章；台灣資安只用主管機關的第一手公告，只取符合關鍵字的標題、日期與連結 |
 | 資安 | www.cisa.gov（CISA KEV）、GitHub Advisory Database（api.github.com） |
 | 第三方彙整 | xcodereleases.com、endoflife.date |
 | 版本與品牌占比 | StatCounter Global Stats（gs.statcounter.com） |

@@ -96,7 +96,7 @@ export function renderLegalSection(): string {
   </section>`;
 }
 
-const NEWS_CATEGORY: Record<string, string> = { announcement: '公告', release: '版本發布', blog: '部落格' };
+const NEWS_CATEGORY: Record<string, string> = { announcement: '公告', release: '版本發布', blog: '部落格', security: '資安' };
 
 const NEWS_SHOWN = 25;
 
@@ -104,10 +104,12 @@ export function renderNewsSection(data: AllVersions): string {
   const items = data.devNews ?? [];
   if (!items.length) return '';
   const sources = [...new Set(items.map(i => i.source))];
+  // Points to the security section only when it is on the page (renderSecuritySection needs data.security)
+  const securityLink = data.security ? 'iOS、Safari、Xcode 的安全性更新與 Android 安全性公告見<a href="#security">資安公告</a>。' : '';
   // Rows past the first NEWS_SHOWN wait behind "show more"; data-news holds the values that let a row through
-  // the news filter (its platform, and "important")
+  // the news filter (its platform, "security" for security news, and "important")
   const capped = items.length > NEWS_SHOWN;
-  const rows = items.map((n, i) => `<li class="news-item${i >= NEWS_SHOWN ? ' list-extra' : ''}" data-news="${esc(n.platform)}${n.important ? '|important' : ''}" data-key="news:${esc(n.url)}">
+  const rows = items.map((n, i) => `<li class="news-item${i >= NEWS_SHOWN ? ' list-extra' : ''}" data-news="${esc(n.platform)}${n.category === 'security' ? '|security' : ''}${n.important ? '|important' : ''}" data-key="news:${esc(n.url)}">
       <span class="news-date">${esc(displayDate(n.date))}</span>
       <span class="tl-platform ${platformClass(n.platform)}">${esc(n.platform)}</span>
       <span class="news-cat">${NEWS_CATEGORY[n.category] ?? ''}</span>
@@ -117,9 +119,9 @@ export function renderNewsSection(data: AllVersions): string {
     </li>`).join('');
   return `<section class="panel" id="news">
     <h2>開發者新聞</h2>
-    <p class="table-note">彙整 ${sources.length} 個官方來源近 60 天的公告、版本發布與部落格文章（每個來源最多 12 則，發文較多的來源因此涵蓋較短的期間），標題維持原文。「重要」為規定、期限、棄用、重大版本或服務異常等需要留意的項目。</p>
+    <p class="table-note">彙整 ${sources.length} 個來源近 60 天的公告、版本發布、部落格與資安文章（每個來源最多 12 則，發文較多的來源因此涵蓋較短的期間），標題維持原文。台灣資安只收主管機關的第一手公告：數位發展部資安署新聞稿、金管會與銀行局新聞稿中的金融資安項目（盜轉、防詐、銀行遭駭等）、銀行局與資安或個資相關的裁罰，以及 TWCERT/CC 漏洞公告中與行動 App、金融相關的項目；每個來源最多 20 則。「重要」為規定、期限、棄用、重大版本或服務異常等需要留意的項目；資安文章的「重要」則是已遭利用的漏洞、CVE、憑證遭冒用或撤銷、供應鏈攻擊與揭露政策。${securityLink}</p>
     <news-list filters="news">
-      ${renderChoiceChips('news', '篩選新聞', [['all', '全部'], ['iOS', 'iOS'], ['Android', 'Android'], ['跨平台', '跨平台'], ['important', '只看重要']], { className: 'news-filters' })}
+      ${renderChoiceChips('news', '篩選新聞', [['all', '全部'], ['iOS', 'iOS'], ['Android', 'Android'], ['跨平台', '跨平台'], ['security', '資安'], ['important', '只看重要']], { className: 'news-filters' })}
       <div class="case mt-12">
         <ul class="news news-feed${capped ? ' is-collapsed' : ''}"${capped ? ' data-capped' : ''} id="news-list" data-news-items data-search-rows>${rows}</ul>
         ${capped ? `<button type="button" class="news-show-more" id="news-show-more" data-show-more>顯示更多（共 ${items.length} 則）</button>` : ''}

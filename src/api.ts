@@ -111,7 +111,7 @@ export const API_ENDPOINTS: Endpoint[] = [
   },
   {
     path: 'api/news.json',
-    description: '開發者新聞：Apple / Android / Swift / Kotlin / Firebase / Cordova 官方 feed，標題維持原文',
+    description: '開發者新聞：Apple / Android / Swift / Kotlin / Firebase / Cordova 官方 feed、Google 與 GitHub 資安部落格、數位發展部資安署新聞稿、TWCERT/CC 漏洞公告，以及金管會與銀行局的金融資安公告與裁罰（category 為 security），標題維持原文',
     sources: ['devNews', 'appleNews', 'androidNews'],
     build: d => ({ items: d.devNews }),
   },
