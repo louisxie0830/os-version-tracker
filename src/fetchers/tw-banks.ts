@@ -36,7 +36,7 @@ export interface TaiwanBankApp {
 /**
  * Each entry was verified (2026-10-11): App Store sellerName is the bank, and the Play page returns 200
  * with the bank as developer and the matching title.
- * Where a bank has launched a successor app (永豐 / 遠東 / 高雄 / 彰化), the successor is tracked.
+ * Where a bank has launched a successor app (遠東 / 高雄 / 彰化), the successor is tracked.
  * Besides each bank's main personal app, some banks also list their business / merchant / authenticator apps
  * (verified the same way, 2026-10-11).
  */
@@ -55,7 +55,8 @@ export const TW_BANK_APPS: readonly TaiwanBankAppEntry[] = [
   { bank: '台新銀行', app: '台新行動銀行', appStoreId: 388917170, playPackage: 'tw.com.taishinbank.mobile' },
   // Taishin's digital-account brand: a separate personal banking app
   { bank: '台新銀行', app: 'Richart', appStoreId: 1079733142, playPackage: 'tw.com.taishinbank.richart' },
-  { bank: '永豐銀行', app: '永豐銀行行動銀行（新版）', appStoreId: 6587560188, playPackage: 'com.sinopac.newmobilebank' },
+  // SinoPac tracking is paused on both stores. Restore the entry after verifying the Taiwan listings.
+  // { bank: '永豐銀行', app: '永豐銀行行動銀行（新版）', appStoreId: 6587560188, playPackage: 'com.sinopac.newmobilebank' },
   { bank: '元大銀行', app: '元大行動銀行', appStoreId: 6499507336, playPackage: 'com.yuantabank.bankinginyour.superapp.personal' },
   { bank: '元大銀行', app: '元大銀行商務', kind: 'business', appStoreId: 6499507295, playPackage: 'com.yuantabank.bankinginyour.superapp.corporate' },
   { bank: '元大銀行', app: '元大銀行鑽金收款通', kind: 'merchant', appStoreId: 1116007716, playPackage: 'com.yuantabank.o2o.ezpaymentmobile' },
