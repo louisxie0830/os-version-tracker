@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 
-# Node 26 = latest Node.js release line (nodejs.org/dist/index.json -> v26.11.1, 2026-10-07).
+# Node.js 26 LTS (2026-11-11 security release).
 # Pinned by digest for reproducible, tamper-resistant builds. To update:
-#   docker buildx imagetools inspect node:26-alpine   (or Docker Hub API) and replace the digest.
-ARG NODE_IMAGE=node:26.11.1-alpine3.24@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a
+#   docker buildx imagetools inspect node:<version>-alpine3.24, then replace the index digest.
+ARG NODE_IMAGE=node:26.13.1-alpine3.24@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
 
 # ---- build: compile TypeScript ----
 FROM ${NODE_IMAGE} AS build
