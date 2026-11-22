@@ -1,5 +1,5 @@
 import type { AllVersions } from './fetch-all.js';
-import { displayDate, esc, externalLink } from './render-actions.js';
+import { esc, externalLink } from './render-actions.js';
 import { securityFindings, FISAC_URL, type FinancialNotice, type SecurityFinding } from './security-intelligence.js';
 
 const empty = (message: string) => `<p class="table-note">${message}</p>`;
@@ -12,6 +12,12 @@ const select = (label: string, name: string, values: Array<[string, string]>) =>
 const findingKey = (f: SecurityFinding) => `${f.id}|${f.product}|${f.fixed ?? ''}`;
 const rowState = (key: string) => `<span data-security-state="${esc(key)}">待確認適用性</span>`;
 const filter = (id: string) => `<label class="security-search">篩選此表<input type="search" data-security-filter="${id}" placeholder="輸入銀行、產品、CVE 或版本"></label>`;
+const storeIdentity = (raw?: string) => {
+  try {
+    const url = new URL(raw ?? '');
+    return url.hostname === 'apps.apple.com' ? url.pathname.match(/\/id(\d+)/)?.[1] ?? '未取得' : url.hostname === 'play.google.com' ? url.searchParams.get('id') ?? '未取得' : '未取得';
+  } catch { return '未取得'; }
+};
 
 function financialTable(items: FinancialNotice[], phishing: boolean): string {
   return table(phishing ? '官方偽冒與釣魚通報' : '金融資安公告時間軸', ['公告／更新', '官方資訊', '目前可確認', '個人追蹤'], items.map(n => [
@@ -28,9 +34,13 @@ function trackingForm(findings: SecurityFinding[], notices: FinancialNotice[]): 
     <form data-security-case-form class="security-form">
       ${select('追蹤項目', 'subject', [['manual', '自行新增事件或漏洞'], ...notices.map(n => [n.id, n.title] as [string, string]), ...findings.map(f => [findingKey(f), `${f.id} · ${f.product}`] as [string, string])])}
       ${field('自行新增時的標題', 'title', 'text', 'maxlength="300"')}
+      ${field('涉及銀行／產品（選填）', 'bank', 'text', 'maxlength="300"')}
+      ${field('受影響服務（選填）', 'service', 'text', 'maxlength="300"')}
+      ${field('事件發生時間（台灣時間，選填）', 'occurredAt', 'datetime-local')}
+      ${field('服務恢復時間（台灣時間，選填）', 'recoveredAt', 'datetime-local')}
       ${select('處理狀態', 'status', [['pending', '待確認'], ['working', '處理中'], ['mitigated', '已採取措施'], ['fixed', '已修補／服務恢復'], ['verified', '已驗證'], ['not-applicable', '不適用']])}
       ${field('證據來源網址或文件位置', 'evidence', 'text', 'maxlength="500" required')}
-      ${field('處理說明', 'note', 'text', 'maxlength="1000"')}
+      ${field('處置措施／後續更新', 'note', 'text', 'maxlength="1000"')}
       <button type="submit" class="btn">儲存追蹤紀錄</button>
     </form><div data-security-case-list></div>
   </details>`;
@@ -42,10 +52,10 @@ export function renderSecurityCenter(data: AllVersions, existing: string): strin
   const scores = new Map((report?.epss ?? []).map(s => [s.cve, s]));
   const notices = report?.financialNotices ?? [];
   const latestPatch = report?.android.flatMap(b => b.patchLevels).sort().at(-1);
-  const remediation = table('漏洞與原廠修補對照', ['漏洞／產品', '受影響範圍', '原廠修補', '利用狀態'], findings.map(f => [
+  const remediation = table('漏洞與原廠修補對照', ['漏洞／產品', '原廠適用資訊／受影響範圍', '原廠修補與措施', '利用狀態'], findings.map(f => [
     `${externalLink(f.url, esc(f.id))}<div>${esc(f.product)}</div><div class="tl-source">${esc(f.component ?? f.platform)} · ${esc(f.date)}</div>`,
     esc(f.affected ?? '官方資料尚未取得或未明列，待確認'),
-    esc(f.fixed ?? '尚未取得修補版本，請查看原廠公告'),
+    `${esc(f.fixed ?? '尚未取得修補版本，請查看原廠公告')}<div class="tl-source">${esc(f.action ?? '暫時緩解措施尚未取得，請以原始公告為準')}</div>`,
     f.exploited ? '<span class="status status-urgent">已有利用紀錄／原廠警示</span>' : '目前收錄資料未標示；不代表未遭利用',
   ]));
   const priority = table('漏洞評估順序（尚未比對你的環境）', ['評估順序', '漏洞／產品', '嚴重度／CVSS', 'EPSS', '適用性與處理'], findings.map((f, i) => {
@@ -68,7 +78,7 @@ export function renderSecurityCenter(data: AllVersions, existing: string): strin
   const tabs: Array<[string, string, string]> = [
     ['overview', '漏洞與修補', `${existing}<h3>漏洞與原廠修補對照</h3><p class="table-note">保留各產品與版本分支的修補資訊。Safari 修補不直接視為 iOS 修補；沒有明確版本時顯示待確認。</p>${filter('remediation')}<div id="security-remediation">${remediation}</div>`],
     ['incidents', '金融事件', `<h3>金融資安事件與裁罰時間軸</h3><p class="table-note">依主管機關公開公告排列；公告、事件發生及服務恢復是不同時間。商店下架原因未公布時，不能據此判定遭駭。</p>${filter('incidents')}<div id="security-incidents">${financialTable(notices.filter(n => n.kind !== 'phishing'), false)}</div>${trackingForm([], notices)}`],
-    ['phishing', '偽冒通報', `<h3>偽冒銀行網站與假 App 通報</h3><p class="table-note">只顯示官方通報的線索及來源狀態；可疑網址以 hxxp、[.] 呈現，不提供直接開啟。收錄範圍為 F-ISAC 最新公開清單，完整內容請見 ${externalLink(FISAC_URL, 'F-ISAC')}。</p>${filter('phishing')}<div id="security-phishing">${financialTable(notices.filter(n => n.kind === 'phishing'), true)}</div><h4>已收錄銀行的官方商店識別</h4>${table('官方商店連結對照', ['銀行／App', 'App Store', 'Google Play'], data.twBanks.map(b => [esc(`${b.bank}／${b.app}`), b.ios ? externalLink(b.ios.url, '官方商店頁') : '未取得', b.android ? externalLink(b.android.url, '官方商店頁') : '未取得']))}`],
+    ['phishing', '偽冒通報', `<h3>偽冒銀行網站與假 App 通報</h3><p class="table-note">只顯示官方通報的線索及來源狀態；可疑網址以 hxxp、[.] 呈現，不提供直接開啟。收錄範圍為 F-ISAC 最新公開清單，完整內容請見 ${externalLink(FISAC_URL, 'F-ISAC')}。</p>${filter('phishing')}<div id="security-phishing">${financialTable(notices.filter(n => n.kind === 'phishing'), true)}</div><h4>已收錄銀行的官方商店識別</h4>${table('官方商店連結對照', ['銀行／App', 'App Store ID／連結', 'Google Play 套件／連結'], data.twBanks.map(b => [esc(`${b.bank}／${b.app}`), b.ios ? `${esc(storeIdentity(b.ios.url))}<br>${externalLink(b.ios.url, '官方商店頁')}` : '未取得', b.android ? `${esc(storeIdentity(b.android.url))}<br>${externalLink(b.android.url, '官方商店頁')}` : '未取得']))}`],
     ['priority', '優先處理', `<h3>漏洞處理優先順序</h3><p class="table-note">本站先排已有利用紀錄的項目，再依嚴重度、EPSS 與公告時間排列；這是評估順序，不是銀行安全評分。EPSS 是未來 30 天漏洞遭利用的機率估計，不是你或某家銀行被駭的機率。缺評分不當作 0 分。</p>${filter('priority')}<div id="security-priority">${priority}</div>${trackingForm(findings, [])}`],
     ['android', 'Android 修補', `<h3>Android 元件修補對照</h3><p class="table-note">系統安全修補日期、Google Play 系統更新與核心版本分開記錄。達到公告日期只代表此項對照，不能證明整機沒有漏洞。</p>
       <form data-security-patch-form class="security-form">

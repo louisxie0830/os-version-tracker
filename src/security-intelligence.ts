@@ -22,6 +22,7 @@ export interface SecurityFinding {
   platform: SecurityPlatform;
   affected?: string;
   fixed?: string;
+  action?: string;
   severity?: string;
   cvss?: number;
   exploited: boolean;
@@ -74,7 +75,8 @@ export function appleFindings(html: string, release: { name: string; date: strin
     return ids.map(cve => ({
       id: cve, cve, product: release.name, component: component || undefined,
       platform: /^iOS|^iPadOS/.test(release.name) ? 'iOS' as const : '跨平台' as const,
-      affected, fixed: release.name, exploited: /may have been exploited/i.test(text), date: release.date, url: release.url!,
+      affected: affected ? `更新適用裝置：${affected}；受影響系統版本依原文確認` : undefined,
+      fixed: release.name, exploited: /may have been exploited/i.test(text), date: release.date, url: release.url!,
     }));
   });
 }
@@ -175,8 +177,8 @@ export function securityFindings(report: SecurityReport | null | undefined): Sec
   });
   for (const kev of report.kevArchive ?? report.exploited) {
     const matches = findings.filter(f => f.cve === kev.cve);
-    if (matches.length) matches.forEach(f => { f.exploited = true; });
-    else findings.push({ id: kev.cve, cve: kev.cve, product: kev.product, platform: kev.platform, exploited: true, date: kev.dateAdded, url: kev.url });
+    if (matches.length) matches.forEach(f => { f.exploited = true; f.action = kev.requiredAction; });
+    else findings.push({ id: kev.cve, cve: kev.cve, product: kev.product, platform: kev.platform, exploited: true, date: kev.dateAdded, url: kev.url, action: kev.requiredAction });
   }
   const severity = (s?: string) => ({ critical: 4, high: 3, moderate: 2, medium: 2, low: 1 }[s?.toLowerCase() ?? ''] ?? 0);
   const score = new Map((report.epss ?? []).map(e => [e.cve, e.score]));

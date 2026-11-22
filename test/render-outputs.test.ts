@@ -183,8 +183,11 @@ test('frameworks section: upstream text is escaped', () => {
 
 // ---------- render-security.ts ----------
 
-test('security section: absent without a report; empty lists say so', () => {
-  assert.equal(renderSecuritySection({ ...snapshot, security: null }), '');
+test('security section: missing reports retain source health and local tools; empty lists say so', () => {
+  const missing = renderSecuritySection({ ...snapshot, security: null });
+  assert.match(missing, /本次尚未取得資安報告/);
+  assert.match(missing, /data-security-packages/);
+  assert.match(missing, /data-security-tab="sources"/);
   const html = renderSecuritySection({ ...snapshot, security: security() });
   for (const empty of ['近 180 天沒有新增', '近 120 天沒有相關的安全性更新', '目前抓不到 Android 安全性公告', '這些套件目前沒有資安公告']) assert.ok(html.includes(empty), empty);
 });

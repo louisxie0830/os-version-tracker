@@ -5,7 +5,7 @@ interface SecurityAdvisory {
   ranges: Array<{ package: string; vulnerable?: string; patched?: string }>;
 }
 interface SecurityPackageResult { name: string; version: string; ecosystem: string; result: string; detail: string }
-interface SecurityCaseRecord { subject: string; title: string; status: string; evidence: string; note: string; at: string }
+interface SecurityCaseRecord { subject: string; title: string; status: string; evidence: string; note: string; at: string; bank?: string; service?: string; occurredAt?: string; recoveredAt?: string }
 interface SecurityVerification { target: string; control: string; test: string; result: string; testedAt: string; evidence: string; reviewer: string; note: string; at: string }
 interface SecurityPatchRecord { system: string; published: string; mainline: string; kernel: string; at: string }
 interface SecurityWorkspace { schema: 1; cases: SecurityCaseRecord[]; verifications: SecurityVerification[]; patches: SecurityPatchRecord[] }
@@ -134,7 +134,10 @@ const SecurityTools = (() => {
     const out = fresh();
     for (const value of raw.cases.slice(-500)) {
       const v = fields(value, ['subject', 'title', 'status', 'evidence', 'note', 'at']);
-      if (v && ['pending', 'working', 'mitigated', 'fixed', 'verified', 'not-applicable'].includes(v.status) && v.subject && v.evidence && !Number.isNaN(Date.parse(v.at))) out.cases.push(v as unknown as SecurityCaseRecord);
+      if (v && ['pending', 'working', 'mitigated', 'fixed', 'verified', 'not-applicable'].includes(v.status) && v.subject && v.evidence && !Number.isNaN(Date.parse(v.at))) {
+        const extra = record(value) ? Object.fromEntries(['bank', 'service', 'occurredAt', 'recoveredAt'].map(key => [key, text(value[key], 300)])) : {};
+        out.cases.push({ ...v, ...extra } as unknown as SecurityCaseRecord);
+      }
     }
     for (const value of raw.verifications.slice(-500)) {
       const v = fields(value, ['target', 'control', 'test', 'result', 'testedAt', 'evidence', 'reviewer', 'note', 'at']);

@@ -52,6 +52,7 @@ export interface ExploitedVuln {
   description: string;
   ransomware: boolean;
   url: string;
+  requiredAction?: string;
 }
 
 export interface SdkAdvisory {
@@ -215,6 +216,7 @@ interface KevEntry {
   dateAdded: string;
   shortDescription: string;
   knownRansomwareCampaignUse?: string;
+  requiredAction?: string;
 }
 
 /** Products that run on phones or inside apps (Chromium covers Android WebView); macOS / Windows-only entries are left out */
@@ -244,6 +246,7 @@ export function parseKev(feed: { vulnerabilities?: KevEntry[] }, now = new Date(
       description: e.shortDescription,
       ransomware: e.knownRansomwareCampaignUse === 'Known',
       url: `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(e.cveID)}`,
+      ...(e.requiredAction ? { requiredAction: e.requiredAction } : {}),
     }];
   }).sort((a, b) => b.dateAdded.localeCompare(a.dateAdded));
 }

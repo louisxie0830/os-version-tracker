@@ -75,7 +75,7 @@ export const API_ENDPOINTS: Endpoint[] = [
   },
   {
     path: 'api/cordova.json',
-    description: 'Cordova：平台與核心 plugin 的最新版本、需要的平台版本、破壞性變更，以及已知漏洞（latestAffected 表示最新版仍受影響）',
+    description: 'Cordova：平台與核心 plugin 的最新版本、需要的平台版本、破壞性變更，以及已知漏洞（latestAffected 為 true／false／null；null 表示適用版本尚無法判斷）',
     sources: ['cordova', 'security'],
     build: d => d.cordova && {
       ...d.cordova,

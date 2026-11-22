@@ -474,6 +474,11 @@
       const patch = center.querySelector('[data-security-patch-form]'); patch.elements.namedItem('system').value='2026-10-01'; patch.elements.namedItem('published').value='2026-11-01';
       patch.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
       if (!center.querySelector('[data-security-patch-result]').textContent.includes('落後所選公告日期')) add('security patch','outdated system patch was not identified');
+      open('incidents');
+      const caseForm = center.querySelector('[data-security-case-form]');
+      for (const [name, value] of Object.entries({subject:'manual',title:'E2E incident',bank:'E2E bank',service:'E2E mobile service',occurredAt:'2026-11-20T09:30',recoveredAt:'2026-11-20T12:00',evidence:'E2E official notice'})) caseForm.elements.namedItem(name).value=value;
+      caseForm.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
+      if (!center.querySelector('[data-security-case-list]').textContent.includes('E2E mobile service') || !JSON.parse(localStorage.getItem(storageKey)).cases.some(c => c.recoveredAt === '2026-11-20T12:00')) add('security incident','structured event and recovery evidence was not retained');
       open('overview');
     } finally {
       if (previous === null) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey,previous);

@@ -36,7 +36,8 @@
           const item = last.get(span.dataset.securityState ?? '');
           span.textContent = item ? `${CASE_STATUS[item.status]}（個人紀錄） · ${item.at.slice(0, 10)}` : '待確認適用性';
         }
-        for (const target of this.querySelectorAll('[data-security-case-list]')) makeTable(target, ['個人追蹤', '處理狀態', '證據／說明', '記錄時間'], [...state.cases].reverse().map(c => [c.title || c.subject, CASE_STATUS[c.status], `${c.evidence} ${c.note}`, c.at]));
+        for (const target of this.querySelectorAll('[data-security-case-list]')) makeTable(target, ['個人追蹤／銀行／服務', '處理狀態', '發生／恢復（台灣時間）', '證據／處置說明', '記錄時間（UTC）'], [...state.cases].reverse().map(c => [
+          [c.title || c.subject, c.bank, c.service].filter(Boolean).join(' · '), CASE_STATUS[c.status], `發生 ${c.occurredAt || '待確認'}／恢復 ${c.recoveredAt || '待確認'}`, `${c.evidence} ${c.note}`, c.at]));
         makeTable(this.querySelector('[data-security-verification-list]'), ['App／版本', '分類／測試', '使用者填報結果', '證據與說明', '測試日期／人員'], [...state.verifications].reverse().map(v => [v.target, `${v.control} · ${v.test}`, RESULT[v.result], `${v.evidence} ${v.note}`, `${v.testedAt} ${v.reviewer}`]));
         const patch = state.patches.at(-1), target = this.querySelector('[data-security-patch-result]');
         if (target && patch) makeTable(target, ['元件', '裝置值', '對照結果'], [
@@ -74,7 +75,8 @@
         const v = values(form), at = new Date().toISOString();
         const title = v.subject === 'manual' ? v.title : (form.elements.namedItem('subject') as HTMLSelectElement).selectedOptions[0]?.textContent ?? '';
         if (!title || !v.evidence || !(v.status in CASE_STATUS)) { say('請填寫標題、處理狀態與證據。'); return; }
-        state.cases.push({ subject: v.subject === 'manual' ? `manual:${title}` : v.subject, title, status: v.status, evidence: v.evidence, note: v.note, at });
+        state.cases.push({ subject: v.subject === 'manual' ? `manual:${title}` : v.subject, title, status: v.status, evidence: v.evidence, note: v.note, at,
+          bank: v.bank, service: v.service, occurredAt: v.occurredAt, recoveredAt: v.recoveredAt });
         state.cases = state.cases.slice(-500); write();
       }, { signal });
       const patchForm = this.querySelector<HTMLFormElement>('[data-security-patch-form]');

@@ -160,7 +160,7 @@ function securityCard(title: string, rows: string[], note: string, empty: string
 
 export function renderSecuritySection(data: AllVersions): string {
   const s = data.security;
-  if (!s) return '';
+  if (!s) return `<section class="panel" id="security"><h2>資安</h2><p class="table-note">本次尚未取得資安報告，不能據此判定沒有風險。套件匯入與個人驗證紀錄仍可使用。</p>${renderSecurityCenter(data, '')}${renderSources(data, ['security'])}</section>`;
   const exploitedBadge = (cves: string[]) => cves.length ? `<span class="status status-urgent">可能已遭利用：${esc(cves.join('、'))}</span>` : '';
 
   const kev = s.exploited.map(v => `<li data-key="security:kev:${esc(v.cve)}">

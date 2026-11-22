@@ -17,7 +17,7 @@ const index = `<h1>情資總覽</h1><table><tr><td>2026/11/18</td><td>FISAC-400-
 test('Apple repair evidence is kept by product branch and CVE, with explicit availability and exploitation notes', () => {
   const html = '<h2>WebKit</h2><p>Available for: iPhone 11 and later</p><p>Impact: This issue may have been exploited.</p><p>CVE-2026-12345</p><h2>Kernel</h2><p>CVE-2026-12346</p>';
   const rows = appleFindings(html, { name: 'iOS 27.1', date: '2026-11-18', url: 'https://support.apple.com/x' });
-  assert.equal(rows[0].affected, 'iPhone 11 and later');
+  assert.match(rows[0].affected ?? '', /更新適用裝置：iPhone 11 and later/);
   assert.equal(rows[0].component, 'WebKit'); assert.equal(rows[0].fixed, 'iOS 27.1'); assert.equal(rows[0].exploited, true);
   assert.equal(rows[1].exploited, false);
   assert.equal(appleFindings(html, { name: 'Safari 27.1', date: '2026-11-18', url: 'https://support.apple.com/y' })[0].platform, '跨平台');
