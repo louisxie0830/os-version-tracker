@@ -41,7 +41,7 @@ How the Site collects data: it reads only public pages, feeds and APIs that requ
 | Google (official) | developer.android.com (including the Android Developers Blog and the AndroidX feed), source.android.com (Android security bulletins), support.google.com (Play policies and technical quality requirements), play.google.com (store listings), firebase.google.com (Firebase SDK release notes), developers.google.com (Google Play services release notes), dl.google.com (Google Maven, Android SDK repository), storage.googleapis.com (Flutter's official release list), docs.flutter.dev (Flutter's breaking-change list), androidstudio.googleblog.com |
 | Developer tools | services.gradle.org, gradle.org, kotlinlang.org, repo1.maven.org, jb.gg (Android Studio release list), registry.npmjs.org (npm) |
 | Developer news | www.swift.org, blog.jetbrains.com (Kotlin Blog), firebase.blog, cordova.apache.org, the security blogs blog.google/security (Google Security Blog), projectzero.google (Project Zero) and github.blog/security (GitHub Security Blog), the Taiwan financial-security news sources www.fsc.gov.tw (FSC press releases), www.banking.gov.tw (FSC Banking Bureau press releases and penalties), www-api.moda.gov.tw (Administration for Cyber Security press releases, open data, CC0) and www.twcert.org.tw (TWCERT/CC vulnerability notes), and the Apple and Google feeds listed above; news titles are shown in their original wording and link to the original articles; Taiwan security items come only from the authorities' own first-hand announcements, and only the titles, dates and links that match keywords are kept |
-| Security | www.cisa.gov (CISA KEV), the GitHub Advisory Database (api.github.com) |
+| Security | www.cisa.gov (CISA KEV), the GitHub Advisory Database (api.github.com), api.first.org (FIRST EPSS scores), www.fisac.tw (F-ISAC's latest public list and the titles, dates, sources and latest indicators in TLP WHITE/CLEAR notices) |
 | Third-party aggregators | xcodereleases.com, endoflife.date |
 | Version and brand market share | StatCounter Global Stats (gs.statcounter.com) |
 | Community and open-source projects | GitHub (api.github.com, raw.githubusercontent.com, github.com), Stack Exchange API (api.stackexchange.com) |
@@ -105,6 +105,8 @@ Open-source packages used by the Project are used under their own licenses and r
 - **It sets no cookies, loads no third-party scripts, fonts, ads or analytics, and collects no personal data about its visitors.**
 - Your browser only requests pages and data files from the Site itself (for example `notifications.json`); you visit external websites only when you click their links.
 - The following data is **stored only in your browser's localStorage**, is never sent to any server, and can be deleted at any time by clearing the site's data:
+  - Personal security case tracking, Android component patch comparisons and OWASP MASVS verification records; users can export and import backups.
+  - Imported package inventories and OSV scan results are parsed only in the current page's memory. They are not automatically persisted, uploaded, or sent to third-party services. Personal records are excluded from the public JSON APIs.
   - `theme`: the light or dark mode you picked (follows your system setting when you haven't)
   - `seen-items`: items seen on your previous visit (used for the "new" marker)
   - `notif-known`, `notif-read`: items known to and read in the notification center

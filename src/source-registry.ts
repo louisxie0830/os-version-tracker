@@ -286,11 +286,13 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
       { url: 'https://api.github.com/advisories', method: 'API', terms: GHSA_LICENSE },
       { url: 'https://source.android.com/docs/security/bulletin/asb-overview', method: 'HTML 網頁', terms: ANDROID_SOURCE },
       { url: 'https://support.apple.com/en-us/100100', method: 'HTML 網頁', terms: APPLE_TERMS },
+      { url: 'https://api.first.org/data/v1/epss', method: 'API', terms: 'https://www.first.org/epss/' },
+      { url: 'https://www.fisac.tw/STIX_CASE/QueryStixCase/Query', method: 'HTML 網頁', terms: 'https://www.fisac.tw/Apsys/Legal' },
     ],
     licence: 'CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款）',
     attribution: 'GitHub Advisory Database（CC BY 4.0）',
     risk: 'high',
-    note: `KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號。${APPLE_FACTS}`,
+    note: `KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號。FIRST EPSS 每次只查最多 100 個相關 CVE，保留評分日期。F-ISAC 只取最新公開清單與最多三則 TLP WHITE/CLEAR 公開通報的標題、時間、來源及最新線索，不抓取可疑網域或會員情資。套件與 OSV 結果僅由使用者在瀏覽器本機匯入，不送往第三方。${APPLE_FACTS}`,
   },
   crashes: {
     endpoints: [

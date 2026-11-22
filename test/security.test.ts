@@ -109,7 +109,9 @@ test('security report keeps partial results and fails only when every source fai
   try {
     await assert.rejects(fetchSecurityReport({ apple: fail, android: fail, exploited: fail, advisories: fail }), /security: every upstream failed/);
     const partial = await fetchSecurityReport({ apple: fail, android: fail, exploited: () => Promise.resolve([]), advisories: fail });
-    assert.deepEqual(partial, { apple: [], android: [], exploited: [], advisories: [] });
+    assert.deepEqual([partial.apple, partial.android, partial.exploited, partial.advisories], [[], [], [], []]);
+    assert.equal(partial.subsources?.find(s => s.id === 'kev')?.status, 'ok');
+    assert.equal(partial.subsources?.filter(s => s.status === 'failed').length, 3, 'an empty success is distinguished from three failed upstreams');
   } finally {
     console.warn = warn;
   }

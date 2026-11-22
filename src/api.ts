@@ -1,6 +1,6 @@
 import type { AllVersions, SourceKey } from './fetch-all.js';
 import { buildNowCards } from './now.js';
-import { inVersionRange } from './fetchers/security.js';
+import { versionRangeStatus } from './fetchers/security.js';
 import { REPO_BLOB, SOURCE_REGISTER, termsOf } from './source-registry.js';
 import type { SourceInfo } from './types.js';
 
@@ -63,7 +63,7 @@ export const API_ENDPOINTS: Endpoint[] = [
   },
   {
     path: 'api/security.json',
-    description: '資安：已遭利用的漏洞（CISA KEV）、Apple 安全性更新、Android 安全性公告、常用 SDK 資安公告',
+    description: '資安：CISA KEV 與歷史、原廠漏洞修補對照、SDK CVSS、FIRST EPSS、F-ISAC 偽冒通報、金融公告時間軸及資安子來源狀態；不含個人本機紀錄',
     sources: ['security'],
     build: d => d.security,
   },
@@ -82,7 +82,7 @@ export const API_ENDPOINTS: Endpoint[] = [
       advisories: [...d.cordova.platforms.map(p => ({ name: p.name, latest: p.latest })), ...d.cordova.plugins.map(p => ({ name: p.name, latest: p.latest }))]
         .flatMap(({ name, latest }) => (d.security?.advisories ?? []).flatMap(a => (a.ranges ?? [])
           .filter(r => r.package === name)
-          .map(r => ({ package: name, id: a.id, cve: a.cve, severity: a.severity, vulnerable: r.vulnerable, patched: r.patched, latestAffected: inVersionRange(latest, r.vulnerable), url: a.url })))),
+          .map(r => ({ package: name, id: a.id, cve: a.cve, severity: a.severity, vulnerable: r.vulnerable, patched: r.patched, latestAffected: versionRangeStatus(latest, r.vulnerable), url: a.url })))),
     },
   },
   {

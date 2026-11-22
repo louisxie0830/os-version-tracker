@@ -4,6 +4,11 @@ import { fetchFeed } from './feed.js';
 import { fetchJson, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 import { feedDay } from '../taipei-date.js';
 import { forgetOtherNews, rememberNews } from '../history.js';
+import { lastGood, rememberGood } from '../last-good.js';
+import type { SecuritySourceState } from '../security-intelligence.js';
+
+let securityNewsStates: SecuritySourceState[] = [];
+export function lastSecurityNewsStates(): SecuritySourceState[] { return structuredClone(securityNewsStates); }
 
 /**
  * Developer news from official feeds, merged into one timeline. Titles stay in their original
@@ -252,7 +257,24 @@ export async function fetchDevNews(
   now = new Date(),
   forget: (keepIds: string[]) => void = forgetOtherNews,
 ): Promise<DevNewsItem[]> {
-  const { values } = await settleSources('dev news', sources.map(s => [s.name, () => fetcher(s).then(items => ({ source: s, items }))] as const),
+  const statuses: SecuritySourceState[] = [];
+  securityNewsStates = statuses;
+  const { values } = await settleSources('dev news', sources.map(s => [s.name, async () => {
+    const previous = lastGood<{ at: string }>(`security-news:${s.id}`, now);
+    try {
+      const items = await fetcher(s);
+      if (!items.length && !s.include) throw new Error('returned no usable data');
+      if (s.category === 'security') {
+        statuses.push({ id: `news:${s.id}`, label: s.name, url: s.url, status: 'ok', checkedAt: now.toISOString(), lastSuccessAt: now.toISOString(), count: items.length });
+        rememberGood(`security-news:${s.id}`, { at: now.toISOString() }, now);
+      }
+      return { source: s, items };
+    } catch (error) {
+      if (s.category === 'security') statuses.push({ id: `news:${s.id}`, label: s.name, url: s.url, status: 'failed', checkedAt: now.toISOString(),
+        lastSuccessAt: previous?.fetchedAt, count: 0, error: String((error as Error).message).slice(0, 300) });
+      throw error;
+    }
+  }] as const),
     r => r.items.length > 0 || !!r.source.include);
   const lists = sources.map(s => {
     const fetched = values.get(s.name)?.items;

@@ -1,7 +1,8 @@
 import type { AllVersions } from './fetch-all.js';
 import type { CordovaPlatform } from './fetchers/cordova.js';
 import type { CrashItem } from './fetchers/crashes.js';
-import { inVersionRange, SDK_PACKAGES, type SdkAdvisory } from './fetchers/security.js';
+import { versionRangeStatus, SDK_PACKAGES, type SdkAdvisory } from './fetchers/security.js';
+import { renderSecurityCenter } from './render-security-center.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
 import type { ActionStatus } from './types.js';
 import { platformClass, renderSources } from './render-common.js';
@@ -91,9 +92,9 @@ export function renderAdvisoryNotes(data: AllVersions, pkg: string, latest: stri
   const found = advisoriesFor(data, pkg);
   if (!found.length) return '<span class="tl-source">沒有已知漏洞</span>';
   return found.map(({ advisory: a, vulnerable, patched }) => {
-    const stillAffected = inVersionRange(latest, vulnerable);
+    const stillAffected = versionRangeStatus(latest, vulnerable);
     return `<div class="plugin-advisory">
-      <span class="status status-${stillAffected ? 'urgent' : SEVERITY[a.severity].status}">${stillAffected ? '最新版仍受影響' : SEVERITY[a.severity].label}</span>
+      <span class="status status-${stillAffected ? 'urgent' : SEVERITY[a.severity].status}">${stillAffected === null ? '適用版本待確認' : stillAffected ? '最新版仍受影響' : SEVERITY[a.severity].label}</span>
       ${externalLink(a.url, esc(vulnerable ? `${vulnerable} 受影響` : a.summary))}${patched ? `<span class="tl-source">${esc(patched)} 修正${a.cve ? ` · ${esc(a.cve)}` : ''}</span>` : ''}
     </div>`;
   }).join('');
@@ -202,12 +203,12 @@ export function renderSecuritySection(data: AllVersions): string {
   return `<section class="panel" id="security">
     <h2>資安</h2>
     <p class="table-note">整理會影響 App 的資安訊息：已確認在外遭到利用的 iOS / Android / WebView 漏洞、Apple 與 Android 的安全性更新，以及常用 SDK 的資安公告。標示「可能已遭利用」的項目，建議盡快提醒使用者更新系統，或升級受影響的 SDK。</p>
-    <div class="crash-grid">
+    ${renderSecurityCenter(data, `<div class="crash-grid">
       ${securityCard('已遭利用的漏洞（近 180 天）', kev, '美國 CISA 已知遭利用漏洞清單（KEV）；Chromium 會影響 Android WebView 與 Chrome', '近 180 天沒有新增與 iOS / Android / WebView 相關的項目。')}
       ${securityCard('Apple 安全性更新（近 120 天）', apple, 'iOS / iPadOS、Safari（WKWebView 使用的 WebKit）與 Xcode；取自 Apple 安全性更新頁面', '近 120 天沒有相關的安全性更新。')}
       ${securityCard('Android 安全性公告', android, '每月的 Android Security Bulletin；修補程式等級可在裝置的「設定 → 安全性」查看', '目前抓不到 Android 安全性公告。', 3)}
       ${securityCard('常用 SDK 資安公告', advisories, `取自 GitHub Advisory Database：Cordova、React Native、Expo、Capacitor、Flutter WebView、dio、OkHttp、Gson、Retrofit、Glide、Alamofire、Firebase、Sentry 等 ${SDK_PACKAGES.length} 個套件；依公布日期排序`, '這些套件目前沒有資安公告。', 8)}
-    </div>
+    </div>`)}
     ${renderSources(data, ['security'])}
   </section>`;
 }

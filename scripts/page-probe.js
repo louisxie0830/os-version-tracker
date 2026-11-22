@@ -356,7 +356,7 @@
     }
     // Every other button in the page body ("show more", copy link, back to top…)
     for (const button of document.querySelectorAll('main button, aside button')) {
-      if (!visible(button) || button.classList.contains('chip')) continue;
+      if (!visible(button) || button.classList.contains('chip') || button.closest('security-center')) continue;
       button.click();
       await tick();
     }
@@ -437,6 +437,49 @@
     if (document.querySelector('[data-capped]') && !document.documentElement.classList.contains('has-js')) add('show more', 'has-js dropped although the components are defined');
   }
 
+  async function securityInteractions() {
+    const center = document.querySelector('security-center');
+    if (!center) return;
+    const storageKey = 'osvt-security-workspace-v1', previous = localStorage.getItem(storageKey);
+    const tick = () => wait(30);
+    try {
+      const tabs = [...center.querySelectorAll('[data-security-tab]')];
+      if (tabs.length !== 8) add('security center', `expected 8 views, found ${tabs.length}`);
+      for (const tab of tabs) {
+        tab.click(); await tick();
+        const panels = [...center.querySelectorAll('[data-security-panel]')].filter(p => !p.hidden);
+        if (panels.length !== 1 || panels[0]?.dataset.securityPanel !== tab.dataset.securityTab) add('security tabs', tab.textContent);
+        overflow(` (security ${tab.dataset.securityTab})`);
+      }
+      const open = name => center.querySelector(`[data-security-tab="${name}"]`).click();
+      open('packages');
+      const input = center.querySelector('[data-security-packages]');
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([JSON.stringify({lockfileVersion:3,packages:{'node_modules/e2e-package':{version:'1.0.0'}}})], 'package-lock.json', {type:'application/json'}));
+      input.files = transfer.files; input.dispatchEvent(new Event('change')); await tick();
+      if (!center.querySelector('[data-security-package-results]').textContent.includes('仍待完整掃描')) add('security import', 'unknown package was not marked pending');
+      const osv = new DataTransfer();
+      osv.items.add(new File([JSON.stringify({results:[{packages:[{package:{name:'e2e-package',version:'1.0.0',ecosystem:'npm'},vulnerabilities:[{id:'OSV-E2E'}]}]}]})], 'osv.json', {type:'application/json'}));
+      const osvInput = center.querySelector('[data-security-osv]'); osvInput.files = osv.files; osvInput.dispatchEvent(new Event('change')); await tick();
+      if (!center.querySelector('[data-security-package-results]').textContent.includes('掃描回報受影響')) add('security import', 'OSV exact-version result was not applied');
+      open('verification');
+      const form = center.querySelector('[data-security-verification-form]');
+      const fill = (name, value) => { form.elements.namedItem(name).value = value; };
+      fill('target','E2E App 1.0'); fill('test','E2E authentication evidence'); fill('testedAt','2026-11-22'); fill('result','pass');
+      form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+      if (!center.querySelector('[data-security-feedback]').textContent.includes('通過須附證據')) add('security verification','passing without evidence was accepted');
+      fill('evidence','E2E report'); form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
+      if (!center.querySelector('[data-security-verification-list]').textContent.includes('E2E App 1.0')) add('security verification','evidence record was not saved');
+      open('android');
+      const patch = center.querySelector('[data-security-patch-form]'); patch.elements.namedItem('system').value='2026-10-01'; patch.elements.namedItem('published').value='2026-11-01';
+      patch.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
+      if (!center.querySelector('[data-security-patch-result]').textContent.includes('落後所選公告日期')) add('security patch','outdated system patch was not identified');
+      open('overview');
+    } finally {
+      if (previous === null) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey,previous);
+    }
+  }
+
   addEventListener('load', () => setTimeout(async () => {
     const report = { width: document.documentElement.clientWidth, issues, errors };
     try {
@@ -454,6 +497,7 @@
       squeezedTables();
       anchors();
       await interactions();
+      await securityInteractions();
       report.localRefs = [...new Set([...document.querySelectorAll('a[href], link[href], script[src], img[src]')]
         .map(el => el.getAttribute('href') ?? el.getAttribute('src'))
         .filter(ref => !/^(?:[a-z]+:|#|\/\/)/i.test(ref)))];

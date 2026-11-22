@@ -281,8 +281,10 @@
   - API `https://api.github.com/advisories`（條款：<https://github.com/github/advisory-database/blob/main/LICENSE.md>）
   - HTML 網頁 `https://source.android.com/docs/security/bulletin/asb-overview`（條款：<https://source.android.com/docs/setup/about/licenses>）
   - HTML 網頁 `https://support.apple.com/en-us/100100`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
+  - API `https://api.first.org/data/v1/epss`（條款：<https://www.first.org/epss/>）
+  - HTML 網頁 `https://www.fisac.tw/STIX_CASE/QueryStixCase/Query`（條款：<https://www.fisac.tw/Apsys/Legal>）
 - 須標示：GitHub Advisory Database（CC BY 4.0）
-- 說明：KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號。只取版本、日期與規定名稱等事實資訊並附原始連結
+- 說明：KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號。FIRST EPSS 每次只查最多 100 個相關 CVE，保留評分日期。F-ISAC 只取最新公開清單與最多三則 TLP WHITE/CLEAR 公開通報的標題、時間、來源及最新線索，不抓取可疑網域或會員情資。套件與 OSV 結果僅由使用者在瀏覽器本機匯入，不送往第三方。只取版本、日期與規定名稱等事實資訊並附原始連結
 
 ### `crashes`：Apple / Android release notes · GitHub SDK 與 Cordova issues
 

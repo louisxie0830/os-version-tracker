@@ -35,7 +35,7 @@ import { AGP_PAST_RELEASES_URL, fetchAgpJdk, type AgpJdkRequirement } from './fe
 import { fetchPrivacyCompliance, THIRD_PARTY_SDK_URL, type PrivacyCompliance } from './fetchers/privacy.js';
 import { fetchCrashReport, type CrashReport } from './fetchers/crashes.js';
 import { fetchOsShare, STATCOUNTER_URL, type OsShare } from './fetchers/os-share.js';
-import { fetchDevNews, type DevNewsItem } from './fetchers/dev-news.js';
+import { fetchDevNews, lastSecurityNewsStates, type DevNewsItem } from './fetchers/dev-news.js';
 import { fetchCordovaReleases, type CordovaReleases } from './fetchers/cordova.js';
 import { APPLE_SECURITY_URL, fetchSecurityReport, type SecurityReport } from './fetchers/security.js';
 import { DEVELOPER_STATUS_PAGE, fetchDeveloperStatus, type DeveloperStatus } from './fetchers/apple-status.js';
@@ -48,6 +48,7 @@ import { bankSnapshots, coreVersionProblems, recordBankVersions, type BankChange
 import { anonymizeAppStoreUrl, maskName } from './mask.js';
 import { createRefreshCache } from './refresh-cache.js';
 import { safeUrl } from './safe-url.js';
+import { financialTimeline } from './security-intelligence.js';
 import { buildAndroidActions, buildDeadlineTimeline, buildiOSActions, zhPlatform, zhSdk } from './insights.js';
 import { deferNotifications, notifyWebhook, prunableWhen, recentItems, recordItems, toTrackedItems, type TrackedItem } from './changes.js';
 import type {
@@ -465,6 +466,13 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
 
   // Sources that worked but came back with holes: far fewer items than usual (above), a field missing for some apps
   if (sources.twBanks?.ok) quality.set('twBanks', [...bankFieldGaps(TW_BANK_APPS, twBanks), ...(quality.get('twBanks') ?? [])]);
+  if (security) {
+    if (f.devNews === FETCHERS.devNews) security.newsSources = lastSecurityNewsStates();
+    security.financialNotices = financialTimeline(devNews, security.financialNotices ?? [],
+      deps.lastGood<SecurityReport>('security', now())?.value.financialNotices ?? [], now().toISOString());
+    const partial = (security.subsources ?? []).filter(s => s.status !== 'ok').map(s => `${s.label}：${s.error ?? s.status}`);
+    if (partial.length) quality.set('security', [...(quality.get('security') ?? []), ...partial]);
+  }
   for (const [source, problems] of quality) {
     if (problems.length) run.quality[source] = problems;
     void reportDataQuality(source, problems);

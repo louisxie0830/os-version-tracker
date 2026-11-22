@@ -39,7 +39,7 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 | Google 官方 | developer.android.com（含 Android Developers Blog 與 AndroidX feed）、source.android.com（Android 安全性公告）、support.google.com（Play 政策與技術品質規定）、play.google.com（商店頁）、firebase.google.com（Firebase SDK 版本說明）、developers.google.com（Google Play services 版本說明）、dl.google.com（Google Maven、Android SDK repository）、storage.googleapis.com（Flutter 官方版本清單）、docs.flutter.dev（Flutter 破壞性變更清單）、androidstudio.googleblog.com |
 | 開發工具 | services.gradle.org、gradle.org、kotlinlang.org、repo1.maven.org、jb.gg（Android Studio 版本清單）、registry.npmjs.org（npm） |
 | 開發者新聞 | www.swift.org、blog.jetbrains.com（Kotlin Blog）、firebase.blog、cordova.apache.org、資安部落格 blog.google/security（Google Security Blog）、projectzero.google（Project Zero）、github.blog/security（GitHub Security Blog）、台灣金融資安新聞來源 www.fsc.gov.tw（金管會新聞稿）、www.banking.gov.tw（金管會銀行局新聞稿與裁罰）、www-api.moda.gov.tw（數位發展部資安署新聞稿開放資料，CC0）、www.twcert.org.tw（TWCERT/CC 漏洞公告），以及上列 Apple 與 Google 的官方 feed；新聞標題維持原文並連回原始文章；台灣資安只用主管機關的第一手公告，只取符合關鍵字的標題、日期與連結 |
-| 資安 | www.cisa.gov（CISA KEV）、GitHub Advisory Database（api.github.com） |
+| 資安 | www.cisa.gov（CISA KEV）、GitHub Advisory Database（api.github.com）、api.first.org（FIRST EPSS 評分）、www.fisac.tw（F-ISAC 最新公開情資清單及 TLP WHITE/CLEAR 通報的標題、時間、來源與最新線索） |
 | 第三方彙整 | xcodereleases.com、endoflife.date |
 | 版本與品牌占比 | StatCounter Global Stats（gs.statcounter.com） |
 | 社群與開源專案 | GitHub（api.github.com、raw.githubusercontent.com、github.com）、Stack Exchange API（api.stackexchange.com） |
@@ -103,6 +103,8 @@ OS Version Tracker（以下稱「本網站」或「本專案」）是由個人�
 - **不使用 Cookie、不載入任何第三方程式、字型、廣告或分析追蹤工具，也不蒐集網站訪客的個人資料。**
 - 你的瀏覽器只會向本網站本身請求頁面與資料檔（例如 `notifications.json`）；點擊外部連結時才會前往該網站。
 - 下列資料**只儲存在你瀏覽器的 localStorage**，不會傳送到任何伺服器，可隨時透過清除網站資料刪除：
+  - 資安事件個人追蹤、Android 元件修補對照與 OWASP MASVS 驗證紀錄；可由使用者匯出與匯入備份。
+  - 使用者匯入的套件清單與 OSV 掃描結果僅在本次頁面記憶體解析，不會自動儲存、上傳或送往第三方查詢。個人紀錄不包含於公開 JSON API。
   - `theme`：你選擇的淺色或深色模式（沒有選擇時跟隨系統設定）
   - `seen-items`：上次造訪看過的項目（用於「新」標示）
   - `notif-known`、`notif-read`：通知中心已知與已讀的項目

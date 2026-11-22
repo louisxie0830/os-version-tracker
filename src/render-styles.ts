@@ -9,7 +9,27 @@ import { COMPONENT_TAGS } from './component-tags.js';
 /** .w-0 … .w-100: bar widths in whole percent */
 const WIDTHS = Array.from({ length: 101 }, (_, n) => `.w-${n} { width: ${n}%; }`).join('\n');
 
-export const PAGE_CSS = `:root {
+export const PAGE_CSS = `
+.security-tabs, .security-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.security-tabs button { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; }
+.security-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: white; }
+.security-tabs button:focus-visible, .security-form input:focus-visible, .security-form select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.security-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); align-items: end; gap: 14px; margin: 16px 0; }
+.security-form label, .security-file, .security-search { display: grid; gap: 6px; min-width: 0; font-size: 13px; color: var(--ink); }
+.security-form input, .security-form select, .security-search input { width: 100%; min-width: 0; max-width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; }
+.security-form select { text-overflow: ellipsis; }
+.security-file { margin: 12px 0; }
+.security-file input { max-width: 100%; }
+.security-search { max-width: 420px; margin: 12px 0; }
+.security-table { width: 100%; }
+.security-table td { white-space: normal; overflow-wrap: anywhere; max-width: 34ch; }
+.security-table caption { text-align: left; padding: 8px 0; color: var(--muted); font-size: 13px; }
+.security-indicators { padding-left: 16px; margin: 8px 0; }
+.security-indicators code, .security-details pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.security-details { margin: 18px 0; padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+.security-details summary { cursor: pointer; font-weight: 600; }
+security-center [role="tabpanel"] { min-width: 0; }
+:root {
   --bg: #f7f6f2;
   --bg-2: #fbfaf7;
   --ink: #1b2a33;
