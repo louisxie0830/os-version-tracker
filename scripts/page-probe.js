@@ -235,16 +235,6 @@
 
   async function interactions() {
     const tick = () => wait(30);
-    const importFile = (kind, input, files) => new Promise(resolve => {
-      const done = event => {
-        if (event.detail?.kind !== kind) return;
-        center.removeEventListener('security-import', done);
-        if (!event.detail.ok) add('security import', `${kind}: ${center.querySelector('[data-security-feedback]').textContent}`);
-        resolve();
-      };
-      center.addEventListener('security-import', done);
-      input.files = files; input.dispatchEvent(new Event('change'));
-    });
     const resetChips = () => document.querySelectorAll('[data-filter-group], [data-bank-filter], .news-filters').forEach(g => g.querySelector('.chip')?.click());
     // Every custom element in the page is defined (a standard element always is)
     for (const tag of new Set([...document.querySelectorAll(':not(:defined)')].map(el => el.localName))) add('component not defined', tag);
@@ -452,6 +442,16 @@
     if (!center) return;
     const storageKey = 'osvt-security-workspace-v1', previous = localStorage.getItem(storageKey);
     const tick = () => wait(30);
+    const importFile = (kind, input, files) => new Promise(resolve => {
+      const done = event => {
+        if (event.detail?.kind !== kind) return;
+        center.removeEventListener('security-import', done);
+        if (!event.detail.ok) add('security import', `${kind}: ${center.querySelector('[data-security-feedback]').textContent}`);
+        resolve();
+      };
+      center.addEventListener('security-import', done);
+      input.files = files; input.dispatchEvent(new Event('change'));
+    });
     try {
       const tabs = [...center.querySelectorAll('[data-security-tab]')];
       if (tabs.length !== 8) add('security center', `expected 8 views, found ${tabs.length}`);
