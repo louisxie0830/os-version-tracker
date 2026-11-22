@@ -100,15 +100,37 @@
         return JSON.parse(await file.text()) as unknown;
       };
       let packages: SecurityPackage[] = [], scan: ReturnType<typeof SecurityTools.osv> = new Map();
+      let packageRequest = 0, osvRequest = 0;
+      const imported = (kind: string, ok: boolean) => this.dispatchEvent(new CustomEvent('security-import', { bubbles: true, detail: { kind, ok } }));
       const assess = () => {
         const target = this.querySelector('[data-security-package-results]'), status = this.querySelector('[data-security-package-status]');
         if (status) status.textContent = packages.length ? `已解析 ${packages.length} 個套件版本，OSV 結果含 ${scan.size} 個套件版本；只在本機比對。` : '尚未匯入套件清單。';
         makeTable(target, ['套件／生態系', '使用版本', '比對結果', '漏洞／修補與限制'], SecurityTools.assess(packages, data.advisories ?? [], scan).map(r => [`${r.name} (${r.ecosystem})`, r.version, r.result, r.detail]));
       };
       const packageInput = this.querySelector<HTMLInputElement>('[data-security-packages]');
-      packageInput?.addEventListener('change', async () => { try { packages = SecurityTools.packages(await readFile(packageInput)); assess(); say('套件清單已在本機解析，沒有上傳。'); } catch (error) { packages = []; assess(); say(`匯入失敗：${(error as Error).message}`); } }, { signal });
+      packageInput?.addEventListener('change', async () => {
+        const request = ++packageRequest;
+        try {
+          const value = SecurityTools.packages(await readFile(packageInput));
+          if (request !== packageRequest || signal.aborted) return;
+          packages = value; assess(); say('套件清單已在本機解析，沒有上傳。'); imported('packages', true);
+        } catch (error) {
+          if (request !== packageRequest || signal.aborted) return;
+          packages = []; assess(); say(`匯入失敗：${(error as Error).message}`); imported('packages', false);
+        }
+      }, { signal });
       const osvInput = this.querySelector<HTMLInputElement>('[data-security-osv]');
-      osvInput?.addEventListener('change', async () => { try { scan = SecurityTools.osv(await readFile(osvInput)); assess(); say('OSV 結果已在本機匯入；只套用到完全相同的套件、生態系與版本。'); } catch (error) { scan = new Map(); assess(); say(`匯入失敗：${(error as Error).message}`); } }, { signal });
+      osvInput?.addEventListener('change', async () => {
+        const request = ++osvRequest;
+        try {
+          const value = SecurityTools.osv(await readFile(osvInput));
+          if (request !== osvRequest || signal.aborted) return;
+          scan = value; assess(); say('OSV 結果已在本機匯入；只套用到完全相同的套件、生態系與版本。'); imported('osv', true);
+        } catch (error) {
+          if (request !== osvRequest || signal.aborted) return;
+          scan = new Map(); assess(); say(`匯入失敗：${(error as Error).message}`); imported('osv', false);
+        }
+      }, { signal });
       const importer = this.querySelector<HTMLInputElement>('[data-security-import]');
       importer?.addEventListener('change', async () => {
         try {

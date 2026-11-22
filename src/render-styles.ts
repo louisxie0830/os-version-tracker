@@ -12,7 +12,7 @@ const WIDTHS = Array.from({ length: 101 }, (_, n) => `.w-${n} { width: ${n}%; }`
 export const PAGE_CSS = `
 .security-tabs, .security-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .security-tabs button { border: 1px solid var(--line); border-radius: 8px; padding: 9px 12px; background: var(--panel); color: var(--ink); font: inherit; cursor: pointer; }
-.security-tabs button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: white; }
+.security-tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--panel); }
 .security-tabs button:focus-visible, .security-form input:focus-visible, .security-form select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .security-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); align-items: end; gap: 14px; margin: 16px 0; }
 .security-form label, .security-file, .security-search { display: grid; gap: 6px; min-width: 0; font-size: 13px; color: var(--ink); }

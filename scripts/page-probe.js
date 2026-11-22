@@ -235,6 +235,16 @@
 
   async function interactions() {
     const tick = () => wait(30);
+    const importFile = (kind, input, files) => new Promise(resolve => {
+      const done = event => {
+        if (event.detail?.kind !== kind) return;
+        center.removeEventListener('security-import', done);
+        if (!event.detail.ok) add('security import', `${kind}: ${center.querySelector('[data-security-feedback]').textContent}`);
+        resolve();
+      };
+      center.addEventListener('security-import', done);
+      input.files = files; input.dispatchEvent(new Event('change'));
+    });
     const resetChips = () => document.querySelectorAll('[data-filter-group], [data-bank-filter], .news-filters').forEach(g => g.querySelector('.chip')?.click());
     // Every custom element in the page is defined (a standard element always is)
     for (const tag of new Set([...document.querySelectorAll(':not(:defined)')].map(el => el.localName))) add('component not defined', tag);
@@ -456,11 +466,11 @@
       const input = center.querySelector('[data-security-packages]');
       const transfer = new DataTransfer();
       transfer.items.add(new File([JSON.stringify({lockfileVersion:3,packages:{'node_modules/e2e-package':{version:'1.0.0'}}})], 'package-lock.json', {type:'application/json'}));
-      input.files = transfer.files; input.dispatchEvent(new Event('change')); await tick();
+      await importFile('packages', input, transfer.files);
       if (!center.querySelector('[data-security-package-results]').textContent.includes('仍待完整掃描')) add('security import', 'unknown package was not marked pending');
       const osv = new DataTransfer();
       osv.items.add(new File([JSON.stringify({results:[{packages:[{package:{name:'e2e-package',version:'1.0.0',ecosystem:'npm'},vulnerabilities:[{id:'OSV-E2E'}]}]}]})], 'osv.json', {type:'application/json'}));
-      const osvInput = center.querySelector('[data-security-osv]'); osvInput.files = osv.files; osvInput.dispatchEvent(new Event('change')); await tick();
+      const osvInput = center.querySelector('[data-security-osv]'); await importFile('osv', osvInput, osv.files);
       if (!center.querySelector('[data-security-package-results]').textContent.includes('掃描回報受影響')) add('security import', 'OSV exact-version result was not applied');
       open('verification');
       const form = center.querySelector('[data-security-verification-form]');
