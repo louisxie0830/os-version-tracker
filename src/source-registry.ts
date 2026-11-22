@@ -78,6 +78,7 @@ const FEED_TERMS: Record<string, string> = {
   'blog.google': GOOGLE_TERMS,
   'projectzero.google': GOOGLE_TERMS,
   'github.blog': GITHUB_TERMS,
+  'api.github.com': GITHUB_TERMS,
   // FSC: the site's open-data declaration (government data, reuse allowed with attribution)
   'www.fsc.gov.tw': 'https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004',
   // CNA's RSS terms: titles, leads and links for personal or non-profit, non-commercial use
@@ -286,11 +287,17 @@ export const SOURCE_REGISTER: Record<SourceKey, SourceRecord> = {
       { url: 'https://api.github.com/advisories', method: 'API', terms: GHSA_LICENSE },
       { url: 'https://source.android.com/docs/security/bulletin/asb-overview', method: 'HTML 網頁', terms: ANDROID_SOURCE },
       { url: 'https://support.apple.com/en-us/100100', method: 'HTML 網頁', terms: APPLE_TERMS },
+      { url: 'https://api.first.org/data/v1/epss', method: 'API', terms: 'https://www.first.org/epss/' },
+      { url: 'https://www.fisac.tw/STIX_CASE/QueryStixCase/Query', method: 'HTML 網頁', terms: 'https://www.fisac.tw/Apsys/Legal' },
+      { url: 'https://chromereleases.googleblog.com/feeds/posts/default', method: 'RSS / Atom', terms: GOOGLE_TERMS },
+      { url: 'https://source.android.com/docs/security/bulletin/pixel', method: 'HTML 網頁', terms: ANDROID_SOURCE },
+      { url: 'https://security.samsungmobile.com/securityUpdate.smsb', method: 'HTML 網頁', terms: 'https://www.samsung.com/us/common/legal/' },
+      { url: 'https://www.mediatek.com/product-security-bulletin', method: 'HTML 網頁', terms: 'https://www.mediatek.com/terms-of-use' },
     ],
-    licence: 'CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款）',
+    licence: 'CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 與 Pixel 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款）；Chrome Releases（Google 服務條款）；Samsung Mobile Security 與 MediaTek 安全公告（各自的網站條款）',
     attribution: 'GitHub Advisory Database（CC BY 4.0）',
     risk: 'high',
-    note: `KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號。${APPLE_FACTS}`,
+    note: `KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號；Chrome、Pixel、Samsung、MediaTek 只取版本或月份、日期、CVE 數量與已遭利用的 CVE 編號，連回原始公告。FIRST EPSS 每次只查最多 100 個相關 CVE，保留評分日期。F-ISAC 只取最新公開清單與最多三則 TLP WHITE/CLEAR 公開通報的標題、時間、來源及最新線索，不抓取可疑網域或會員情資。套件與 OSV 結果僅由使用者在瀏覽器本機匯入，不送往第三方。${APPLE_FACTS}`,
   },
   crashes: {
     endpoints: [

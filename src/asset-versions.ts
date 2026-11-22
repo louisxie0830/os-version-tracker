@@ -30,6 +30,7 @@ export const COMPONENT_DIR = path.join(ROOT_DIR, 'dist', 'browser');
 export const APP_PARTS = [
   'light-element.js', 'toasts.js', 'safe-link.js',
   'choice-chips.js', 'activity-filter.js', 'bank-table.js', 'news-list.js', 'trend-charts.js', 'page-search.js', 'section-nav.js', 'notif-center.js',
+  'security-tools.js', 'security-center.js',
   'page.js',
 ] as const;
 export type AppPart = (typeof APP_PARTS)[number];
@@ -51,7 +52,7 @@ export function readPart(name: AppPart): Buffer {
 }
 
 /** The parts whose top-level declarations are the globals the others build on: joined as they are */
-const SHARED_PARTS: readonly string[] = ['light-element.js', 'toasts.js', 'safe-link.js'];
+const SHARED_PARTS: readonly string[] = ['light-element.js', 'toasts.js', 'safe-link.js', 'security-tools.js'];
 
 /**
  * Joins compiled parts into one classic script, each marked with its name. Every part but the shared ones is

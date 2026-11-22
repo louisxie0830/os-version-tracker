@@ -8,7 +8,8 @@ import type { FrameworkInfo } from '../src/fetchers/frameworks.ts';
 import { buildNowCards, nowHref } from '../src/now.ts';
 import { renderFrameworksSection } from '../src/render-frameworks.ts';
 import { renderSnapshotRail } from '../src/render-feed.ts';
-import { renderApiSection } from '../src/render-docs.ts';
+import { renderApiSection, renderNewsSection } from '../src/render-docs.ts';
+import { toTrackedItems } from '../src/changes.ts';
 import { taipeiToday } from '../src/taipei-date.ts';
 import { renderCordovaSection, renderCrashesSection, renderSecuritySection } from '../src/render-security.ts';
 import type { CordovaPlatform, CordovaReleases } from '../src/fetchers/cordova.ts';
@@ -183,8 +184,11 @@ test('frameworks section: upstream text is escaped', () => {
 
 // ---------- render-security.ts ----------
 
-test('security section: absent without a report; empty lists say so', () => {
-  assert.equal(renderSecuritySection({ ...snapshot, security: null }), '');
+test('security section: missing reports retain source health and local tools; empty lists say so', () => {
+  const missing = renderSecuritySection({ ...snapshot, security: null });
+  assert.match(missing, /本次尚未取得資安報告/);
+  assert.match(missing, /data-security-packages/);
+  assert.match(missing, /data-security-tab="sources"/);
   const html = renderSecuritySection({ ...snapshot, security: security() });
   for (const empty of ['近 180 天沒有新增', '近 120 天沒有相關的安全性更新', '目前抓不到 Android 安全性公告', '這些套件目前沒有資安公告']) assert.ok(html.includes(empty), empty);
 });
@@ -210,6 +214,62 @@ test('security section: badges, missing optional fields, limits and escaping', (
   assert.match(html, /status-urgent">嚴重</);
   assert.match(html, /status-info">未分級</);
   assert.match(html, /<div class="tl-source">GHSA-x<\/div>/, 'no CVE: just the advisory id');
+});
+
+test('security section: the urgent list with actions, Chrome and vendor cards, and the security posts with their filters', () => {
+  const recent = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
+  const html = renderSecuritySection({ ...snapshot, security: security({
+    chrome: [{ version: '158.0.8127.36', url: 'https://chromereleases.googleblog.com/1', published: recent, fixes: 204, critical: 6, exploited: ['CVE-2026-130963'] }],
+    vendors: [
+      { vendor: 'Samsung', title: 'Samsung Security Maintenance Release SMR-NOV-2026', url: 'https://security.samsungmobile.com/securityUpdate.smsb#SMR-NOV-2026', published: recent, cves: 82, critical: 20, exploited: [] },
+      { vendor: 'Pixel', title: 'Pixel Update Bulletin November 2026', url: 'https://source.android.com/p', published: recent, patchLevel: '2026-11-05', exploited: [] },
+    ],
+  }), devNews: [
+    { id: `acs:https://moda.gov.tw/1`, source: '數位發展部資安署', platform: '跨平台', category: 'security', title: `NGINX ${EVIL}`, url: 'https://moda.gov.tw/1', date: recent, important: true },
+    { id: 'google-security:https://blog.google/1', source: 'Google Security Blog', platform: 'Android', category: 'security', title: 'Android post', url: 'https://blog.google/1', date: recent, important: false },
+    { id: 'swift:https://swift.org/1', source: 'Swift.org', platform: 'iOS', category: 'blog', title: 'Swift post', url: 'https://swift.org/1', date: recent, important: false },
+  ] });
+  const urgent = html.match(/<div class="case urgent-case">([\s\S]*?)<div class="crash-note">/)?.[1] ?? '';
+  assert.match(urgent, /共 2 項/);
+  assert.match(urgent, /Chrome 158\.0\.8127\.36 修補了已遭利用的漏洞[\s\S]*?建議動作<\/strong>提醒使用者把 Chrome 與 Android System WebView 更新到 158\.0\.8127\.36 以上/);
+  assert.match(urgent, /數位發展部資安署/);
+  assert.ok(!html.includes(EVIL), 'upstream titles escaped');
+  assert.match(html, /Chrome 安全性更新（WebView）[\s\S]*?204 個安全性修補（嚴重 6 個）/);
+  assert.match(html, /手機與晶片廠商安全公告[\s\S]*?Samsung[\s\S]*?82 個 CVE（嚴重 20 個）[\s\S]*?修補程式等級 2026\/11\/05/);
+  const posts = html.match(/<news-list filters="sec">([\s\S]*?)<\/news-list>/)?.[1] ?? '';
+  assert.match(posts, /data-sec="跨平台\|tw\|important"/, 'a Taiwan authority, important');
+  assert.match(posts, /data-sec="Android"/);
+  assert.doesNotMatch(posts, /Swift post/, 'only security posts');
+  for (const value of ['all', 'iOS', 'Android', '跨平台', 'tw', 'important']) assert.match(posts, new RegExp(`data-value="${value}"`));
+  assert.doesNotMatch(html, /\sid="news-list"|\sid="news-show-more"/, 'no ids shared with the developer news list');
+  const quietHtml = renderSecuritySection({ ...snapshot, security: security(), devNews: [] });
+  assert.match(quietHtml, /目前沒有需要立即處理的資安項目/);
+  assert.doesNotMatch(quietHtml, /Chrome 安全性更新|手機與晶片廠商|<news-list/, 'older snapshots: no empty cards for sources they lack');
+});
+
+test('developer news leaves security posts to the security section when that section is on the page', () => {
+  const items = [
+    { id: 'acs:https://moda.gov.tw/1', source: '數位發展部資安署', platform: '跨平台' as const, category: 'security' as const, title: 'Security notice', url: 'https://moda.gov.tw/1', date: '2026-11-20', important: true },
+    { id: 'swift:https://swift.org/1', source: 'Swift.org', platform: 'iOS' as const, category: 'blog' as const, title: 'Swift post', url: 'https://swift.org/1', date: '2026-11-20', important: false },
+  ];
+  const withSecurity = renderNewsSection({ ...snapshot, security: security(), devNews: items });
+  assert.doesNotMatch(withSecurity, /Security notice|data-value="security"/);
+  assert.match(withSecurity, /集中在<a href="#security">資安<\/a>區塊/);
+  const without = renderNewsSection({ ...snapshot, security: null, devNews: items });
+  assert.match(without, /Security notice/, 'no security section: the posts stay here');
+  assert.match(without, /data-value="security"/);
+});
+
+test('now cards and tracked items: exploited Chrome and vendor fixes', () => {
+  const report = security({
+    chrome: [{ version: '158.0.1.1', url: 'https://chromereleases.googleblog.com/1', published: '2026-10-10', critical: 1, exploited: ['CVE-2026-1'] }, { version: '157.0.1.1', url: 'https://c/2', published: '2026-10-05', critical: 0, exploited: [] }],
+    vendors: [{ vendor: 'MediaTek', title: 'MediaTek October', url: 'https://www.mediatek.com/1', published: '2026-10-05', exploited: ['CVE-2026-2'] }],
+  });
+  const cards = buildNowCards(quiet({ security: report }), NOW);
+  assert.deepEqual(cards.map(c => [c.platform, c.title]), [['跨平台', 'Chrome 158.0.1.1 修補了已遭利用的漏洞'], ['Android', 'MediaTek October：CVE-2026-2']]);
+  assert.match(cards[1].body, /手機廠商隨系統更新推送/);
+  const tracked = toTrackedItems({ deadlines: [], appleNews: [], androidNews: [], devices: [], security: report });
+  assert.deepEqual(tracked.filter(t => t.id.startsWith('security:chrome') || t.id.startsWith('security:vendor')).map(t => t.id), ['security:chrome:158.0.1.1', 'security:vendor:https://www.mediatek.com/1']);
 });
 
 test('crashes section: absent without data; GitHub and Stack Overflow items credit their authors', () => {

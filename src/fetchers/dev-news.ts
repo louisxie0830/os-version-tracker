@@ -4,6 +4,11 @@ import { fetchFeed } from './feed.js';
 import { fetchJson, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 import { feedDay } from '../taipei-date.js';
 import { forgetOtherNews, rememberNews } from '../history.js';
+import { lastGood, rememberGood } from '../last-good.js';
+import type { SecuritySourceState } from '../security-intelligence.js';
+
+let securityNewsStates: SecuritySourceState[] = [];
+export function lastSecurityNewsStates(): SecuritySourceState[] { return structuredClone(securityNewsStates); }
 
 /**
  * Developer news from official feeds, merged into one timeline. Titles stay in their original
@@ -106,6 +111,17 @@ export function acsPressItems(body: unknown): FeedItem[] {
   }).sort((a, b) => b.pubDate.localeCompare(a.pubDate));
 }
 
+/** A GitHub releases list (REST API): published releases only, no drafts or pre-releases */
+export function githubReleaseItems(body: unknown): FeedItem[] {
+  if (!Array.isArray(body)) throw new Error('GitHub releases: not a JSON array');
+  return body.flatMap(row => {
+    const r = row as { tag_name?: unknown; name?: unknown; html_url?: unknown; published_at?: unknown; draft?: unknown; prerelease?: unknown };
+    const title = typeof r.name === 'string' && r.name.trim() ? r.name : typeof r.tag_name === 'string' ? r.tag_name : '';
+    if (r.draft || r.prerelease || !title || typeof r.html_url !== 'string' || typeof r.published_at !== 'string') return [];
+    return [{ title, link: r.html_url, isoDate: r.published_at }];
+  });
+}
+
 /** ACS releases engineers act on: urgent patches, exploited flaws, breaches, ransomware (fraud reminders are routine) */
 const ACS_IMPORTANT = /重大(?:安全)?(?:更新|漏洞)|籲.{0,16}(?:儘速|盡速|加速|立即)|緊急安全更新|遭.{0,4}利用|已遭攻擊|CVE-\d|零時差|外洩|勒索|入侵/;
 /** Ceremonies, talks, calendars and recruiting: not news an app team needs */
@@ -161,6 +177,10 @@ export const NEWS_SOURCES: NewsSource[] = [
     important: SECURITY_IMPORTANT, platformOf: securityPlatform, exclude: /\bWindows\b|\bWin32\b|Hyper-V|\bNTFS\b/i },
   { id: 'github-security', name: 'GitHub Security Blog', url: 'https://github.blog/security/feed/', platform: '跨平台', category: 'security',
     important: SECURITY_IMPORTANT, platformOf: securityPlatform },
+  // The mobile app security standard (MASVS) that app security tests check against: a new version changes the checks
+  // (from GitHub's API: github.com's robots.txt disallows the releases.atom feed)
+  { id: 'masvs', name: 'OWASP MASVS', url: 'https://api.github.com/repos/OWASP/masvs/releases?per_page=10', platform: '跨平台', category: 'security',
+    json: githubReleaseItems, transform: item => ({ title: `OWASP MASVS ${(item.title ?? '').trim()} 發布`, url: item.link }), important: /MASVS v?\d+\.0\.0\b/ },
   // Taiwan financial security (盜轉, banks hacked, scam apps), only from the authorities themselves (first-hand,
   // no news media), picked by keyword. Each gets its own cap: a busy week of incidents shouldn't push them out.
   { id: 'fsc', name: '金管會新聞稿', url: 'https://www.fsc.gov.tw/RSS/Messages?serno=201202290009&language=chinese', platform: '跨平台', category: 'security',
@@ -252,7 +272,24 @@ export async function fetchDevNews(
   now = new Date(),
   forget: (keepIds: string[]) => void = forgetOtherNews,
 ): Promise<DevNewsItem[]> {
-  const { values } = await settleSources('dev news', sources.map(s => [s.name, () => fetcher(s).then(items => ({ source: s, items }))] as const),
+  const statuses: SecuritySourceState[] = [];
+  securityNewsStates = statuses;
+  const { values } = await settleSources('dev news', sources.map(s => [s.name, async () => {
+    const previous = lastGood<{ at: string }>(`security-news:${s.id}`, now);
+    try {
+      const items = await fetcher(s);
+      if (!items.length && !s.include) throw new Error('returned no usable data');
+      if (s.category === 'security') {
+        statuses.push({ id: `news:${s.id}`, label: s.name, url: s.url, status: 'ok', checkedAt: now.toISOString(), lastSuccessAt: now.toISOString(), count: items.length });
+        rememberGood(`security-news:${s.id}`, { at: now.toISOString() }, now);
+      }
+      return { source: s, items };
+    } catch (error) {
+      if (s.category === 'security') statuses.push({ id: `news:${s.id}`, label: s.name, url: s.url, status: 'failed', checkedAt: now.toISOString(),
+        lastSuccessAt: previous?.fetchedAt, count: 0, error: String((error as Error).message).slice(0, 300) });
+      throw error;
+    }
+  }] as const),
     r => r.items.length > 0 || !!r.source.include);
   const lists = sources.map(s => {
     const fetched = values.get(s.name)?.items;

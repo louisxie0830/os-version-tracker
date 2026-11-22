@@ -11,6 +11,7 @@ import {
   parseKev,
 } from '../src/fetchers/security.ts';
 import { toTrackedItems } from '../src/changes.ts';
+import { resetLastGood } from '../src/last-good.ts';
 
 const now = new Date('2026-10-14T00:00:00Z');
 
@@ -109,9 +110,22 @@ test('security report keeps partial results and fails only when every source fai
   try {
     await assert.rejects(fetchSecurityReport({ apple: fail, android: fail, exploited: fail, advisories: fail }), /security: every upstream failed/);
     const partial = await fetchSecurityReport({ apple: fail, android: fail, exploited: () => Promise.resolve([]), advisories: fail });
-    assert.deepEqual(partial, { apple: [], android: [], exploited: [], advisories: [] });
+    assert.deepEqual([partial.apple, partial.android, partial.exploited, partial.advisories], [[], [], [], []]);
+    assert.equal(partial.subsources?.find(s => s.id === 'kev')?.status, 'ok');
+    assert.equal(partial.subsources?.filter(s => s.status === 'failed').length, 3, 'an empty success is distinguished from three failed upstreams');
+    // The KEV success above is remembered as the last good copy, which a later failure falls back to: start clean
+    resetLastGood();
+    const none = { apple: fail, android: fail, exploited: fail, advisories: fail, chrome: fail, pixel: fail, samsung: fail, mediatek: fail };
+    await assert.rejects(fetchSecurityReport(none), /security: every upstream failed/, 'the vendor sources count too');
+    const vendor = (v: 'Pixel' | 'Samsung' | 'MediaTek', published: string) => ({ vendor: v, title: v, url: `https://x/${v}`, published, exploited: [] });
+    const vendors = await fetchSecurityReport({ ...none, samsung: async () => [vendor('Samsung', '2026-11-01')], mediatek: async () => [vendor('MediaTek', '2026-11-02')], pixel: async () => [vendor('Pixel', '2026-10-06')] });
+    assert.deepEqual(vendors.vendors?.map(b => b.vendor), ['MediaTek', 'Samsung', 'Pixel'], 'every vendor, newest first');
+    assert.deepEqual(vendors.chrome, [], 'Chrome asked for but failed: an empty list');
+    assert.equal(vendors.subsources?.find(s => s.id === 'chrome')?.status, 'failed', 'each vendor source has its own status');
+    assert.equal(partial.chrome, undefined, 'not asked for: absent, like an older snapshot');
   } finally {
     console.warn = warn;
+    resetLastGood();
   }
 });
 

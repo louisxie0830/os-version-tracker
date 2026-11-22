@@ -1,14 +1,20 @@
 import { fetchJson, githubHeaders, NETWORK_TIMEOUT_MS, SLOW_NETWORK_TIMEOUT_MS } from '../net.js';
 import { safeUrl } from '../safe-url.js';
 import { cleanText, fetchHtml } from './html-table.js';
-import { settleSources } from './settle.js';
+import { mapLimit, settleSources } from './settle.js';
 import { compareVersions } from '../versions.js';
 import { calendarDate } from '../taipei-date.js';
+import { lastGood, rememberGood } from '../last-good.js';
+import { appleFindings, androidFindings, parseEpss, parseFinancialIndex, financialDetail, EPSS_URL, FISAC_URL,
+  type SecurityFinding, type SecuritySourceState, type EpssScore, type FinancialNotice } from '../security-intelligence.js';
+import { CHROME_RELEASES_URL, fetchChromeStable, fetchMediatekBulletins, fetchPixelBulletins, fetchSamsungUpdates, MEDIATEK_BULLETINS_URL, PIXEL_BULLETINS_URL,
+  SAMSUNG_UPDATES_URL, type ChromeStable, type VendorBulletin } from './vendor-security.js';
 
 /**
  * Security information that affects mobile apps: Apple security releases for iOS / Safari (WebKit is
  * what WKWebView runs) / Xcode, the monthly Android Security Bulletins, vulnerabilities CISA has seen
- * exploited in the wild (KEV, US government work), and GitHub advisories for widely used mobile SDKs.
+ * exploited in the wild (KEV, US government work), GitHub advisories for widely used mobile SDKs, and
+ * (vendor-security.ts) Chrome stable updates and the Pixel, Samsung and MediaTek monthly bulletins.
  */
 
 export type SecurityPlatform = 'iOS' | 'Android' | '跨平台';
@@ -21,6 +27,8 @@ export interface AppleSecurityRelease {
   cves?: number;
   /** CVEs Apple says "may have been exploited" */
   exploited: string[];
+  findings?: SecurityFinding[];
+  detailStatus?: 'ok' | 'failed' | 'pending';
 }
 
 export interface AndroidBulletin {
@@ -34,6 +42,8 @@ export interface AndroidBulletin {
   mostSevere?: string;
   /** CVEs with "indications that … may be under limited, targeted exploitation" */
   exploited: string[];
+  findings?: SecurityFinding[];
+  detailStatus?: 'ok' | 'failed';
 }
 
 export interface ExploitedVuln {
@@ -45,6 +55,7 @@ export interface ExploitedVuln {
   description: string;
   ransomware: boolean;
   url: string;
+  requiredAction?: string;
 }
 
 export interface SdkAdvisory {
@@ -58,6 +69,8 @@ export interface SdkAdvisory {
   ranges: Array<{ package: string; vulnerable?: string; patched?: string }>;
   platform: SecurityPlatform;
   url: string;
+  cvss?: number;
+  ecosystems?: Record<string, string>;
 }
 
 export interface SecurityReport {
@@ -65,6 +78,16 @@ export interface SecurityReport {
   android: AndroidBulletin[];
   exploited: ExploitedVuln[];
   advisories: SdkAdvisory[];
+  /** Full relevant KEV history; the original exploited list stays limited to recent additions for notifications. */
+  kevArchive?: ExploitedVuln[];
+  subsources?: SecuritySourceState[];
+  epss?: EpssScore[];
+  financialNotices?: FinancialNotice[];
+  newsSources?: SecuritySourceState[];
+  /** Chrome desktop stable updates (WebView shares their fixes); absent in older snapshots */
+  chrome?: ChromeStable[];
+  /** Pixel, Samsung and MediaTek monthly bulletins, newest first; absent in older snapshots */
+  vendors?: VendorBulletin[];
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -109,16 +132,27 @@ export function parseAppleAdvisory(html: string): Pick<AppleSecurityRelease, 'cv
   return { cves: cveIds(text).length, exploited: [...new Set(exploited)] };
 }
 
-export async function fetchAppleSecurity(now = new Date(), maxPages = 12): Promise<AppleSecurityRelease[]> {
+/**
+ * Every advisory page in the window is read (a few at a time): a page left unread would mark the source partial
+ * at every refresh, an incomplete-data alert that could never close. maxPages only guards against a list that
+ * suddenly grows; pages past it are marked pending
+ */
+export const APPLE_MAX_PAGES = 40;
+const APPLE_CONCURRENCY = 4;
+
+export async function fetchAppleSecurity(now = new Date(), maxPages = APPLE_MAX_PAGES): Promise<AppleSecurityRelease[]> {
   const releases = parseAppleSecurityReleases(await fetchHtml(APPLE_SECURITY_URL), now);
+  for (const release of releases.filter(r => r.url).slice(maxPages)) release.detailStatus = 'pending';
   // Advisory pages add CVE counts and exploitation notes; a failed page just leaves them out
-  await Promise.all(releases.filter(r => r.url).slice(0, maxPages).map(async r => {
+  await mapLimit(releases.filter(r => r.url).slice(0, maxPages), APPLE_CONCURRENCY, async r => {
     try {
-      Object.assign(r, parseAppleAdvisory(await fetchHtml(r.url!)));
+      const html = await fetchHtml(r.url!);
+      Object.assign(r, parseAppleAdvisory(html), { findings: appleFindings(html, r), detailStatus: 'ok' });
     } catch (err) {
+      r.detailStatus = 'failed';
       console.warn(`[security] Apple advisory ${r.url} failed (${(err as Error).message})`);
     }
-  }));
+  });
   return releases;
 }
 
@@ -126,8 +160,11 @@ export async function fetchAppleSecurity(now = new Date(), maxPages = 12): Promi
 
 export const ANDROID_BULLETINS_URL = 'https://source.android.com/docs/security/bulletin/asb-overview';
 
-/** The overview table: bulletin link, languages, published date, security patch levels */
-export function parseAndroidBulletinIndex(html: string, limit = 3): AndroidBulletin[] {
+/**
+ * The overview table: bulletin link, languages, published date, security patch levels. The Pixel Update
+ * Bulletins index has the same table, so the page's address and the title's prefix are parameters.
+ */
+export function parseAndroidBulletinIndex(html: string, limit = 3, base = ANDROID_BULLETINS_URL, titlePrefix = 'Android Security Bulletin'): AndroidBulletin[] {
   // The table with a "Published" column (not just the page's first table), its columns found by their headers
   const tables = [...html.matchAll(/<table[\s\S]*?<\/table>/g)].map(m => m[0]);
   const headersOf = (table: string) => [...table.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map(c => cleanText(c[1]));
@@ -148,8 +185,8 @@ export function parseAndroidBulletinIndex(html: string, limit = 3): AndroidBulle
     const published = cells[publishedCol] && toIsoDate(cleanText(cells[publishedCol]));
     if (!href || !published) return [];
     return [{
-      title: `Android Security Bulletin ${cleanText(cells[0])}`,
-      url: new URL(href, ANDROID_BULLETINS_URL).href.replace(/\.html$/, ''),
+      title: `${titlePrefix} ${cleanText(cells[0])}`,
+      url: new URL(href, base).href.replace(/\.html$/, ''),
       published,
       patchLevels: cleanText(cells[patchCol] ?? '').match(/\d{4}-\d{2}-\d{2}/g) ?? [],
       exploited: [],
@@ -172,8 +209,12 @@ export async function fetchAndroidBulletins(): Promise<AndroidBulletin[]> {
   if (!bulletins.length) throw new Error('No Android security bulletins found');
   await Promise.all(bulletins.map(async b => {
     try {
-      Object.assign(b, parseAndroidBulletin(await fetchHtml(`${b.url}?hl=en`)));
+      const html = await fetchHtml(`${b.url}?hl=en`);
+      Object.assign(b, parseAndroidBulletin(html), { detailStatus: 'ok' });
+      b.findings = androidFindings(html, b);
+      if (b.cves && !b.findings.length) b.detailStatus = 'failed';
     } catch (err) {
+      b.detailStatus = 'failed';
       console.warn(`[security] ${b.url} failed (${(err as Error).message})`);
     }
   }));
@@ -193,6 +234,7 @@ interface KevEntry {
   dateAdded: string;
   shortDescription: string;
   knownRansomwareCampaignUse?: string;
+  requiredAction?: string;
 }
 
 /** Products that run on phones or inside apps (Chromium covers Android WebView); macOS / Windows-only entries are left out */
@@ -222,12 +264,13 @@ export function parseKev(feed: { vulnerabilities?: KevEntry[] }, now = new Date(
       description: e.shortDescription,
       ransomware: e.knownRansomwareCampaignUse === 'Known',
       url: `https://nvd.nist.gov/vuln/detail/${encodeURIComponent(e.cveID)}`,
+      ...(e.requiredAction ? { requiredAction: e.requiredAction } : {}),
     }];
   }).sort((a, b) => b.dateAdded.localeCompare(a.dateAdded));
 }
 
-export async function fetchExploited(now = new Date()): Promise<ExploitedVuln[]> {
-  return parseKev(await fetchJson<{ vulnerabilities?: KevEntry[] }>(KEV_FEED, { headers: { Accept: 'application/json' } }, SLOW_NETWORK_TIMEOUT_MS, status => `CISA KEV HTTP ${status}`), now);
+export async function fetchExploited(now = new Date(), days = 180): Promise<ExploitedVuln[]> {
+  return parseKev(await fetchJson<{ vulnerabilities?: KevEntry[] }>(KEV_FEED, { headers: { Accept: 'application/json' } }, SLOW_NETWORK_TIMEOUT_MS, status => `CISA KEV HTTP ${status}`), now, days);
 }
 
 // ---------- GitHub Advisory Database ----------
@@ -255,6 +298,7 @@ interface GithubAdvisory {
   published_at: string;
   withdrawn_at?: string | null;
   vulnerabilities?: Array<{ package?: { ecosystem?: string; name?: string }; vulnerable_version_range?: string | null; first_patched_version?: string | null }>;
+  cvss?: { score?: number | null };
 }
 
 const SEVERITIES = ['critical', 'high', 'medium', 'low'] as const;
@@ -278,6 +322,9 @@ export function parseAdvisories(items: GithubAdvisory[], limit = 50): SdkAdvisor
         .map(v => ({ package: v.package!.name!, vulnerable: v.vulnerable_version_range ?? undefined, patched: v.first_patched_version ?? undefined })),
       platform: platforms.size === 1 ? [...platforms][0] : '跨平台',
       url,
+      ...(typeof a.cvss?.score === 'number' && a.cvss.score >= 0 && a.cvss.score <= 10 ? { cvss: a.cvss.score } : {}),
+      ecosystems: Object.fromEntries((a.vulnerabilities ?? []).filter(v => v.package?.name && v.package.ecosystem)
+        .map(v => [v.package!.name!, v.package!.ecosystem!])),
     }];
   }).sort((a, b) => b.published.localeCompare(a.published)).slice(0, limit);
 }
@@ -296,29 +343,119 @@ export interface SecurityReportDeps {
   android: () => Promise<AndroidBulletin[]>;
   exploited: () => Promise<ExploitedVuln[]>;
   advisories: () => Promise<SdkAdvisory[]>;
+  financial?: () => Promise<FinancialNotice[]>;
+  epss?: (ids: string[]) => Promise<EpssScore[]>;
+  /** Chrome (WebView) and the phone / chip vendors (vendor-security.ts); optional like the two above */
+  chrome?: () => Promise<ChromeStable[]>;
+  pixel?: () => Promise<VendorBulletin[]>;
+  samsung?: () => Promise<VendorBulletin[]>;
+  mediatek?: () => Promise<VendorBulletin[]>;
+}
+
+export async function fetchFinancialNotices(): Promise<FinancialNotice[]> {
+  const at = new Date().toISOString();
+  const notices = parseFinancialIndex(await fetchHtml(FISAC_URL), at);
+  // Bounded public metadata, never follow the suspicious links listed in a notice.
+  return Promise.all(notices.slice(0, 3).map(async notice => {
+    try { return { ...financialDetail(await fetchHtml(notice.url), notice), detailStatus: 'ok' as const }; }
+    catch { return { ...notice, detailStatus: 'failed' as const }; }
+  }));
+}
+
+export async function fetchEpss(ids: string[]): Promise<EpssScore[]> {
+  const unique = [...new Set(ids.filter(id => /^CVE-\d{4}-\d{4,}$/.test(id)))].slice(0, 100);
+  const out: EpssScore[] = [];
+  for (let i = 0; i < unique.length; i += 50) {
+    const url = `https://api.first.org/data/v1/epss?cve=${encodeURIComponent(unique.slice(i, i + 50).join(','))}&limit=100`;
+    out.push(...parseEpss(await fetchJson<unknown>(url, {}, NETWORK_TIMEOUT_MS, status => `EPSS HTTP ${status}`)));
+  }
+  return out;
 }
 
 const SECURITY_DEPS: SecurityReportDeps = {
   apple: () => fetchAppleSecurity(),
   android: fetchAndroidBulletins,
-  exploited: () => fetchExploited(),
+  exploited: () => fetchExploited(new Date(), 36500),
   advisories: fetchSdkAdvisories,
+  financial: fetchFinancialNotices,
+  epss: fetchEpss,
+  // Arrows: vendor-security.ts imports this module too, so its functions are looked up when called
+  chrome: () => fetchChromeStable(),
+  pixel: () => fetchPixelBulletins(),
+  samsung: () => fetchSamsungUpdates(),
+  mediatek: () => fetchMediatekBulletins(),
 };
 
 /** Partial results are kept; throws only when every source failed */
-export async function fetchSecurityReport(deps: SecurityReportDeps = SECURITY_DEPS): Promise<SecurityReport> {
-  const { values } = await settleSources<unknown[]>('security', [
-    ['Apple security releases', deps.apple],
-    ['Android Security Bulletins', deps.android],
-    ['CISA KEV', deps.exploited],
-    ['GitHub advisories', deps.advisories],
-  ]);
-  return {
+export async function fetchSecurityReport(deps: SecurityReportDeps = SECURITY_DEPS, now = new Date()): Promise<SecurityReport> {
+  const states: SecuritySourceState[] = [];
+  async function read<T extends unknown[]>(id: string, label: string, url: string, run: () => Promise<T>): Promise<T> {
+    const previous = lastGood<T>(`security:${id}`, now);
+    try {
+      const value = await run();
+      const incomplete = value.some(row => ['failed', 'pending'].includes((row as { detailStatus?: string } | null)?.detailStatus ?? ''));
+      states.push({ id, label, url, status: incomplete ? 'partial' : 'ok', checkedAt: now.toISOString(), count: value.length,
+        lastSuccessAt: incomplete ? previous?.fetchedAt : now.toISOString(), ...(incomplete ? { error: '部分公告內文未取得，受影響與修補資訊可能不完整' } : {}) });
+      if (!incomplete) rememberGood(`security:${id}`, value, now);
+      return value;
+    } catch (err) {
+      states.push({ id, label, url, status: 'failed', checkedAt: now.toISOString(), lastSuccessAt: previous?.fetchedAt,
+        count: previous?.value.length ?? 0, error: String((err as Error).message).slice(0, 300) });
+      if (previous) return previous.value;
+      throw err;
+    }
+  }
+  const tasks: Array<readonly [string, () => Promise<unknown[]>]> = [
+    ['Apple security releases', () => read('apple', 'Apple 安全性更新', APPLE_SECURITY_URL, deps.apple)],
+    ['Android Security Bulletins', () => read('android', 'Android 安全性公告', ANDROID_BULLETINS_URL, deps.android)],
+    ['CISA KEV', () => read('kev', 'CISA 已遭利用漏洞', KEV_URL, deps.exploited)],
+    ['GitHub advisories', () => read('advisories', 'GitHub SDK 公告', ADVISORY_URL, deps.advisories)],
+  ];
+  if (deps.financial) tasks.push(['Financial notices', () => read('financial', 'F-ISAC 最新公開清單', FISAC_URL, deps.financial!)]);
+  if (deps.chrome) tasks.push(['Chrome Releases', () => read('chrome', 'Chrome 穩定版安全性更新', CHROME_RELEASES_URL, deps.chrome!)]);
+  if (deps.pixel) tasks.push(['Pixel Update Bulletins', () => read('pixel', 'Pixel 安全性公告', PIXEL_BULLETINS_URL, deps.pixel!)]);
+  if (deps.samsung) tasks.push(['Samsung security updates', () => read('samsung', 'Samsung 每月安全性更新', SAMSUNG_UPDATES_URL, deps.samsung!)]);
+  if (deps.mediatek) tasks.push(['MediaTek security bulletins', () => read('mediatek', 'MediaTek 晶片安全公告', MEDIATEK_BULLETINS_URL, deps.mediatek!)]);
+  const { values } = await settleSources<unknown[]>('security', tasks);
+  const archive = (values.get('CISA KEV') ?? []) as ExploitedVuln[];
+  const vendors = ['Pixel Update Bulletins', 'Samsung security updates', 'MediaTek security bulletins']
+    .flatMap(name => (values.get(name) ?? []) as VendorBulletin[])
+    .sort((a, b) => b.published.localeCompare(a.published));
+  const report: SecurityReport = {
     apple: (values.get('Apple security releases') ?? []) as AppleSecurityRelease[],
     android: (values.get('Android Security Bulletins') ?? []) as AndroidBulletin[],
-    exploited: (values.get('CISA KEV') ?? []) as ExploitedVuln[],
+    exploited: archive.filter(v => v.dateAdded >= isoDaysAgo(now, 180)),
+    kevArchive: archive,
     advisories: (values.get('GitHub advisories') ?? []) as SdkAdvisory[],
+    financialNotices: (values.get('Financial notices') ?? []) as FinancialNotice[],
+    ...(deps.chrome ? { chrome: (values.get('Chrome Releases') ?? []) as ChromeStable[] } : {}),
+    ...(deps.pixel || deps.samsung || deps.mediatek ? { vendors } : {}),
   };
+  if (deps.epss) {
+    const ids = [...report.exploited.map(v => v.cve), ...report.apple.flatMap(v => v.exploited),
+      ...report.advisories.flatMap(v => v.cve ? [v.cve] : []), ...report.android.flatMap(v => (v.findings ?? []).map(f => f.cve ?? ''))];
+    report.epss = await read('epss', 'FIRST EPSS（最多 100 個 CVE）', EPSS_URL, () => deps.epss!(ids)).catch(() => []);
+  }
+  report.subsources = states.sort((a, b) => a.id.localeCompare(b.id));
+  return report;
+}
+
+/** Unknown ranges and prereleases require verification, never a safe result. */
+export function versionRangeStatus(version: string, range: string | undefined): boolean | null {
+  if (!range || !/^v?\d+(?:\.\d+)*$/.test(version)) return null;
+  const groups = range.split('||');
+  const results = groups.map(group => {
+    const parts = group.split(',').map(p => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    const checks = parts.map(part => {
+      const m = part.match(/^(<=|>=|<|>|=)?\s*v?(\d+(?:\.\d+)*)$/);
+      if (!m) return null;
+      const diff = compareVersions(version.replace(/^v/, ''), m[2]);
+      return m[1] === '<' ? diff < 0 : m[1] === '<=' ? diff <= 0 : m[1] === '>' ? diff > 0 : m[1] === '>=' ? diff >= 0 : diff === 0;
+    });
+    return checks.includes(false) ? false : checks.includes(null) ? null : true;
+  });
+  return results.includes(true) ? true : results.includes(null) ? null : false;
 }
 
 /**

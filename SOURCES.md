@@ -36,7 +36,7 @@
 | `twBanks` | App Store / Google Play（台灣區） | 中 | API、網頁內嵌資料 | iTunes Lookup API（Apple 公開提供的 API）；Google Play 商店頁依 Google Play 服務條款 |
 | `devNews` | Apple / Android / Swift / Kotlin / Firebase / Cordova / Google 與 GitHub 資安部落格官方 feed · 數位發展部資安署 · 金管會 · 銀行局 · TWCERT/CC | 中 | RSS / Atom、JSON 檔 | 各官方 feed（供訂閱讀取）；Apple、Google、Swift.org、JetBrains、Apache Cordova、Firebase、GitHub 各自的網站條款；金管會網站資料開放宣告（金管會與銀行局）；數位發展部資安署新聞稿開放資料（CC0）；TWCERT/CC 網站著作權聲明 |
 | `cordova` | npm registry · Apache Cordova RELEASENOTES.md | 低 | API、Markdown 檔 | npm registry 公開 API；Apache Cordova 原始碼與 release notes 依 Apache 2.0；GitHub 服務條款 |
-| `security` | Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database | 高 | JSON 檔、API、HTML 網頁 | CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款） |
+| `security` | Apple 安全性更新 · Android 與 Pixel 安全性公告 · Chrome Releases · Samsung · MediaTek · CISA KEV · GitHub Advisory Database | 高 | JSON 檔、API、HTML 網頁、RSS / Atom | CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 與 Pixel 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款）；Chrome Releases（Google 服務條款）；Samsung Mobile Security 與 MediaTek 安全公告（各自的網站條款） |
 | `crashes` | Apple / Android release notes · GitHub SDK 與 Cordova issues | 高 | API、JSON 檔、HTML 網頁 | GitHub 服務條款；Stack Overflow 使用者內容依 CC BY-SA（Stack Exchange API 條款要求標示來源與作者）；Apple release notes 依 Apple 網站使用條款 |
 | `appleStatus` | Apple Developer System Status | 高 | JSON 檔 | Apple 網站使用條款；狀態頁背後的資料檔不是公開提供的資料介面 |
 | `appleDeprecations` | Apple 文件的淘汰標記（收據驗證、伺服器通知） | 高 | JSON 檔 | Apple 網站使用條款 |
@@ -255,6 +255,7 @@
   - RSS / Atom `https://blog.google/security/rss/`（條款：<https://policies.google.com/terms>）
   - RSS / Atom `https://projectzero.google/feed.xml`（條款：<https://policies.google.com/terms>）
   - RSS / Atom `https://github.blog/security/feed/`（條款：<https://docs.github.com/site-policy/github-terms/github-terms-of-service>）
+  - JSON 檔 `https://api.github.com/repos/OWASP/masvs/releases?per_page=10`（條款：<https://docs.github.com/site-policy/github-terms/github-terms-of-service>）
   - RSS / Atom `https://www.fsc.gov.tw/RSS/Messages?serno=201202290009&language=chinese`（條款：<https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004>）
   - RSS / Atom `https://www.twcert.org.tw/tw/rss-132-1.xml`（條款：<https://www.twcert.org.tw/tw/cp-39-470-19dcd-1.html>）
   - RSS / Atom `https://www.banking.gov.tw/RSS/banking/Messages?serno=201203060004&language=chinese`（條款：<https://www.fsc.gov.tw/ch/main.jsp?websitelink=artsublink.jsp&dataserno=201604250004>）
@@ -272,17 +273,23 @@
   - Markdown 檔 `https://raw.githubusercontent.com/apache/{repo}/master/RELEASENOTES.md`（條款：<https://www.apache.org/licenses/LICENSE-2.0>）
 - 說明：版本與平台需求為事實資訊；破壞性變更與修正項目摘錄自 Apache 2.0 授權的 release notes
 
-### `security`：Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database
+### `security`：Apple 安全性更新 · Android 與 Pixel 安全性公告 · Chrome Releases · Samsung · MediaTek · CISA KEV · GitHub Advisory Database
 
 - 風險：高
-- 授權或條款：CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款）
+- 授權或條款：CISA KEV（CC0 1.0）；GitHub Advisory Database（CC BY 4.0）；Android 與 Pixel 安全性公告（Android 開放原始碼專案授權）；Apple 安全性更新頁（Apple 網站使用條款）；Chrome Releases（Google 服務條款）；Samsung Mobile Security 與 MediaTek 安全公告（各自的網站條款）
 - 端點：
   - JSON 檔 `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`（條款：<https://www.cisa.gov/sites/default/files/licenses/kev/license.txt>）
   - API `https://api.github.com/advisories`（條款：<https://github.com/github/advisory-database/blob/main/LICENSE.md>）
   - HTML 網頁 `https://source.android.com/docs/security/bulletin/asb-overview`（條款：<https://source.android.com/docs/setup/about/licenses>）
   - HTML 網頁 `https://support.apple.com/en-us/100100`（條款：<https://www.apple.com/legal/internet-services/terms/site.html>）
+  - API `https://api.first.org/data/v1/epss`（條款：<https://www.first.org/epss/>）
+  - HTML 網頁 `https://www.fisac.tw/STIX_CASE/QueryStixCase/Query`（條款：<https://www.fisac.tw/Apsys/Legal>）
+  - RSS / Atom `https://chromereleases.googleblog.com/feeds/posts/default`（條款：<https://policies.google.com/terms>）
+  - HTML 網頁 `https://source.android.com/docs/security/bulletin/pixel`（條款：<https://source.android.com/docs/setup/about/licenses>）
+  - HTML 網頁 `https://security.samsungmobile.com/securityUpdate.smsb`（條款：<https://www.samsung.com/us/common/legal/>）
+  - HTML 網頁 `https://www.mediatek.com/product-security-bulletin`（條款：<https://www.mediatek.com/terms-of-use>）
 - 須標示：GitHub Advisory Database（CC BY 4.0）
-- 說明：KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號。只取版本、日期與規定名稱等事實資訊並附原始連結
+- 說明：KEV 與 GitHub Advisory 風險低；Apple 安全性更新頁只取版本名稱、日期與 CVE 編號；Chrome、Pixel、Samsung、MediaTek 只取版本或月份、日期、CVE 數量與已遭利用的 CVE 編號，連回原始公告。FIRST EPSS 每次只查最多 100 個相關 CVE，保留評分日期。F-ISAC 只取最新公開清單與最多三則 TLP WHITE/CLEAR 公開通報的標題、時間、來源及最新線索，不抓取可疑網域或會員情資。套件與 OSV 結果僅由使用者在瀏覽器本機匯入，不送往第三方。只取版本、日期與規定名稱等事實資訊並附原始連結
 
 ### `crashes`：Apple / Android release notes · GitHub SDK 與 Cordova issues
 

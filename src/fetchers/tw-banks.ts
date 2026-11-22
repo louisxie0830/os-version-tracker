@@ -1,3 +1,4 @@
+import { mapLimit } from './settle.js';
 import { fetchText, NETWORK_TIMEOUT_MS as TIMEOUT_MS } from '../net.js';
 /**
  * Minimum iOS / Android versions required by the official mobile banking apps of major Taiwan banks.
@@ -263,18 +264,6 @@ export function parsePlayMinAndroid(html: string): string | undefined {
 // The lookup URLs carry app ids in their query string: errors name only host and path
 const storePage = (url: string, lang: string) => fetchText(url, { headers: { 'Accept-Language': lang } }, TIMEOUT_MS, (status, where) => `${where} failed: ${status}`);
 
-async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(items.length);
-  let next = 0;
-  const worker = async () => {
-    while (next < items.length) {
-      const i = next++;
-      out[i] = await fn(items[i]);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return out;
-}
 
 async function fetchItunesApps(ids: number[]): Promise<Map<number, ItunesAppInfo>> {
   const apps = new Map<number, ItunesAppInfo>();

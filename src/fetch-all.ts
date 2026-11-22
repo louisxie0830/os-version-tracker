@@ -35,7 +35,7 @@ import { AGP_PAST_RELEASES_URL, fetchAgpJdk, type AgpJdkRequirement } from './fe
 import { fetchPrivacyCompliance, THIRD_PARTY_SDK_URL, type PrivacyCompliance } from './fetchers/privacy.js';
 import { fetchCrashReport, type CrashReport } from './fetchers/crashes.js';
 import { fetchOsShare, STATCOUNTER_URL, type OsShare } from './fetchers/os-share.js';
-import { fetchDevNews, type DevNewsItem } from './fetchers/dev-news.js';
+import { fetchDevNews, lastSecurityNewsStates, type DevNewsItem } from './fetchers/dev-news.js';
 import { fetchCordovaReleases, type CordovaReleases } from './fetchers/cordova.js';
 import { APPLE_SECURITY_URL, fetchSecurityReport, type SecurityReport } from './fetchers/security.js';
 import { DEVELOPER_STATUS_PAGE, fetchDeveloperStatus, type DeveloperStatus } from './fetchers/apple-status.js';
@@ -48,6 +48,7 @@ import { bankSnapshots, coreVersionProblems, recordBankVersions, type BankChange
 import { anonymizeAppStoreUrl, maskName } from './mask.js';
 import { createRefreshCache } from './refresh-cache.js';
 import { safeUrl } from './safe-url.js';
+import { financialTimeline } from './security-intelligence.js';
 import { buildAndroidActions, buildDeadlineTimeline, buildiOSActions, zhPlatform, zhSdk } from './insights.js';
 import { deferNotifications, notifyWebhook, prunableWhen, recentItems, recordItems, toTrackedItems, type TrackedItem } from './changes.js';
 import type {
@@ -153,7 +154,7 @@ export const SOURCES = {
   devNews: { label: 'Apple / Android / Swift / Kotlin / Firebase / Cordova / Google 與 GitHub 資安部落格官方 feed · 數位發展部資安署 · 金管會 · 銀行局 · TWCERT/CC', url: 'https://developer.apple.com/news/' },
   crashes: { label: 'Apple / Android release notes · GitHub SDK 與 Cordova issues', url: 'https://developer.apple.com/documentation/ios-ipados-release-notes' },
   cordova: { label: 'npm registry · Apache Cordova RELEASENOTES.md', url: 'https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md' },
-  security: { label: 'Apple 安全性更新 · Android 安全性公告 · CISA KEV · GitHub Advisory Database', url: APPLE_SECURITY_URL },
+  security: { label: 'Apple 安全性更新 · Android 與 Pixel 安全性公告 · Chrome Releases · Samsung · MediaTek · CISA KEV · GitHub Advisory Database', url: APPLE_SECURITY_URL },
   appleStatus: { label: 'Apple Developer System Status', url: DEVELOPER_STATUS_PAGE },
   frameworks: { label: 'GitHub react/react-native releases · Flutter release index', url: 'https://github.com/react/react-native/releases' },
   sdkReleases: { label: 'Firebase（Apple / Android）與 Google Play services 版本說明', url: FIREBASE_APPLE_NOTES_URL },
@@ -465,6 +466,13 @@ async function refreshSources(deps: RefreshDeps): Promise<AllVersions> {
 
   // Sources that worked but came back with holes: far fewer items than usual (above), a field missing for some apps
   if (sources.twBanks?.ok) quality.set('twBanks', [...bankFieldGaps(TW_BANK_APPS, twBanks), ...(quality.get('twBanks') ?? [])]);
+  if (security) {
+    if (f.devNews === FETCHERS.devNews) security.newsSources = lastSecurityNewsStates();
+    security.financialNotices = financialTimeline(devNews, security.financialNotices ?? [],
+      deps.lastGood<SecurityReport>('security', now())?.value.financialNotices ?? [], now().toISOString());
+    const partial = (security.subsources ?? []).filter(s => s.status !== 'ok').map(s => `${s.label}：${s.error ?? s.status}`);
+    if (partial.length) quality.set('security', [...(quality.get('security') ?? []), ...partial]);
+  }
   for (const [source, problems] of quality) {
     if (problems.length) run.quality[source] = problems;
     void reportDataQuality(source, problems);

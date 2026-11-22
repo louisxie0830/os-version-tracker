@@ -124,11 +124,13 @@ jobs:
     permissions:
       actions: write
     steps:
-      # The watchdog (refresh-watchdog.yml) runs on its own schedule and would go quiet the same way
+      # The watchdog (refresh-watchdog.yml) and the security watch (security-watch.yml) run on their own schedules
+      # and would go quiet the same way
       - name: Keep the schedules enabled
         run: |
           gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pages.yml/enable"
           gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/refresh-watchdog.yml/enable"
+          gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/security-watch.yml/enable"
         env:
           GH_TOKEN: ${{ github.token }}
 

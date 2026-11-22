@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { settleSources } from '../src/fetchers/settle.ts';
+import { mapLimit, settleSources } from '../src/fetchers/settle.ts';
 import { fetchAndroidToolchain } from '../src/fetchers/android-toolchain.ts';
 import { fetchiOSToolchain } from '../src/fetchers/ios-toolchain.ts';
 import { fetchCrashReport, type CrashItem } from '../src/fetchers/crashes.ts';
@@ -89,4 +89,17 @@ test('publishDecision: half the sources is below the line', () => {
   const set = (failed: number) => ({ ios: src(true), android: src(true), ...Object.fromEntries(Array.from({ length: 8 }, (_, i) => [`s${i}`, src(i >= failed)])) });
   assert.equal(publishDecision(set(5)).publish, false, '5 of 10');
   assert.equal(publishDecision(set(4)).publish, true, '6 of 10');
+});
+
+test('mapLimit runs at most `limit` at a time and keeps the order', async () => {
+  let running = 0, peak = 0;
+  const out = await mapLimit([30, 10, 20, 5, 15], 2, async ms => {
+    running++; peak = Math.max(peak, running);
+    await new Promise(r => setTimeout(r, ms));
+    running--;
+    return ms * 2;
+  });
+  assert.deepEqual(out, [60, 20, 40, 10, 30]);
+  assert.equal(peak, 2);
+  assert.deepEqual(await mapLimit([], 4, async x => x), []);
 });

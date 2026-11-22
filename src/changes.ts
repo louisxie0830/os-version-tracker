@@ -218,6 +218,25 @@ export function toTrackedItems(input: {
       url: b.url,
       date: b.published,
     })),
+    // Chrome (WebView) and phone / chip vendor updates that fix something already exploited
+    ...(input.security?.chrome ?? []).filter(c => c.exploited.length).map(c => ({
+      id: `security:chrome:${c.version}`,
+      kind: 'security' as const,
+      platform: '跨平台' as const,
+      title: `Chrome ${c.version} 修補了已遭利用的漏洞（WebView 同步更新）`,
+      detail: c.exploited.join('、'),
+      url: c.url,
+      date: c.published,
+    })),
+    ...(input.security?.vendors ?? []).filter(b => b.exploited.length).map(b => ({
+      id: `security:vendor:${b.url}`,
+      kind: 'security' as const,
+      platform: 'Android' as const,
+      title: `${b.title} 修補了可能已遭利用的漏洞`,
+      detail: b.exploited.join('、'),
+      url: b.url,
+      date: b.published,
+    })),
     ...(input.security?.advisories ?? []).filter(a => (a.severity === 'critical' || a.severity === 'high') && a.published >= recentAdvisory).map(a => ({
       id: `security:ghsa:${a.id}`,
       kind: 'security' as const,

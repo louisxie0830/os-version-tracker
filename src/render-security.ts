@@ -1,10 +1,12 @@
 import type { AllVersions } from './fetch-all.js';
 import type { CordovaPlatform } from './fetchers/cordova.js';
 import type { CrashItem } from './fetchers/crashes.js';
-import { inVersionRange, SDK_PACKAGES, type SdkAdvisory } from './fetchers/security.js';
+import { versionRangeStatus, SDK_PACKAGES, type SdkAdvisory } from './fetchers/security.js';
+import { renderSecurityCenter } from './render-security-center.js';
 import { displayDate, esc, externalLink } from './render-actions.js';
 import type { ActionStatus } from './types.js';
-import { platformClass, renderSources } from './render-common.js';
+import { platformClass, renderChoiceChips, renderSources } from './render-common.js';
+import { sourceId, TW_AUTHORITY, urgentSecurityItems } from './security-urgent.js';
 
 /** Security, crashes and Cordova sections. */
 
@@ -91,9 +93,9 @@ export function renderAdvisoryNotes(data: AllVersions, pkg: string, latest: stri
   const found = advisoriesFor(data, pkg);
   if (!found.length) return '<span class="tl-source">沒有已知漏洞</span>';
   return found.map(({ advisory: a, vulnerable, patched }) => {
-    const stillAffected = inVersionRange(latest, vulnerable);
+    const stillAffected = versionRangeStatus(latest, vulnerable);
     return `<div class="plugin-advisory">
-      <span class="status status-${stillAffected ? 'urgent' : SEVERITY[a.severity].status}">${stillAffected ? '最新版仍受影響' : SEVERITY[a.severity].label}</span>
+      <span class="status status-${stillAffected ? 'urgent' : SEVERITY[a.severity].status}">${stillAffected === null ? '適用版本待確認' : stillAffected ? '最新版仍受影響' : SEVERITY[a.severity].label}</span>
       ${externalLink(a.url, esc(vulnerable ? `${vulnerable} 受影響` : a.summary))}${patched ? `<span class="tl-source">${esc(patched)} 修正${a.cve ? ` · ${esc(a.cve)}` : ''}</span>` : ''}
     </div>`;
   }).join('');
@@ -159,7 +161,7 @@ function securityCard(title: string, rows: string[], note: string, empty: string
 
 export function renderSecuritySection(data: AllVersions): string {
   const s = data.security;
-  if (!s) return '';
+  if (!s) return `<section class="panel" id="security"><h2>資安</h2><p class="table-note">本次尚未取得資安報告，不能據此判定沒有風險。套件匯入與個人驗證紀錄仍可使用。</p>${renderSecurityCenter(data, '')}${renderSources(data, ['security'])}</section>`;
   const exploitedBadge = (cves: string[]) => cves.length ? `<span class="status status-urgent">可能已遭利用：${esc(cves.join('、'))}</span>` : '';
 
   const kev = s.exploited.map(v => `<li data-key="security:kev:${esc(v.cve)}">
@@ -189,6 +191,23 @@ export function renderSecuritySection(data: AllVersions): string {
       ${b.mostSevere ? `<div class="tl-source">最嚴重：${esc(b.mostSevere)}</div>` : ''}
     </li>`);
 
+  const chrome = (s.chrome ?? []).map(c => `<li data-key="security:chrome:${esc(c.version)}">
+      <div class="tl-head">
+        ${exploitedBadge(c.exploited)}
+        <span class="crash-context">${esc(displayDate(c.published))}${c.fixes !== undefined ? ` · ${c.fixes} 個安全性修補` : ''}${c.critical ? `（嚴重 ${c.critical} 個）` : ''}</span>
+      </div>
+      ${externalLink(c.url, `Chrome ${esc(c.version)} 穩定版`, 'crash-title')}
+    </li>`);
+
+  const vendors = (s.vendors ?? []).map(b => `<li data-key="security:vendor:${esc(b.url)}">
+      <div class="tl-head">
+        ${exploitedBadge(b.exploited)}
+        <span class="tl-platform ${platformClass('Android')}">${esc(b.vendor)}</span>
+        <span class="crash-context">${esc(displayDate(b.published))}${b.patchLevel ? ` · 修補程式等級 ${esc(displayDate(b.patchLevel))}` : ''}${b.cves !== undefined ? ` · ${b.cves} 個 CVE` : ''}${b.critical ? `（嚴重 ${b.critical} 個）` : ''}</span>
+      </div>
+      ${externalLink(b.url, esc(b.title), 'crash-title')}
+    </li>`);
+
   const advisories = s.advisories.map(a => `<li data-key="security:ghsa:${esc(a.id)}">
       <div class="tl-head">
         <span class="status status-${SEVERITY[a.severity].status}">${SEVERITY[a.severity].label}</span>
@@ -201,13 +220,71 @@ export function renderSecuritySection(data: AllVersions): string {
 
   return `<section class="panel" id="security">
     <h2>資安</h2>
-    <p class="table-note">整理會影響 App 的資安訊息：已確認在外遭到利用的 iOS / Android / WebView 漏洞、Apple 與 Android 的安全性更新，以及常用 SDK 的資安公告。標示「可能已遭利用」的項目，建議盡快提醒使用者更新系統，或升級受影響的 SDK。</p>
-    <div class="crash-grid">
+    <p class="table-note">所有會影響 App 的資安訊息集中在這裡，全部取自原始發布者：已確認在外遭到利用的漏洞、Apple、Android、Chrome（WebView）與手機廠商的安全性更新、常用 SDK 的資安公告、金融資安事件與偽冒通報，以及資安部落格與台灣主管機關的公告。最上方是需要立即處理的項目與建議動作。</p>
+    ${renderUrgent(data)}
+    ${renderSecurityCenter(data, `<div class="crash-grid">
       ${securityCard('已遭利用的漏洞（近 180 天）', kev, '美國 CISA 已知遭利用漏洞清單（KEV）；Chromium 會影響 Android WebView 與 Chrome', '近 180 天沒有新增與 iOS / Android / WebView 相關的項目。')}
       ${securityCard('Apple 安全性更新（近 120 天）', apple, 'iOS / iPadOS、Safari（WKWebView 使用的 WebKit）與 Xcode；取自 Apple 安全性更新頁面', '近 120 天沒有相關的安全性更新。')}
       ${securityCard('Android 安全性公告', android, '每月的 Android Security Bulletin；修補程式等級可在裝置的「設定 → 安全性」查看', '目前抓不到 Android 安全性公告。', 3)}
+      ${s.chrome ? securityCard('Chrome 安全性更新（WebView）', chrome, 'Chrome Releases 的桌面穩定版公告；Android System WebView 與 Chrome 使用相同的 Chromium 程式碼，修補同步推出', '目前抓不到 Chrome 穩定版公告。', 4) : ''}
+      ${s.vendors ? securityCard('手機與晶片廠商安全公告', vendors, 'Pixel、Samsung（台灣 Android 第一大品牌）與 MediaTek 晶片的每月公告；Samsung 只公布月份。Qualcomm 的公告頁需要瀏覽器執行程式才看得到內容，沒有收錄', '目前抓不到廠商安全公告。', 6) : ''}
       ${securityCard('常用 SDK 資安公告', advisories, `取自 GitHub Advisory Database：Cordova、React Native、Expo、Capacitor、Flutter WebView、dio、OkHttp、Gson、Retrofit、Glide、Alamofire、Firebase、Sentry 等 ${SDK_PACKAGES.length} 個套件；依公布日期排序`, '這些套件目前沒有資安公告。', 8)}
     </div>
-    ${renderSources(data, ['security'])}
+    ${renderSecurityNews(data)}`)}
+    ${renderSources(data, ['security', 'devNews'])}
   </section>`;
+}
+
+/** The items to act on now, each with what to do (security-urgent.ts); "nothing urgent" is worth saying too */
+function renderUrgent(data: AllVersions): string {
+  const items = urgentSecurityItems(data);
+  const rows = items.map(i => `<li data-key="security:urgent:${esc(i.key)}">
+      <div class="tl-head">
+        <span class="tl-platform ${platformClass(i.platform)}">${esc(i.platform)}</span>
+        <span class="crash-context">${esc(displayDate(i.date))} · ${esc(i.source)}</span>
+      </div>
+      ${externalLink(i.url, esc(i.title), 'crash-title')}
+      <div class="urgent-action"><strong>建議動作</strong>${esc(i.action)}</div>
+    </li>`).join('');
+  return `<div class="case urgent-case">
+    <div class="case-head">
+      <span class="case-no">需要立即處理</span>
+      <span class="case-count">${items.length ? `共 ${items.length} 項` : ''}</span>
+    </div>
+    ${items.length ? `<ul class="crash-list" data-search-rows>${rows}</ul>` : '<div class="case-body empty">目前沒有需要立即處理的資安項目。</div>'}
+    <div class="crash-note">已遭利用的漏洞與修補它的更新（近 30 天，廠商每月公告 45 天）、嚴重或高風險的 SDK 公告（近 30 天），以及台灣主管機關的緊急修補呼籲與事件（近 14 天）。新項目會在網站更新前就以 GitHub Issue 通知。</div>
+  </div>`;
+}
+
+const SECURITY_NEWS_SHOWN = 15;
+
+/**
+ * Security posts and notices (the security category of the news feeds): Google and GitHub security blogs,
+ * Project Zero, OWASP MASVS, and Taiwan's authorities. Filtered by <news-list> like the developer news.
+ */
+function renderSecurityNews(data: AllVersions): string {
+  const items = (data.devNews ?? []).filter(n => n.category === 'security');
+  if (!items.length) return '';
+  const capped = items.length > SECURITY_NEWS_SHOWN;
+  const rows = items.map((n, i) => {
+    const taiwan = TW_AUTHORITY.includes(sourceId(n));
+    return `<li class="news-item${i >= SECURITY_NEWS_SHOWN ? ' list-extra' : ''}" data-sec="${esc(n.platform)}${taiwan ? '|tw' : ''}${n.important ? '|important' : ''}" data-key="secnews:${esc(n.url)}">
+      <span class="news-date">${esc(displayDate(n.date))}</span>
+      <span class="tl-platform ${platformClass(n.platform)}">${esc(n.platform)}</span>
+      ${n.important ? '<span class="status status-urgent news-flag">重要</span>' : ''}
+      ${externalLink(n.url, esc(n.title), 'news-title')}
+      <span class="news-source">${esc(n.source)}</span>
+    </li>`;
+  }).join('');
+  return `<div class="subhead">資安公告與文章（近 60 天）</div>
+    <news-list filters="sec">
+      ${renderChoiceChips('sec', '篩選資安公告', [['all', '全部'], ['iOS', 'iOS'], ['Android', 'Android'], ['跨平台', '跨平台'], ['tw', '台灣'], ['important', '只看重要']], { className: 'news-filters' })}
+      <div class="case mt-12">
+        <ul class="news news-feed${capped ? ' is-collapsed' : ''}"${capped ? ' data-capped' : ''} data-news-items data-search-rows>${rows}</ul>
+        ${capped ? `<button type="button" class="news-show-more" data-show-more>顯示更多（共 ${items.length} 則）</button>` : ''}
+        <div class="news-empty" data-news-empty hidden>沒有符合的資安公告</div>
+        <p class="sr-only" role="status" data-filter-status></p>
+      </div>
+    </news-list>
+    <p class="table-note">「重要」為已遭利用的漏洞、CVE、緊急修補呼籲、憑證遭冒用或撤銷、供應鏈攻擊與資料外洩。台灣：數位發展部資安署、金管會與銀行局（金融資安新聞稿、資安或個資相關裁罰）、TWCERT/CC 漏洞公告（行動 App、金融相關）。</p>`;
 }

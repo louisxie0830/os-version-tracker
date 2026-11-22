@@ -52,6 +52,12 @@ export function buildNowCards(data: AllVersions, now = new Date()): NowCard[] {
   for (const b of (s?.android ?? []).filter(b => b.exploited.length && b.published >= since(45))) {
     cards.push({ type: '資安', platform: 'Android', meta: `可能已遭利用 · ${b.published}`, title: `${b.title}：${b.exploited.join('、')}`, body: `修補程式等級 ${b.patchLevels.at(-1) ?? ''} 以上已修正。`, href: nowHref(b.url, '#security') });
   }
+  for (const c of (s?.chrome ?? []).filter(c => c.exploited.length && c.published >= since(30))) {
+    cards.push({ type: '資安', platform: '跨平台', meta: `已遭利用 · ${c.published}`, title: `Chrome ${c.version} 修補了已遭利用的漏洞`, body: `${c.exploited.join('、')}。Android System WebView 同步更新，建議提醒使用者更新 Chrome 與 WebView。`, href: nowHref(c.url, '#security') });
+  }
+  for (const b of (s?.vendors ?? []).filter(b => b.exploited.length && b.published >= since(45))) {
+    cards.push({ type: '資安', platform: 'Android', meta: `可能已遭利用 · ${b.published}`, title: `${b.title}：${b.exploited.join('、')}`, body: b.vendor === 'MediaTek' ? '晶片修補由手機廠商隨系統更新推送，建議提醒使用者安裝最新系統更新。' : `建議提醒 ${b.vendor} 使用者安裝這個月的安全性更新。`, href: nowHref(b.url, '#security') });
+  }
   const kev = (s?.exploited ?? []).filter(v => v.dateAdded >= since(30));
   if (kev.length) {
     const platforms = new Set(kev.map(v => v.platform));

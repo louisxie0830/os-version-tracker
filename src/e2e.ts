@@ -45,6 +45,23 @@ async function buildFixtureSite(dir: string): Promise<void> {
     date: '2026-10-25',
     important: i === 0,
   }));
+  // Exercise the security section's urgent list, Chrome and vendor cards and its own news-list of security posts
+  // (with its "show more" cap and every filter), which the snapshot predates
+  const today = new Date().toISOString().slice(0, 10);
+  if (data.security) {
+    data.security.chrome = [{ version: '158.0.8127.36', url: 'https://chromereleases.googleblog.com/2026/11/e2e.html', published: today, fixes: 204, critical: 6, exploited: ['CVE-2026-130963'] }];
+    data.security.vendors = [{ vendor: 'Samsung', title: 'Samsung Security Maintenance Release SMR-NOV-2026', url: 'https://security.samsungmobile.com/securityUpdate.smsb#SMR-NOV-2026', published: today, cves: 82, critical: 20, exploited: [] }];
+  }
+  data.devNews.push(...Array.from({ length: 17 }, (_, i) => ({
+    id: `${i % 2 ? 'acs' : 'google-security'}:https://example.com/security/${i}`,
+    source: i % 2 ? '數位發展部資安署' : 'Google Security Blog',
+    platform: (i % 3 === 0 ? 'iOS' : i % 3 === 1 ? 'Android' : '跨平台') as 'iOS' | 'Android' | '跨平台',
+    category: 'security' as const,
+    title: `E2E security notice ${i}`,
+    url: `https://example.com/security/${i}`,
+    date: today,
+    important: i < 2,
+  })));
   // Exercise the trend charts (chart-switch, line-chart and its tooltip), which the snapshot predates
   const months = ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'];
   const trend = (names: string[]) => ({

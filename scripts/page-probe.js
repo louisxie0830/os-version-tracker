@@ -87,14 +87,21 @@
   // Sampled across the page: a link may only catch clicks inside its own row or card
   function strayClicks() {
     const height = document.documentElement.scrollHeight;
-    const y = innerHeight / 2;
-    for (let top = 0; top < height; top += 41) {
+    // A 41px grid down the page, read a band of rows per scroll (the middle half of the screen, clear of the
+    // sticky top bar): scrolling is the slow part, and a phone-width page is tall enough that one row per
+    // scroll took most of a run's time limit on CI
+    const rows = Math.max(1, Math.floor(innerHeight / 2 / 41));
+    const first = innerHeight / 4;
+    for (let top = 0; top < height; top += rows * 41) {
       instant(top);
-      for (let x = 3; x < innerWidth; x += 47) {
-        const a = document.elementFromPoint(x, y)?.closest('a');
-        if (!a) continue;
-        const box = (a.closest('li, tr, .privacy-card, .now-card, .action, .tl-item') || a).getBoundingClientRect();
-        if (x < box.left - 1 || x > box.right + 1 || y < box.top - 1 || y > box.bottom + 1) add('link catches clicks outside its row', describe(a));
+      for (let row = 0; row < rows; row++) {
+        const y = first + row * 41;
+        for (let x = 3; x < innerWidth; x += 47) {
+          const a = document.elementFromPoint(x, y)?.closest('a');
+          if (!a) continue;
+          const box = (a.closest('li, tr, .privacy-card, .now-card, .action, .tl-item') || a).getBoundingClientRect();
+          if (x < box.left - 1 || x > box.right + 1 || y < box.top - 1 || y > box.bottom + 1) add('link catches clicks outside its row', describe(a));
+        }
       }
     }
     instant(0);
@@ -319,7 +326,8 @@
         add('filter leaves a blank list', `news: "${chip.textContent.trim()}"`);
       }
     }
-    document.querySelector('.news-filters .chip')?.click();
+    // Back to "all" in every news list (the security section has one too), so "show more" below sees them capped
+    document.querySelectorAll('.news-filters').forEach(g => g.querySelector('.chip')?.click());
     await tick();
     const sort = document.getElementById('bank-sort');
     if (sort) {
@@ -356,7 +364,7 @@
     }
     // Every other button in the page body ("show more", copy link, back to top…)
     for (const button of document.querySelectorAll('main button, aside button')) {
-      if (!visible(button) || button.classList.contains('chip')) continue;
+      if (!visible(button) || button.classList.contains('chip') || button.closest('security-center')) continue;
       button.click();
       await tick();
     }
@@ -437,6 +445,73 @@
     if (document.querySelector('[data-capped]') && !document.documentElement.classList.contains('has-js')) add('show more', 'has-js dropped although the components are defined');
   }
 
+  async function securityInteractions() {
+    const center = document.querySelector('security-center');
+    if (!center) return;
+    const storageKey = 'osvt-security-workspace-v1', previous = localStorage.getItem(storageKey);
+    const tick = () => wait(30);
+    // The probe's files hand their text over directly: under --virtual-time-budget, Chrome sometimes stops the
+    // clock while a Blob read is pending and the read never completes, so the run stalls with nothing to say why.
+    // The component's parsing and results are what's tested here, not Chrome reading a file
+    const texts = new Map(); // "name size" → text: input.files may hand back a different File object
+    const blobText = Blob.prototype.text;
+    Blob.prototype.text = function () { const key = this instanceof File && `${this.name} ${this.size}`; return key && texts.has(key) ? Promise.resolve(texts.get(key)) : blobText.call(this); };
+    // An import that never reports back is a finding, not a probe that waits forever
+    const importFile = (kind, input, name, value) => new Promise(resolve => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([JSON.stringify(value)], name, { type: 'application/json' }));
+      const files = transfer.files;
+      for (const file of files) texts.set(`${file.name} ${file.size}`, JSON.stringify(value));
+      const finish = () => { clearTimeout(timer); center.removeEventListener('security-import', done); resolve(); };
+      const done = event => {
+        if (event.detail?.kind !== kind) return;
+        if (!event.detail.ok) add('security import', `${kind}: ${center.querySelector('[data-security-feedback]').textContent}`);
+        finish();
+      };
+      const timer = setTimeout(() => { add('security import', `${kind}: no result after 5s`); finish(); }, 5000);
+      center.addEventListener('security-import', done);
+      input.files = files; input.dispatchEvent(new Event('change'));
+    });
+    try {
+      const tabs = [...center.querySelectorAll('[data-security-tab]')];
+      if (tabs.length !== 8) add('security center', `expected 8 views, found ${tabs.length}`);
+      for (const tab of tabs) {
+        tab.click(); await tick();
+        const panels = [...center.querySelectorAll('[data-security-panel]')].filter(p => !p.hidden);
+        if (panels.length !== 1 || panels[0]?.dataset.securityPanel !== tab.dataset.securityTab) add('security tabs', tab.textContent);
+        overflow(` (security ${tab.dataset.securityTab})`);
+      }
+      const open = name => center.querySelector(`[data-security-tab="${name}"]`).click();
+      open('packages');
+      const input = center.querySelector('[data-security-packages]');
+      await importFile('packages', input, 'package-lock.json', {lockfileVersion:3,packages:{'node_modules/e2e-package':{version:'1.0.0'}}});
+      if (!center.querySelector('[data-security-package-results]').textContent.includes('仍待完整掃描')) add('security import', 'unknown package was not marked pending');
+      await importFile('osv', center.querySelector('[data-security-osv]'), 'osv.json', {results:[{packages:[{package:{name:'e2e-package',version:'1.0.0',ecosystem:'npm'},vulnerabilities:[{id:'OSV-E2E'}]}]}]});
+      if (!center.querySelector('[data-security-package-results]').textContent.includes('掃描回報受影響')) add('security import', 'OSV exact-version result was not applied');
+      open('verification');
+      const form = center.querySelector('[data-security-verification-form]');
+      const fill = (name, value) => { form.elements.namedItem(name).value = value; };
+      fill('target','E2E App 1.0'); fill('test','E2E authentication evidence'); fill('testedAt','2026-11-22'); fill('result','pass');
+      form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+      if (!center.querySelector('[data-security-feedback]').textContent.includes('通過須附證據')) add('security verification','passing without evidence was accepted');
+      fill('evidence','E2E report'); form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
+      if (!center.querySelector('[data-security-verification-list]').textContent.includes('E2E App 1.0')) add('security verification','evidence record was not saved');
+      open('android');
+      const patch = center.querySelector('[data-security-patch-form]'); patch.elements.namedItem('system').value='2026-10-01'; patch.elements.namedItem('published').value='2026-11-01';
+      patch.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
+      if (!center.querySelector('[data-security-patch-result]').textContent.includes('落後所選公告日期')) add('security patch','outdated system patch was not identified');
+      open('incidents');
+      const caseForm = center.querySelector('[data-security-case-form]');
+      for (const [name, value] of Object.entries({subject:'manual',title:'E2E incident',bank:'E2E bank',service:'E2E mobile service',occurredAt:'2026-11-20T09:30',recoveredAt:'2026-11-20T12:00',evidence:'E2E official notice'})) caseForm.elements.namedItem(name).value=value;
+      caseForm.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})); await tick();
+      if (!center.querySelector('[data-security-case-list]').textContent.includes('E2E mobile service') || !JSON.parse(localStorage.getItem(storageKey)).cases.some(c => c.recoveredAt === '2026-11-20T12:00')) add('security incident','structured event and recovery evidence was not retained');
+      open('overview');
+    } finally {
+      Blob.prototype.text = blobText;
+      if (previous === null) localStorage.removeItem(storageKey); else localStorage.setItem(storageKey,previous);
+    }
+  }
+
   addEventListener('load', () => setTimeout(async () => {
     const report = { width: document.documentElement.clientWidth, issues, errors };
     try {
@@ -454,6 +529,7 @@
       squeezedTables();
       anchors();
       await interactions();
+      await securityInteractions();
       report.localRefs = [...new Set([...document.querySelectorAll('a[href], link[href], script[src], img[src]')]
         .map(el => el.getAttribute('href') ?? el.getAttribute('src'))
         .filter(ref => !/^(?:[a-z]+:|#|\/\/)/i.test(ref)))];

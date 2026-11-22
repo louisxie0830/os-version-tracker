@@ -787,7 +787,7 @@ test('app.js: a part that throws while loading is reported, and the parts after 
   const app = readScript('app.js').toString();
   for (const part of APP_PARTS) {
     const wrapped = app.includes(`// ---- ${part} ----\ntry {\n`);
-    assert.equal(wrapped, !['light-element.js', 'toasts.js', 'safe-link.js'].includes(part), part);
+    assert.equal(wrapped, !['light-element.js', 'toasts.js', 'safe-link.js', 'security-tools.js'].includes(part), part);
   }
 });
 

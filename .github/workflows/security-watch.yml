@@ -1,0 +1,47 @@
+# Hourly security check: fetches only the security sources and opens a GitHub issue (labelled security-alert)
+# for each new item that needs action now, so it reaches the repo's watchers by email within the hour instead of
+# waiting for the site's next refresh (three times a day). It doesn't build or deploy the site and saves no state:
+# the issues themselves record what was sent (src/security-alerts.ts). Close an issue once it is handled.
+name: Security watch
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: security-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # Actions are pinned to full commit SHAs (tag in the comment) so a moved tag can't change what runs
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # .nvmrc: one place to change the Node version, for every workflow
+          node-version-file: .nvmrc
+          cache: npm
+
+      # --ignore-scripts: dependencies' install scripts never run on the runner
+      - run: npm ci --ignore-scripts
+
+      - name: Open issues for new urgent security items
+        run: |
+          export SITE_URL="${SITE_URL_OVERRIDE:-https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}}"
+          # The TypeScript run as it is (tsx): no compile step for one small script
+          npx tsx src/security-watch.ts
+        env:
+          SITE_URL_OVERRIDE: ${{ vars.SITE_URL }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ALERT_GITHUB_ISSUES: '1'
