@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bankAppKey, coreVersionProblems, recordBankVersions, resetHistoryState, ROLLBACK_ACCEPT_AFTER } from '../src/history.ts';
-import { toTrackedItems } from '../src/changes.ts';
+import { bankAppKey, normalizeHistoryState, coreVersionProblems, recordBankVersions, resetHistoryState, ROLLBACK_ACCEPT_AFTER } from '../src/history.ts';
+import { buildNotificationsJson, prunableWhen, recordItems, resetChangesState, shownDate, toTrackedItems } from '../src/changes.ts';
 import type { TaiwanBankApp } from '../src/fetchers/tw-banks.ts';
 
 const app = (ios?: string, android?: string, id = 111): TaiwanBankApp => ({
@@ -119,4 +119,79 @@ test('coreVersionProblems: different wrong values in a row never add up to an ac
   for (let i = 0; i < ROLLBACK_ACCEPT_AFTER + 1; i++) {
     assert.equal(coreVersionProblems({ iosStable: i % 2 ? '18.1' : '18.2' }).length, 1, `refresh ${i + 1}`);
   }
+});
+
+const releaseApp = (version?: string, updated = '2026-11-18', androidVersion = version): TaiwanBankApp => ({
+  ...app('15.0', '9', 6499507336),
+  ios: { minOs: '15.0', version, updated, url: 'https://apps.apple.com/tw/app/id6499507336' },
+  android: { minOs: '9', version: androidVersion, updated, url: 'https://play.google.com/store/apps/details?id=com.yuantabank.bank' },
+});
+
+test('App releases reach the bell even when minimum OS is unchanged; repeats are not new', () => {
+  resetHistoryState(); resetChangesState();
+  const input = { deadlines: [], appleNews: [], androidNews: [], devices: [] };
+  const before = new Date('2026-11-17T04:00:00Z');
+  const now = new Date('2026-11-18T04:00:00Z');
+  assert.deepEqual(recordBankVersions([releaseApp('1.3.0', '2026-11-16')], before), []);
+  recordItems([], before);
+  const changes = recordBankVersions([releaseApp('1.3.1')], now);
+  assert.equal(changes.length, 2);
+  assert.ok(changes.every(c => c.field === 'app-version' && c.from === '1.3.0' && c.to === '1.3.1'));
+  const tracked = toTrackedItems({ ...input, bankChanges: changes }, now);
+  const first = recordItems(tracked, now);
+  assert.equal(first.added.length, 2);
+  const bell = JSON.parse(buildNotificationsJson(first.items, now.toISOString()));
+  assert.match(bell.items[0].title, /版本更新.*1\.3\.0 → 1\.3\.1/);
+  assert.equal(bell.items[0].date, '2026-11-18');
+  assert.equal(bell.items[0].kindLabel, '銀行 App');
+  assert.ok(prunableWhen(key => key === 'twBanks')(bell.items[0].id));
+  assert.equal(recordItems(toTrackedItems({ ...input, bankChanges: recordBankVersions([releaseApp('1.3.1')], now) }, now), now).added.length, 0);
+});
+
+test('migration backfills the confirmed Nov 18 store release once, with no invented old version', () => {
+  resetHistoryState(); resetChangesState();
+  const now = new Date('2026-11-25T04:00:00Z');
+  recordBankVersions([releaseApp(undefined)], new Date('2026-11-17T04:00:00Z'));
+  const changes = recordBankVersions([releaseApp('1.3.1')], now);
+  assert.equal(changes.length, 2);
+  assert.ok(changes.every(c => c.from === '' && c.date === '2026-11-18'));
+  const tracked = toTrackedItems({ deadlines: [], appleNews: [], androidNews: [], devices: [], bankChanges: changes }, now);
+  assert.match(tracked[0].title, /iOS 1\.3\.1$/);
+  assert.doesNotMatch(tracked[0].title, /→/);
+  assert.match(tracked[0].detail, /前一版號未記錄/);
+  assert.equal(shownDate({ ...tracked[0], firstSeen: now.toISOString() }), '2026-11-18');
+  assert.equal(recordBankVersions([releaseApp('1.3.1')], now).length, 2);
+});
+
+test('missing and per-device app versions preserve the baseline; each platform updates independently', () => {
+  resetHistoryState();
+  const now = new Date('2026-11-25T04:00:00Z');
+  recordBankVersions([releaseApp('1.3.0')], now);
+  assert.deepEqual(recordBankVersions([releaseApp(undefined, '2026-11-18', 'Varies with device')], now), []);
+  const changes = recordBankVersions([releaseApp('1.3.1', '2026-11-18', '1.3.0')], now);
+  assert.equal(changes.length, 1);
+  assert.equal(changes[0].platform, 'iOS');
+  assert.equal(changes[0].from, '1.3.0');
+});
+
+test('migration ignores old, invalid and future store dates; known version changes still notify', () => {
+  for (const date of ['2026-10-01', 'bad', '2026-02-30', '2027-01-01']) {
+    resetHistoryState();
+    const now = new Date('2026-11-25T04:00:00Z');
+    recordBankVersions([releaseApp(undefined)], now);
+    assert.deepEqual(recordBankVersions([releaseApp('1.3.0', date)], now), []);
+    const changes = recordBankVersions([releaseApp('1.3.1', date)], now);
+    assert.equal(changes.length, 2);
+    assert.equal(changes[0].date, date === '2026-10-01' ? date : '2026-11-25');
+  }
+});
+
+
+test('saved App versions and release events survive state normalization', () => {
+  const bank = { iOS: '15.0', Android: '9', iOSAppVersion: '1.3.1', AndroidAppVersion: '1.3.0' };
+  const event = { key: 'ios:1', bank: '元○○行', app: 'App', platform: 'iOS', field: 'app-version', from: '1.3.0', to: '1.3.1', date: '2026-11-18', url: 'https://apps.apple.com/tw/app/id1' };
+  const restored = normalizeHistoryState(JSON.parse(JSON.stringify({ banks: { 'ios:1': bank }, bankChanges: [event] })))!;
+  assert.deepEqual(restored.value.banks['ios:1'], bank);
+  assert.deepEqual(restored.value.bankChanges, [event]);
+  assert.deepEqual(restored.repaired, []);
 });

@@ -113,7 +113,7 @@
           span(`tl-platform ${item.platformClass ?? ''}`, item.platform),
           span('', item.kindLabel ?? ''),
           // A post shows when it was published (as the feed does, changes.ts shownDate); the rest when they appeared
-          span('', (PUBLISHED_KINDS.has(item.kind) && item.date ? item.date : item.firstSeen || item.date).slice(0, 10).replace(/-/g, '/')),
+          span('', ((PUBLISHED_KINDS.has(item.kind) || item.kind === 'bank') && item.date ? item.date : item.firstSeen || item.date).slice(0, 10).replace(/-/g, '/')),
           // A requirement also says when it takes effect, as the webhook message does
           ...(item.kind === 'deadline' && item.date ? [span('', `生效 ${item.datePrecision === 'year' ? `${item.date.slice(0, 4)} 年內` : item.datePrecision === 'month' ? `${item.date.slice(0, 4)}/${Number(item.date.slice(5, 7))} 月` : item.date.slice(0, 10).replace(/-/g, '/')}`)] : []),
         );

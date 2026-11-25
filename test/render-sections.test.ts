@@ -324,3 +324,13 @@ test('a section that throws is left out of the page (and reported) instead of fa
   assert.match(String(error.mock.calls[0].arguments[0]), /::warning::The Banks section failed to render.*x\.map is not a function/);
   assert.equal(section('Ok', () => '<section>ok</section>'), '<section>ok</section>');
 });
+
+
+test('App release events never appear as minimum OS adjustments', () => {
+  const a = app('甲', '15.0', '9');
+  const html = renderBanksSection(data({ twBanks: [a], bankChanges: [
+    { key: bankAppKey(a), platform: 'iOS', field: 'app-version', from: '1.3.0', to: '1.3.1', date: inDays(-1) },
+  ] as never }));
+  assert.match(html, /近 90 天沒有 App 調整最低版本/);
+  assert.doesNotMatch(html, /bank-change is-up|原 1\.3\.0/);
+});
