@@ -164,9 +164,9 @@ test('recentItems: within 7 days of first seen, or (news without one) of publish
   assert.deepEqual(recentItems([news('dec', '2026-12-28')], 7, yearEnd).map(i => i.id), ['dec'], 'across the year boundary');
 });
 
-test('shownDate: published kinds show their publish date; others when the site first saw them', () => {
+test('shownDate: published and bank events show their own date; deadlines use first seen', () => {
   assert.equal(shownDate({ ...item('n'), kind: 'dev-news', date: '2026-09-15', firstSeen: '2026-10-21T00:00:00Z' }), '2026-09-15');
-  assert.equal(shownDate({ ...item('b'), kind: 'bank', date: '2026-10-20', firstSeen: '2026-10-21T03:00:00Z' }), '2026-10-21T03:00:00Z');
+  assert.equal(shownDate({ ...item('b'), kind: 'bank', date: '2026-10-20', firstSeen: '2026-10-21T03:00:00Z' }), '2026-10-20');
   assert.equal(shownDate({ ...item('d'), date: '2027-01-27' }), '', 'a deadline never seen: no date to sort by');
 });
 

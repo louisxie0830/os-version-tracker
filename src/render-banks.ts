@@ -99,7 +99,7 @@ export function renderBanksSection(data: AllVersions): string {
   const dateSortValue = (date?: string) => date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? Number(date.replaceAll('-', '')) : -1;
   // Minimum-version changes in the last 90 days, newest per app and platform
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const recent = (data.bankChanges ?? []).filter(c => c.date >= since);
+  const recent = (data.bankChanges ?? []).filter(c => c.field !== 'app-version' && c.date >= since);
   const changeOf = (b: AllVersions['twBanks'][number], platform: 'iOS' | 'Android') =>
     recent.find(c => c.key === bankAppKey(b) && c.platform === platform);
   const changeNote = (c?: BankChange) => c

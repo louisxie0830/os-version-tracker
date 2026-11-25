@@ -246,13 +246,16 @@ export function toTrackedItems(input: {
       url: a.url,
       date: a.published,
     })),
-    // A bank raising (or lowering) its minimum OS is a reference point for setting your own
+    // Track both store app releases and minimum OS adjustments as separate events.
     ...(input.bankChanges ?? []).map(c => ({
-      id: `bank:${c.key}:${c.platform}:${c.to}`,
+      id: c.field === 'app-version' ? `bank:${c.key}:release:${c.platform}:${c.to}:${c.date}` : `bank:${c.key}:${c.platform}:${c.to}`,
       kind: 'bank' as const,
       platform: c.platform,
-      title: `銀行 App 最低版本調整：${c.bank} ${c.app} ${c.platform} ${c.from} → ${c.to}`,
-      detail: compareVersions(c.to, c.from) > 0 ? '調高最低支援版本' : '調低最低支援版本',
+      title: c.field === 'app-version'
+        ? `銀行 App 版本更新：${c.bank} ${c.app} ${c.platform} ${c.from ? `${c.from} → ` : ''}${c.to}`
+        : `銀行 App 最低版本調整：${c.bank} ${c.app} ${c.platform} ${c.from} → ${c.to}`,
+      detail: c.field === 'app-version' ? `商店更新日期：${c.date}${c.from ? '' : '（補入近期商店版本；前一版號未記錄）'}`
+        : compareVersions(c.to, c.from) > 0 ? '調高最低支援版本' : '調低最低支援版本',
       url: c.url,
       date: c.date,
     })),
@@ -342,11 +345,11 @@ export const NEW_MAX_AGE_DAYS = 30;
 
 /**
  * The date to show and sort an item by: when it was published for the kinds that have that, otherwise when the
- * site first saw it (a source added later, or a backfill, sees old posts for the first time today)
+ * site first saw it. Bank events show the store release date or the day the minimum OS changed.
  */
 export function shownDate(item: TrackedItem): string {
   // A post whose date couldn't be read falls back to when it was seen, rather than to no date at all
-  return PUBLISHED_KINDS.has(item.kind) && item.date ? item.date : item.firstSeen ?? (item.kind === 'deadline' ? '' : item.date);
+  return (PUBLISHED_KINDS.has(item.kind) || item.kind === 'bank') && item.date ? item.date : item.firstSeen ?? (item.kind === 'deadline' ? '' : item.date);
 }
 
 /**

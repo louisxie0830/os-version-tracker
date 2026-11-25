@@ -5,14 +5,16 @@ import type { TaiwanBankApp } from './fetchers/tw-banks.js';
 import type { DevNewsItem } from './fetchers/dev-news.js';
 
 /**
- * Values remembered between refreshes: each bank app's minimum OS versions (to report when a bank raises
- * or lowers them) and the last accepted core versions (to catch a parser that suddenly reads a wrong,
+ * Values remembered between refreshes: each bank app's app versions and minimum OS versions (to report
+ * app releases and changes to supported systems) and the last accepted core versions (to catch a parser that suddenly reads a wrong,
  * older version), plus how many items each list source returned (to catch a parser that suddenly finds far
  * fewer), and the news items of feeds that hold only a few days (kept for the news window). Like changes.ts, state persists only when HISTORY_STATE_FILE is set (the static build
  * carries it between runs); otherwise it lives in memory. Bank names are stored already masked.
  */
 
 export interface BankChange {
+  /** Omitted in older state files, which tracked minimum OS changes only. */
+  field?: 'app-version';
   /** App Store id or Play package: stable while the masked names may collide */
   key: string;
   bank: string;
@@ -47,7 +49,7 @@ interface CountGuard {
 }
 
 interface HistoryState {
-  banks: Record<string, { iOS?: string; Android?: string }>;
+  banks: Record<string, BankVersions>;
   bankChanges: BankChange[];
   bankSnapshots: BankSnapshot[];
   versions: Record<string, VersionGuard>;
@@ -69,9 +71,17 @@ function emptyState(): HistoryState {
 const str = (v: unknown): v is string => typeof v === 'string';
 const optStr = (v: unknown) => v === undefined || typeof v === 'string';
 const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
-const isBank = (v: unknown): v is { iOS?: string; Android?: string } => isRecord(v) && optStr(v.iOS) && optStr(v.Android);
+interface BankVersions {
+  iOS?: string;
+  Android?: string;
+  iOSAppVersion?: string;
+  AndroidAppVersion?: string;
+}
+const isBank = (v: unknown): v is BankVersions => isRecord(v) && optStr(v.iOS) && optStr(v.Android)
+  && optStr(v.iOSAppVersion) && optStr(v.AndroidAppVersion);
 const isChange = (v: unknown): v is BankChange => isRecord(v)
-  && ['key', 'bank', 'app', 'from', 'to', 'date', 'url'].every(k => str(v[k])) && (v.platform === 'iOS' || v.platform === 'Android');
+  && ['key', 'bank', 'app', 'from', 'to', 'date', 'url'].every(k => str(v[k])) && (v.platform === 'iOS' || v.platform === 'Android')
+  && (v.field === undefined || v.field === 'app-version');
 const isCounts = (v: unknown) => isRecord(v) && Object.values(v).every(num);
 const isSnapshot = (v: unknown): v is BankSnapshot => isRecord(v) && str(v.date) && isCounts(v.iOS) && isCounts(v.Android);
 const isPending = (v: unknown) => v === undefined || (isRecord(v) && num(v.seen) && (str(v.value) || num(v.value)));
@@ -128,13 +138,14 @@ export function bankAppKey(app: TaiwanBankApp): string {
 }
 
 /**
- * Compares each app's minimum iOS / Android with the previous refresh and returns every change seen in the
+ * Compares each app's app version and minimum iOS / Android with the previous refresh and returns every change seen in the
  * last year, newest first. The first refresh is only a baseline. A platform missing this time (that store
  * page failed) keeps its previous value instead of counting as a change.
  */
 export function recordBankVersions(apps: TaiwanBankApp[], now = new Date(), keys?: readonly string[]): BankChange[] {
   // The day in Taiwan (the morning build runs at 21:43 UTC, still the day before in UTC)
   const today = taipeiToday(now);
+  const backfillSince = taipeiToday(new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000));
   for (const [i, app] of apps.entries()) {
     // The configured identity (src/fetchers/tw-banks.ts) when given: one store page failing must not turn the
     // app into a second one keyed by its other store
@@ -148,6 +159,22 @@ export function recordBankVersions(apps: TaiwanBankApp[], now = new Date(), keys
         state.bankChanges.push({ key, bank: app.bank, app: app.app, platform, from: before, to: info.minOs, date: today, url: info.url });
       }
       current[platform] = info.minOs;
+      const versionKey = platform === 'iOS' ? 'iOSAppVersion' : 'AndroidAppVersion';
+      const version = info.version?.trim();
+      // Per-device builds and incomplete store responses must not erase the last known app version.
+      if (!version || /varies|依裝置|因裝置/i.test(version)) continue;
+      const oldVersion = previous?.[versionKey];
+      const releaseDate = info.updated && /^\d{4}-\d{2}-\d{2}$/.test(info.updated)
+        && Number.isFinite(Date.parse(info.updated))
+        && new Date(info.updated).toISOString().slice(0, 10) === info.updated
+        && info.updated <= today ? info.updated : undefined;
+      // Migrate existing apps once: use the store's confirmed release date, never invent an old version.
+      const backfill = !oldVersion && !!previous?.[platform] && !!releaseDate && releaseDate >= backfillSince;
+      if ((oldVersion && compareVersions(oldVersion, version) !== 0) || backfill) {
+        state.bankChanges.push({ key, bank: app.bank, app: app.app, platform, field: 'app-version',
+          from: oldVersion ?? '', to: version, date: releaseDate ?? today, url: info.url });
+      }
+      current[versionKey] = version;
     }
     state.banks[key] = current;
   }
